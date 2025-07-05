@@ -424,14 +424,14 @@
             color: #155724;
         }
 
-        .save-indicator.unsaved {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .save-indicator.saving {
+        .save-indicator.syncing {
             background: #fff3cd;
             color: #856404;
+        }
+
+        .save-indicator.offline {
+            background: #f8d7da;
+            color: #721c24;
         }
 
         .last-save-info {
@@ -458,156 +458,24 @@
             to { transform: translateX(0); opacity: 1; }
         }
 
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
+        .connection-status {
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            justify-content: center;
-            z-index: 2000;
+            gap: 6px;
         }
 
-        .modal {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
+        .connection-status.online {
+            background: #d4edda;
+            color: #155724;
         }
 
-        .modal h3 {
-            color: #37352f;
-            margin-bottom: 15px;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .admin-section {
-            background: #f7f6f3;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            border: 1px solid #e9e9e7;
-        }
-
-        .admin-section h3 {
-            color: #37352f;
-            font-size: 16px;
-            font-weight: 600;
-            margin: 0 0 16px 0;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e9e9e7;
-        }
-
-        .admin-section small {
-            display: block;
-            margin-top: 6px;
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-        .status-info {
-            background: white;
-            padding: 16px;
-            border-radius: 6px;
-            border: 1px solid #e9e9e7;
-        }
-
-        .status-info p {
-            margin: 8px 0;
-            font-size: 14px;
-        }
-
-        .status-info strong {
-            color: #37352f;
-        }
-
-        .admin-badge {
-            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            margin-left: 8px;
-            font-weight: 600;
-        }
-
-        .user-list {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #e9e9e7;
-            border-radius: 8px;
-        }
-
-        .user-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            border-bottom: 1px solid #f7f6f3;
-            transition: background 0.2s ease;
-        }
-
-        .user-item:hover {
-            background: #f7f6f3;
-        }
-
-        .user-item:last-child {
-            border-bottom: none;
-        }
-
-        .user-info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: #37352f;
-        }
-
-        .user-id {
-            font-size: 12px;
-            color: #6b7280;
-        }
-
-        .user-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .admin-warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .admin-only-message {
-            text-align: center;
-            padding: 60px 20px;
-            color: #6b7280;
-            font-size: 18px;
-            background: #f7f6f3;
-            border-radius: 8px;
-            border: 1px solid #e9e9e7;
+        .connection-status.offline {
+            background: #f8d7da;
+            color: #721c24;
         }
 
         @media (max-width: 768px) {
@@ -623,13 +491,9 @@
                 font-size: 12px;
             }
 
-            .modal {
-                width: 95%;
-                padding: 20px;
-            }
-
-            .user-actions {
+            .save-status {
                 flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
@@ -676,12 +540,14 @@
                     <span id="userBadge" class="user-badge"></span>
                 </div>
                 <div class="save-status" id="saveStatus">
-                    <span id="saveIndicator" class="save-indicator unsaved">
-                        🔴 <span id="unsavedCount">0</span> opération(s) non sauvegardée(s)
+                    <span id="connectionStatus" class="connection-status online">
+                        🟢 Connecté au serveur
                     </span>
-                    <button id="manualSaveBtn" class="btn btn-small">💾 Sauvegarder maintenant</button>
-                    <button id="loadFromExcelBtn" class="btn btn-small btn-secondary">📥 Charger Excel</button>
-                    <span id="lastSaveInfo" class="last-save-info"></span>
+                    <span id="saveIndicator" class="save-indicator saved">
+                        ✅ Données synchronisées
+                    </span>
+                    <button id="manualSyncBtn" class="btn btn-small">🔄 Actualiser</button>
+                    <span id="lastSyncInfo" class="last-save-info"></span>
                 </div>
                 <button id="logoutBtn" class="btn btn-secondary btn-small">Déconnexion</button>
             </div>
@@ -691,13 +557,6 @@
                     <div class="tab active" data-tab="operations" id="operationsTabBtn">📋 Opérations</div>
                     <div class="tab" data-tab="nouvelle" id="nouvelleTabBtn">➕ Nouvelle Opération</div>
                     <div class="tab" data-tab="admin" id="adminTabBtn" style="display: none;">⚙️ Administration</div>
-                </div>
-
-                <!-- Message pour admin sans accès aux opérations -->
-                <div id="adminOnlyMessage" class="admin-only-message hidden">
-                    <h3>🔧 Mode Administrateur</h3>
-                    <p>En tant qu'administrateur, vous avez uniquement accès aux fonctions de configuration.</p>
-                    <p>Les opérations sont gérées par les conseillers et le back office.</p>
                 </div>
 
                 <!-- Onglet Opérations -->
@@ -900,926 +759,133 @@
                 <div id="adminTab" class="tab-content hidden">
                     <h2>⚙️ Administration du Système</h2>
                     
-                    <div class="admin-warning">
-                        <strong>⚠️ Zone Administrateur :</strong> Les modifications effectuées ici affectent tous les utilisateurs du système.
-                    </div>
-                    
-                    <div class="admin-section">
-                        <h3>👥 Gestion des Conseillers CGP</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <button id="addCGPBtn" class="btn btn-success">➕ Ajouter un conseiller</button>
-                                <button id="importCGPBtn" class="btn btn-secondary">📥 Importer conseillers</button>
-                                <button id="exportCGPBtn" class="btn btn-secondary">📤 Exporter conseillers</button>
-                            </div>
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalUsers">0</div>
+                            <div>Utilisateurs</div>
                         </div>
-                        <div class="user-list" id="cgpList">
-                            <!-- Liste des CGP sera générée dynamiquement -->
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalOpsAdmin">0</div>
+                            <div>Opérations</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="lastActivityAdmin">-</div>
+                            <div>Dernière activité</div>
                         </div>
                     </div>
 
-                    <div class="admin-section">
-                        <h3>🏢 Gestion du Back Office</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <button id="addBOBtn" class="btn btn-success">➕ Ajouter assistant BO</button>
-                            </div>
-                        </div>
-                        <div class="user-list" id="backOfficeList">
-                            <!-- Liste du Back Office sera générée dynamiquement -->
-                        </div>
+                    <div style="background: #f7f6f3; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                        <h3>🌐 Statut du Serveur</h3>
+                        <p id="serverStatus">✅ Serveur opérationnel - Base de données synchronisée</p>
+                        <p><strong>URL :</strong> <span id="appUrl">-</span></p>
+                        <p><strong>Dernière synchronisation :</strong> <span id="lastServerSync">-</span></p>
                     </div>
 
-                    <div class="admin-section">
-                        <h3>🔐 Gestion des Administrateurs</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <button id="addAdminBtn" class="btn btn-success">➕ Ajouter administrateur</button>
-                            </div>
-                        </div>
-                        <div class="user-list" id="adminList">
-                            <!-- Liste des admins sera générée dynamiquement -->
-                        </div>
-                    </div>
-
-                    <div class="admin-section">
-                        <h3>📝 Configuration des Listes</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <button id="manageFournisseursBtn" class="btn btn-secondary">🏭 Gérer les fournisseurs</button>
-                                <button id="manageDomainesBtn" class="btn btn-secondary">📊 Gérer les domaines</button>
-                            </div>
-                            <div class="form-group">
-                                <button id="manageContratsBtn" class="btn btn-secondary">📋 Gérer les contrats</button>
-                                <button id="manageTypesActesBtn" class="btn btn-secondary">⚡ Gérer les types d'actes</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="admin-section">
-                        <h3>📊 Connexion Google Sheets</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <div id="googleSheetsConnectionStatus" class="status-info">
-                                    <p><strong>Statut :</strong> <span id="connectionStatus">❌ Non connecté</span></p>
-                                    <p><strong>Fichier maître :</strong> <span id="masterFileStatus">❌ Non trouvé</span></p>
-                                    <p><strong>Dernière sync :</strong> <span id="lastGoogleSync">Jamais</span></p>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <button id="connectGoogleSheetsBtn" class="btn btn-success">🔗 Se connecter à Google Sheets</button>
-                                <button id="disconnectGoogleSheetsBtn" class="btn btn-secondary" style="display: none;">🔌 Se déconnecter</button>
-                                <button id="refreshGoogleSheetsBtn" class="btn btn-secondary" style="display: none;">🔄 Actualiser</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="admin-section">
-                        <h3>📋 Configuration Google Sheets</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="masterSheetNameInput">Nom du fichier maître</label>
-                                <input type="text" id="masterSheetNameInput" value="Gestion Patrimoine - Données Maître">
-                                <small>Le fichier sera créé dans votre Google Drive</small>
-                            </div>
-                            <div class="form-group">
-                                <button id="createGoogleSheetsBtn" class="btn" style="display: none;">📊 Créer nouveau Google Sheet</button>
-                                <button id="syncNowBtn" class="btn btn-secondary" style="display: none;">🔄 Synchroniser maintenant</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="admin-section">
-                        <h3>🏗️ Gestion du Fichier Maître</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <button id="createMasterFileBtn" class="btn">📊 Créer fichier maître Excel</button>
-                                <small>
-                                    Crée le fichier Excel initial dans Google Drive (à faire une seule fois)
-                                </small>
-                            </div>
-                            <div class="form-group">
-                                <button id="backupMasterFileBtn" class="btn btn-secondary">💾 Sauvegarder fichier maître</button>
-                                <small>
-                                    Crée une copie de sauvegarde du fichier maître
-                                </small>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <button id="resetMasterFileBtn" class="btn btn-danger">🔄 Réinitialiser fichier maître</button>
-                                <small style="color: #e74c3c;">
-                                    ⚠️ Attention : Efface toutes les données existantes !
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="admin-section">
-                        <h3>🔧 Maintenance et Logs</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <button id="exportConfigBtn" class="btn btn-secondary">📤 Exporter configuration complète</button>
-                                <button id="importConfigBtn" class="btn btn-secondary">📥 Importer configuration</button>
-                            </div>
-                            <div class="form-group">
-                                <button id="clearLocalDataBtn" class="btn btn-secondary">🗑️ Vider les données locales</button>
-                                <button id="exportLogsBtn" class="btn btn-secondary">📋 Exporter les logs</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="admin-section">
-                        <h3>📊 Statut du Système</h3>
-                        <div id="systemStatus" class="status-info">
-                            <p><strong>Google Sheets :</strong> <span id="googleSheetsStatus">❌ Non configuré</span></p>
-                            <p><strong>Dernière synchronisation :</strong> <span id="lastSyncStatus">Jamais</span></p>
-                            <p><strong>Conseillers actifs :</strong> <span id="activeCGPCount">0</span></p>
-                            <p><strong>Assistants BO :</strong> <span id="activeBOCount">0</span></p>
-                            <p><strong>Total opérations dans le système :</strong> <span id="totalOpsAdmin">0</span></p>
-                        </div>
+                    <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffeaa7;">
+                        <h3>📋 Fonctionnalités Admin</h3>
+                        <p>L'interface d'administration complète sera ajoutée dans une prochaine version.</p>
+                        <p>Actuellement disponible : visualisation temps réel des données partagées.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://apis.google.com/js/api.js"></script>
     <script>
-        // ============= CONFIGURATION GOOGLE SHEETS =============
-        const GOOGLE_CONFIG = {
-            apiKey: 'AIzaSyCE-HrqYnboe8_UI2c3x9fpGRvaxNg_kRs', // À remplacer par votre clé API
-            clientId: '270084021063-rivtk4i2qee3odjjqbtkbbe7vn4n0scq.apps.googleusercontent.com', // À remplacer par votre Client ID Google
-            discoveryDoc: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
-            scopes: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file'
-        };
-
-        // Variables pour Google Sheets
-        let googleSheetsConnected = false;
-        let masterSpreadsheetId = null;
-        let masterSpreadsheetName = 'Gestion Patrimoine - Données Maître';
-        let gapiLoaded = false;
-        let gisLoaded = false;
-
-        // Configuration des utilisateurs avec mots de passe
-        let USERS_CONFIG = JSON.parse(localStorage.getItem('usersConfig')) || {
-            cgp: [
-                { id: 'manon', nom: 'Manon', password: 'Manon4827', backOfficeAutorise: false },
-                { id: 'audrey', nom: 'Audrey', password: 'Audrey7314', backOfficeAutorise: false },
-                { id: 'baptistef', nom: 'Baptiste F', password: 'BaptisteF1346', backOfficeAutorise: false },
-                { id: 'baptistee', nom: 'Baptiste E', password: 'BaptisteE9205', backOfficeAutorise: true },
-                { id: 'clement', nom: 'Clément', password: 'Clément5862', backOfficeAutorise: false },
-                { id: 'nicolas', nom: 'Nicolas', password: 'Nicolas7431', backOfficeAutorise: true },
-                { id: 'leo', nom: 'Léo', password: 'Léo2198', backOfficeAutorise: false },
-                { id: 'maxime', nom: 'Maxime', password: 'Maxime3072', backOfficeAutorise: false },
-                { id: 'cyril', nom: 'Cyril', password: 'Cyril6849', backOfficeAutorise: true },
-                { id: 'florent', nom: 'Florent', password: 'Florent1956', backOfficeAutorise: false },
-                { id: 'polepro', nom: 'Pôle Pro', password: 'PôlePro8641', backOfficeAutorise: true }
-            ],
-            backOffice: [
-                { id: 'bo1', nom: 'Alice Robert', password: 'BackOffice2024!' },
-                { id: 'bo2', nom: 'Thomas Bernard', password: 'Admin2024!' }
-            ],
-            admin: [
-                { id: 'admin1', nom: 'Administrateur Système', password: 'AdminGestion2024!' }
-            ]
-        };
-
-        // Configuration des référentiels
-        let REFERENTIELS_CONFIG = JSON.parse(localStorage.getItem('referentielsConfig')) || {
-            fournisseurs: ['Cardif', 'Generali', 'AXA'],
-            domaines: ['AV', 'Retraite', 'Produits Structurés', 'Épargne'],
-            typesActes: ['Versement', 'Rachat partiel', 'Rachat total', 'Arbitrage'],
-            apporteurs: ['Conseiller', 'Direction', 'Progressia'],
-            contrats: {
-                'Cardif': ['Cardif Liberté', 'Cardif Retraite Plus', 'Cardif Patrimoine'],
-                'Generali': ['Generali Patrimoine', 'Generali Retraite', 'Generali Privilège'],
-                'AXA': ['AXA Placement', 'AXA Retraite Entreprise', 'AXA Sélection']
-            }
-        };
-
+        // ============= CONFIGURATION API =============
+        const API_BASE_URL = window.location.origin; // URL de votre app Vercel
+        
         // Variables globales
         let currentUser = null;
-        let operations = JSON.parse(localStorage.getItem('operations') || '[]');
-        let lastSaveTime = localStorage.getItem('lastSaveTime') || null;
-        let unsavedChanges = false;
-        let autoSaveInterval = null;
+        let operations = [];
+        let users = [];
+        let lastSyncTime = null;
+        let isOnline = navigator.onLine;
+        let syncInterval = null;
 
-        // ============= FONCTIONS GOOGLE SHEETS =============
-
-        async function initializeGoogleAPI() {
-            console.log('🔄 Initialisation Google API...');
-            
+        // ============= FONCTIONS API =============
+        
+        async function apiCall(endpoint, options = {}) {
             try {
-                // Vérifier si les clés sont configurées
-                if (GOOGLE_CONFIG.apiKey === 'YOUR_GOOGLE_API_KEY') {
-                    console.log('⚠️ Google API non configuré - mode local uniquement');
-                    updateGoogleSheetsStatus();
-                    return;
-                }
-                
-                // Vérifier si gapi est disponible
-                if (typeof gapi === 'undefined') {
-                    console.error('❌ Google API script non chargé');
-                    return;
-                }
-                
-                console.log('✅ Google API script chargé');
-                
-                // Charger l'API client
-                await new Promise((resolve, reject) => {
-                    gapi.load('client', {
-                        callback: resolve,
-                        onerror: reject
-                    });
-                });
-                
-                console.log('✅ GAPI Client chargé');
-                
-                // Initialiser le client
-                await gapi.client.init({
-                    apiKey: GOOGLE_CONFIG.apiKey,
-                    discoveryDocs: [GOOGLE_CONFIG.discoveryDoc],
-                });
-                
-                console.log('✅ GAPI Client initialisé');
-                
-                // Charger l'API auth2
-                await new Promise((resolve, reject) => {
-                    gapi.load('auth2', {
-                        callback: resolve,
-                        onerror: reject
-                    });
-                });
-                
-                console.log('✅ GAPI Auth2 chargé');
-                
-                // Initialiser auth2
-                await gapi.auth2.init({
-                    client_id: GOOGLE_CONFIG.clientId,
-                });
-                
-                console.log('✅ GAPI Auth2 initialisé');
-                gapiLoaded = true;
-                
-                // Vérifier si déjà connecté
-                const authInstance = gapi.auth2.getAuthInstance();
-                if (authInstance && authInstance.isSignedIn.get()) {
-                    console.log('✅ Déjà connecté à Google');
-                    googleSheetsConnected = true;
-                    await findOrCreateMasterSheet();
-                }
-                
-                updateGoogleSheetsStatus();
-                
-            } catch (error) {
-                console.error('❌ Erreur initialisation Google API:', error);
-                updateGoogleSheetsStatus();
-            }
-        }
-
-        async function connectToGoogleSheets() {
-            console.log('🔄 Tentative de connexion à Google Sheets...');
-            
-            try {
-                // Vérifications préliminaires
-                if (GOOGLE_CONFIG.apiKey === 'YOUR_GOOGLE_API_KEY') {
-                    alert('❌ Google Sheets non configuré.\n\nVeuillez :\n1. Obtenir une clé API Google\n2. Obtenir un Client ID\n3. Les remplacer dans le code');
-                    return;
-                }
-                
-                if (!gapiLoaded) {
-                    alert('❌ Google API pas encore chargé.\n\nAttendez quelques secondes et réessayez.');
-                    return;
-                }
-                
-                if (typeof gapi === 'undefined' || !gapi.auth2) {
-                    console.error('❌ GAPI ou Auth2 non disponible');
-                    alert('❌ Erreur : Google API non disponible');
-                    return;
-                }
-                
-                showSavePopup('🔄 Connexion à Google Sheets en cours...');
-                console.log('🔄 Demande d\'autorisation utilisateur...');
-                
-                const authInstance = gapi.auth2.getAuthInstance();
-                if (!authInstance) {
-                    throw new Error('Instance auth2 non disponible');
-                }
-                
-                // Demander l'autorisation avec les scopes nécessaires
-                const user = await authInstance.signIn({
-                    scope: GOOGLE_CONFIG.scopes
-                });
-                
-                console.log('✅ Utilisateur connecté:', user.getBasicProfile().getEmail());
-                
-                if (user.isSignedIn()) {
-                    googleSheetsConnected = true;
-                    console.log('✅ Connexion réussie');
-                    
-                    await findOrCreateMasterSheet();
-                    updateGoogleSheetsStatus();
-                    showSavePopup('✅ Connecté à Google Sheets avec succès !');
-                } else {
-                    throw new Error('Échec de la connexion utilisateur');
-                }
-                
-            } catch (error) {
-                console.error('❌ Erreur connexion Google Sheets:', error);
-                
-                let errorMessage = 'Erreur de connexion : ';
-                if (error.error === 'popup_closed_by_user') {
-                    errorMessage += 'Popup fermé par l\'utilisateur';
-                } else if (error.error === 'access_denied') {
-                    errorMessage += 'Accès refusé par l\'utilisateur';
-                } else {
-                    errorMessage += error.message || 'Erreur inconnue';
-                }
-                
-                alert(errorMessage);
-                googleSheetsConnected = false;
-                updateGoogleSheetsStatus();
-            }
-        }
-
-        async function disconnectFromGoogleSheets() {
-            try {
-                const authInstance = gapi.auth2.getAuthInstance();
-                await authInstance.signOut();
-                googleSheetsConnected = false;
-                masterSpreadsheetId = null;
-                updateGoogleSheetsStatus();
-                showSavePopup('Déconnecté de Google Sheets');
-            } catch (error) {
-                console.error('Erreur déconnexion:', error);
-            }
-        }
-
-        async function findOrCreateMasterSheet() {
-            try {
-                // Charger l'API Drive
-                await gapi.client.load('drive', 'v3');
-                
-                // Chercher le fichier existant
-                const response = await gapi.client.drive.files.list({
-                    q: `name='${masterSpreadsheetName}' and mimeType='application/vnd.google-apps.spreadsheet'`,
-                    spaces: 'drive'
-                });
-                
-                if (response.result.files && response.result.files.length > 0) {
-                    // Fichier trouvé
-                    masterSpreadsheetId = response.result.files[0].id;
-                    await loadDataFromGoogleSheets();
-                    document.getElementById('masterFileStatus').innerHTML = '✅ Trouvé et chargé';
-                } else {
-                    // Fichier non trouvé
-                    document.getElementById('masterFileStatus').innerHTML = '❌ Fichier non trouvé';
-                    masterSpreadsheetId = null;
-                }
-                
-                document.getElementById('lastGoogleSync').textContent = new Date().toLocaleString('fr-FR');
-            } catch (error) {
-                console.error('Erreur gestion fichier maître:', error);
-                document.getElementById('masterFileStatus').innerHTML = '❌ Erreur';
-            }
-        }
-
-        async function createMasterGoogleSheet() {
-            try {
-                if (!googleSheetsConnected) {
-                    alert('Vous devez d\'abord vous connecter à Google Sheets');
-                    return;
-                }
-
-                masterSpreadsheetName = document.getElementById('masterSheetNameInput').value || 'Gestion Patrimoine - Données Maître';
-                
-                // Créer le spreadsheet
-                const response = await gapi.client.sheets.spreadsheets.create({
-                    properties: {
-                        title: masterSpreadsheetName
+                const response = await fetch(`${API_BASE_URL}/api${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
                     },
-                    sheets: [
-                        { properties: { title: 'Operations' } },
-                        { properties: { title: 'Conseillers' } },
-                        { properties: { title: 'BackOffice' } },
-                        { properties: { title: 'Referentiels' } },
-                        { properties: { title: 'Metadata' } }
-                    ]
+                    ...options
                 });
                 
-                masterSpreadsheetId = response.result.spreadsheetId;
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
-                // Initialiser avec les headers
-                await initializeSheetHeaders();
-                await syncWithGoogleSheets();
-                
-                document.getElementById('masterFileStatus').innerHTML = '✅ Créé avec succès';
-                showSavePopup('✅ Nouveau Google Sheet créé !');
-                updateGoogleSheetsStatus();
+                return await response.json();
             } catch (error) {
-                console.error('Erreur création Google Sheet:', error);
-                alert('Erreur lors de la création : ' + error.message);
+                console.error('Erreur API:', error);
+                updateConnectionStatus(false);
+                throw error;
             }
         }
 
-        async function initializeSheetHeaders() {
-            const requests = [
-                // Headers pour Operations
-                {
-                    updateCells: {
-                        range: { sheetId: 0, startRowIndex: 0, endRowIndex: 1 },
-                        rows: [{
-                            values: [
-                                { userEnteredValue: { stringValue: 'ID' } },
-                                { userEnteredValue: { stringValue: 'Client' } },
-                                { userEnteredValue: { stringValue: 'Nouveau_Client' } },
-                                { userEnteredValue: { stringValue: 'Conseiller_ID' } },
-                                { userEnteredValue: { stringValue: 'Conseiller_Nom' } },
-                                { userEnteredValue: { stringValue: 'Assistant_BO_ID' } },
-                                { userEnteredValue: { stringValue: 'Assistant_BO_Nom' } },
-                                { userEnteredValue: { stringValue: 'Domaine' } },
-                                { userEnteredValue: { stringValue: 'Fournisseur' } },
-                                { userEnteredValue: { stringValue: 'Nom_Contrat' } },
-                                { userEnteredValue: { stringValue: 'Reference_Contrat' } },
-                                { userEnteredValue: { stringValue: 'Type_Acte' } },
-                                { userEnteredValue: { stringValue: 'Montant' } },
-                                { userEnteredValue: { stringValue: 'Pourcentage_Frais' } },
-                                { userEnteredValue: { stringValue: 'Partie_Incompressible' } },
-                                { userEnteredValue: { stringValue: 'CA_Calcule' } },
-                                { userEnteredValue: { stringValue: 'Apporteur_Affaire' } },
-                                { userEnteredValue: { stringValue: 'Date_Envoi_Compagnie' } },
-                                { userEnteredValue: { stringValue: 'Date_Relance' } },
-                                { userEnteredValue: { stringValue: 'Date_Validation' } },
-                                { userEnteredValue: { stringValue: 'Etat_Global' } },
-                                { userEnteredValue: { stringValue: 'Date_Creation' } }
-                            ]
-                        }],
-                        fields: 'userEnteredValue'
-                    }
-                }
-            ];
-            
-            await gapi.client.sheets.spreadsheets.batchUpdate({
-                spreadsheetId: masterSpreadsheetId,
-                resource: { requests: requests }
+        // Authentification
+        async function authenticateUser(userType, userId, password) {
+            return await apiCall('/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ userType, userId, password })
             });
         }
 
-        async function loadDataFromGoogleSheets() {
-            try {
-                const response = await gapi.client.sheets.spreadsheets.values.get({
-                    spreadsheetId: masterSpreadsheetId,
-                    range: 'Operations!A1:Z1000'
-                });
-                
-                const values = response.result.values;
-                if (!values || values.length < 2) {
-                    return; // Pas de données
-                }
-                
-                const headers = values[0];
-                const rows = values.slice(1);
-                
-                const loadedOperations = rows.map(row => {
-                    const operation = {};
-                    headers.forEach((header, index) => {
-                        operation[header] = row[index] || '';
-                    });
-                    
-                    return {
-                        id: operation.ID || Date.now() + Math.random(),
-                        nomClient: operation.Client || '',
-                        nouveauClient: operation.Nouveau_Client === 'OUI',
-                        conseiller: operation.Conseiller_ID || '',
-                        conseillerNom: operation.Conseiller_Nom || '',
-                        assistantBO: operation.Assistant_BO_ID || '',
-                        assistantBONom: operation.Assistant_BO_Nom || '',
-                        domaine: operation.Domaine || '',
-                        fournisseur: operation.Fournisseur || '',
-                        nomContrat: operation.Nom_Contrat || '',
-                        referenceContrat: operation.Reference_Contrat || '',
-                        typeActe: operation.Type_Acte || '',
-                        montant: parseFloat(operation.Montant) || 0,
-                        pourcentageFrais: parseFloat(operation.Pourcentage_Frais) || 0,
-                        partieIncomprise: parseFloat(operation.Partie_Incompressible) || 0,
-                        ca: parseFloat(operation.CA_Calcule) || 0,
-                        apporteurAffaire: operation.Apporteur_Affaire || '',
-                        dateEnvoiCompagnie: operation.Date_Envoi_Compagnie || '',
-                        dateRelance: operation.Date_Relance || '',
-                        dateValidation: operation.Date_Validation || '',
-                        etatGlobal: operation.Etat_Global || 'En cours',
-                        dateCreation: operation.Date_Creation || new Date().toISOString().split('T')[0]
-                    };
-                });
-                
-                operations = loadedOperations;
-                localStorage.setItem('operations', JSON.stringify(operations));
-                
-                if (currentUser && currentUser.type !== 'admin') {
-                    displayOperations();
-                    updateStats();
-                }
-            } catch (error) {
-                console.error('Erreur chargement Google Sheets:', error);
-            }
+        // Opérations
+        async function fetchOperations() {
+            return await apiCall('/operations');
         }
 
-        async function syncWithGoogleSheets() {
-            try {
-                if (!masterSpreadsheetId) {
-                    await findOrCreateMasterSheet();
-                    if (!masterSpreadsheetId) {
-                        alert('Aucun Google Sheet trouvé. Créez-en un d\'abord.');
-                        return;
-                    }
-                }
-                
-                // Préparer les données pour Google Sheets
-                const sheetData = [
-                    ['ID', 'Client', 'Nouveau_Client', 'Conseiller_ID', 'Conseiller_Nom', 'Assistant_BO_ID', 'Assistant_BO_Nom', 'Domaine', 'Fournisseur', 'Nom_Contrat', 'Reference_Contrat', 'Type_Acte', 'Montant', 'Pourcentage_Frais', 'Partie_Incompressible', 'CA_Calcule', 'Apporteur_Affaire', 'Date_Envoi_Compagnie', 'Date_Relance', 'Date_Validation', 'Etat_Global', 'Date_Creation']
-                ];
-                
-                operations.forEach(op => {
-                    sheetData.push([
-                        op.id,
-                        op.nomClient,
-                        op.nouveauClient ? 'OUI' : 'NON',
-                        op.conseiller,
-                        op.conseillerNom,
-                        op.assistantBO,
-                        op.assistantBONom,
-                        op.domaine,
-                        op.fournisseur,
-                        op.nomContrat,
-                        op.referenceContrat,
-                        op.typeActe,
-                        op.montant,
-                        op.pourcentageFrais,
-                        op.partieIncomprise,
-                        op.ca,
-                        op.apporteurAffaire,
-                        op.dateEnvoiCompagnie,
-                        op.dateRelance,
-                        op.dateValidation,
-                        op.etatGlobal,
-                        op.dateCreation
-                    ]);
-                });
-                
-                // Effacer et réécrire la feuille
-                await gapi.client.sheets.spreadsheets.values.clear({
-                    spreadsheetId: masterSpreadsheetId,
-                    range: 'Operations!A:Z'
-                });
-                
-                await gapi.client.sheets.spreadsheets.values.update({
-                    spreadsheetId: masterSpreadsheetId,
-                    range: 'Operations!A1',
-                    valueInputOption: 'RAW',
-                    resource: { values: sheetData }
-                });
-                
-                document.getElementById('lastGoogleSync').textContent = new Date().toLocaleString('fr-FR');
-                markSaved();
-                showSavePopup('✅ Synchronisé avec Google Sheets !');
-            } catch (error) {
-                console.error('Erreur synchronisation:', error);
-                alert('Erreur lors de la synchronisation : ' + error.message);
-            }
+        async function createOperation(operationData) {
+            return await apiCall('/operations', {
+                method: 'POST',
+                body: JSON.stringify(operationData)
+            });
         }
 
-        function updateGoogleSheetsStatus() {
-            const connectionStatus = document.getElementById('connectionStatus');
-            const connectBtn = document.getElementById('connectGoogleSheetsBtn');
-            const disconnectBtn = document.getElementById('disconnectGoogleSheetsBtn');
-            const refreshBtn = document.getElementById('refreshGoogleSheetsBtn');
-            const createBtn = document.getElementById('createGoogleSheetsBtn');
-            const syncBtn = document.getElementById('syncNowBtn');
-            
-            // Vérifier la configuration
-            const isConfigured = GOOGLE_CONFIG.apiKey !== 'YOUR_GOOGLE_API_KEY' && 
-                                GOOGLE_CONFIG.clientId !== 'YOUR_GOOGLE_CLIENT_ID';
-            
-            if (!isConfigured) {
-                connectionStatus.innerHTML = '⚙️ Non configuré';
-                if (connectBtn) {
-                    connectBtn.textContent = '⚙️ Configuration requise';
-                    connectBtn.style.display = 'inline-flex';
-                    connectBtn.disabled = true;
-                }
-                if (disconnectBtn) disconnectBtn.style.display = 'none';
-                if (refreshBtn) refreshBtn.style.display = 'none';
-                if (createBtn) createBtn.style.display = 'none';
-                if (syncBtn) syncBtn.style.display = 'none';
-                return;
-            }
-            
-            if (!gapiLoaded) {
-                connectionStatus.innerHTML = '🔄 Chargement...';
-                if (connectBtn) {
-                    connectBtn.textContent = '🔄 Chargement...';
-                    connectBtn.disabled = true;
-                }
-                return;
-            }
-            
-            if (googleSheetsConnected) {
-                connectionStatus.innerHTML = '✅ Connecté';
-                if (connectBtn) connectBtn.style.display = 'none';
-                if (disconnectBtn) disconnectBtn.style.display = 'inline-flex';
-                if (refreshBtn) refreshBtn.style.display = 'inline-flex';
-                if (createBtn) createBtn.style.display = 'inline-flex';
-                if (syncBtn) syncBtn.style.display = 'inline-flex';
-            } else {
-                connectionStatus.innerHTML = '❌ Non connecté';
-                if (connectBtn) {
-                    connectBtn.textContent = '🔗 Se connecter à Google Sheets';
-                    connectBtn.disabled = false;
-                    connectBtn.style.display = 'inline-flex';
-                }
-                if (disconnectBtn) disconnectBtn.style.display = 'none';
-                if (refreshBtn) refreshBtn.style.display = 'none';
-                if (createBtn) createBtn.style.display = 'none';
-                if (syncBtn) syncBtn.style.display = 'none';
-            }
-            
-            // Mettre à jour le statut système
-            const googleSheetsStatus = document.getElementById('googleSheetsStatus');
-            if (googleSheetsStatus) {
-                googleSheetsStatus.innerHTML = 
-                    isConfigured ? 
-                        (googleSheetsConnected ? '🟢 Connecté via API' : '🟡 Configuré mais non connecté') : 
-                        '❌ Non configuré';
-            }
-            
-            const lastSync = document.getElementById('lastGoogleSync')?.textContent || 'Jamais';
-            const lastSyncStatus = document.getElementById('lastSyncStatus');
-            if (lastSyncStatus) {
-                lastSyncStatus.textContent = lastSync;
-            }
+        async function updateOperation(id, operationData) {
+            return await apiCall(`/operations/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(operationData)
+            });
         }
 
-        // Fonction de test de configuration
-        function testGoogleConfiguration() {
-            console.log('🔍 Test de configuration Google...');
-            
-            // Test 1: Vérifier les clés
-            if (GOOGLE_CONFIG.apiKey === 'YOUR_GOOGLE_API_KEY') {
-                console.log('❌ API Key non configurée');
-                return false;
-            }
-            
-            if (GOOGLE_CONFIG.clientId === 'YOUR_GOOGLE_CLIENT_ID') {
-                console.log('❌ Client ID non configuré');
-                return false;
-            }
-            
-            console.log('✅ Clés API configurées');
-            
-            // Test 2: Vérifier si gapi est chargé
-            if (typeof gapi === 'undefined') {
-                console.log('❌ Google API script non chargé');
-                return false;
-            }
-            
-            console.log('✅ Google API script disponible');
-            
-            // Test 3: Vérifier l'état de l'initialisation
-            if (!gapiLoaded) {
-                console.log('⚠️ Google API pas encore initialisé');
-                return false;
-            }
-            
-            console.log('✅ Google API initialisé');
-            return true;
+        async function deleteOperation(id) {
+            return await apiCall(`/operations/${id}`, {
+                method: 'DELETE'
+            });
         }
 
-        // Fonction de debug (accessible globalement)
-        window.debugGoogleSheets = function() {
-            console.log('=== DEBUG GOOGLE SHEETS ===');
-            console.log('API Key configurée:', GOOGLE_CONFIG.apiKey !== 'YOUR_GOOGLE_API_KEY');
-            console.log('Client ID configuré:', GOOGLE_CONFIG.clientId !== 'YOUR_GOOGLE_CLIENT_ID');
-            console.log('GAPI disponible:', typeof gapi !== 'undefined');
-            console.log('GAPI chargé:', gapiLoaded);
-            console.log('Google Sheets connecté:', googleSheetsConnected);
-            console.log('Spreadsheet ID:', masterSpreadsheetId);
-            
-            if (typeof gapi !== 'undefined' && gapi.auth2) {
-                const authInstance = gapi.auth2.getAuthInstance();
-                if (authInstance) {
-                    console.log('Auth instance disponible:', true);
-                    console.log('Utilisateur connecté:', authInstance.isSignedIn.get());
-                } else {
-                    console.log('Auth instance disponible:', false);
-                }
-            }
-            
-            // Test de connectivité
-            console.log('Test de connectivité Google...');
-            fetch('https://apis.google.com/js/api.js')
-                .then(() => console.log('✅ APIs Google accessibles'))
-                .catch(() => console.log('❌ APIs Google inaccessibles'));
-        };
-
-        // Version simplifiée d'initialisation Google API
-        async function initializeGoogleAPI() {
-            console.log('🔄 Initialisation Google API...');
-            
-            try {
-                // Vérifier si les clés sont configurées
-                if (GOOGLE_CONFIG.apiKey === 'YOUR_GOOGLE_API_KEY') {
-                    console.log('⚠️ Google API non configuré - mode local uniquement');
-                    gapiLoaded = false;
-                    updateGoogleSheetsStatus();
-                    return;
-                }
-                
-                // Vérifier si gapi est disponible avec timeout
-                let gapiReady = false;
-                let attempts = 0;
-                const maxAttempts = 10;
-                
-                while (!gapiReady && attempts < maxAttempts) {
-                    if (typeof gapi !== 'undefined') {
-                        gapiReady = true;
-                        break;
-                    }
-                    attempts++;
-                    console.log(`Tentative ${attempts}/${maxAttempts} de chargement GAPI...`);
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-                
-                if (!gapiReady) {
-                    console.error('❌ Google API script non accessible après 5 secondes');
-                    gapiLoaded = false;
-                    updateGoogleSheetsStatus();
-                    return;
-                }
-                
-                console.log('✅ Google API script détecté');
-                
-                // Initialisation simple avec timeout
-                const initPromise = new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => {
-                        reject(new Error('Timeout initialisation Google API'));
-                    }, 10000); // 10 secondes max
-                    
-                    gapi.load('client:auth2', {
-                        callback: () => {
-                            clearTimeout(timeout);
-                            resolve();
-                        },
-                        onerror: () => {
-                            clearTimeout(timeout);
-                            reject(new Error('Erreur chargement modules GAPI'));
-                        }
-                    });
-                });
-                
-                await initPromise;
-                console.log('✅ Modules GAPI chargés');
-                
-                // Initialisation client avec timeout
-                await Promise.race([
-                    gapi.client.init({
-                        apiKey: GOOGLE_CONFIG.apiKey,
-                        clientId: GOOGLE_CONFIG.clientId,
-                        discoveryDocs: [GOOGLE_CONFIG.discoveryDoc],
-                        scope: GOOGLE_CONFIG.scopes
-                    }),
-                    new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout init client')), 10000)
-                    )
-                ]);
-                
-                console.log('✅ Client Google initialisé');
-                gapiLoaded = true;
-                
-                // Vérifier si déjà connecté
-                const authInstance = gapi.auth2.getAuthInstance();
-                if (authInstance && authInstance.isSignedIn.get()) {
-                    console.log('✅ Déjà connecté à Google');
-                    googleSheetsConnected = true;
-                    await findOrCreateMasterSheet();
-                }
-                
-                updateGoogleSheetsStatus();
-                
-            } catch (error) {
-                console.error('❌ Erreur initialisation Google API:', error);
-                gapiLoaded = false;
-                updateGoogleSheetsStatus();
-                
-                // Proposer le mode local
-                setTimeout(() => {
-                    if (!gapiLoaded) {
-                        console.log('💡 Mode local disponible (sauvegarde Excel)');
-                        showSavePopup('⚠️ Google Sheets indisponible - Mode local activé');
-                    }
-                }, 2000);
-            }
+        // Utilisateurs
+        async function fetchUsers() {
+            return await apiCall('/users');
         }
 
         // ============= INITIALISATION =============
+        
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
+            setupEventListeners();
+            checkConnectionStatus();
+            startSyncInterval();
         });
 
         function initializeApp() {
-            populateSelects();
-            setupEventListeners();
-            loadSampleData();
-            updateSaveStatus();
-            startAutoSave();
-            initializeGoogleAPI();
-        }
-
-        function populateSelects() {
-            // Peuple les sélecteurs de CGP
-            const cgpSelects = ['cgpSelect', 'conseiller', 'filterCGP'];
-            cgpSelects.forEach(selectId => {
-                const select = document.getElementById(selectId);
-                if (select) {
-                    select.innerHTML = '<option value="">Sélectionner...</option>';
-                    USERS_CONFIG.cgp.forEach(cgp => {
-                        const option = document.createElement('option');
-                        option.value = cgp.id;
-                        option.textContent = cgp.nom;
-                        select.appendChild(option);
-                    });
-                }
+            updateConnectionStatus(isOnline);
+            
+            // Gérer les changements de connexion
+            window.addEventListener('online', () => {
+                updateConnectionStatus(true);
+                syncData();
             });
-
-            // Peuple les assistants back office
-            const assistantSelect = document.getElementById('assistantBO');
-            if (assistantSelect) {
-                assistantSelect.innerHTML = '<option value="">Sélectionner...</option>';
-                USERS_CONFIG.backOffice.forEach(bo => {
-                    const option = document.createElement('option');
-                    option.value = bo.id;
-                    option.textContent = bo.nom;
-                    assistantSelect.appendChild(option);
-                });
-            }
-
-            populateReferentiels();
-        }
-
-        function populateReferentiels() {
-            // Fournisseurs
-            const fournisseurSelect = document.getElementById('fournisseur');
-            if (fournisseurSelect) {
-                fournisseurSelect.innerHTML = '<option value="">Sélectionner...</option>';
-                REFERENTIELS_CONFIG.fournisseurs.forEach(fournisseur => {
-                    const option = document.createElement('option');
-                    option.value = fournisseur;
-                    option.textContent = fournisseur;
-                    fournisseurSelect.appendChild(option);
-                });
-            }
-
-            // Domaines
-            const domaineSelects = ['domaine', 'filterDomaine'];
-            domaineSelects.forEach(selectId => {
-                const select = document.getElementById(selectId);
-                if (select) {
-                    const currentValue = select.value;
-                    select.innerHTML = selectId === 'filterDomaine' ? '<option value="">Tous</option>' : '<option value="">Sélectionner...</option>';
-                    REFERENTIELS_CONFIG.domaines.forEach(domaine => {
-                        const option = document.createElement('option');
-                        option.value = domaine;
-                        option.textContent = domaine === 'AV' ? 'Assurance Vie' : domaine;
-                        select.appendChild(option);
-                    });
-                    if (currentValue) select.value = currentValue;
-                }
+            
+            window.addEventListener('offline', () => {
+                updateConnectionStatus(false);
             });
-
-            // Types d'actes
-            const typeActeSelect = document.getElementById('typeActe');
-            if (typeActeSelect) {
-                typeActeSelect.innerHTML = '<option value="">Sélectionner...</option>';
-                REFERENTIELS_CONFIG.typesActes.forEach(type => {
-                    const option = document.createElement('option');
-                    option.value = type;
-                    option.textContent = type;
-                    typeActeSelect.appendChild(option);
-                });
-            }
-
-            // Apporteurs
-            const apporteurSelect = document.getElementById('apporteurAffaire');
-            if (apporteurSelect) {
-                apporteurSelect.innerHTML = '<option value="">Aucun</option>';
-                REFERENTIELS_CONFIG.apporteurs.forEach(apporteur => {
-                    const option = document.createElement('option');
-                    option.value = apporteur;
-                    option.textContent = apporteur;
-                    apporteurSelect.appendChild(option);
-                });
-            }
         }
 
         function setupEventListeners() {
@@ -1834,130 +900,25 @@
             });
 
             // Formulaire opération
-            const operationForm = document.getElementById('operationForm');
-            if (operationForm) {
-                operationForm.addEventListener('submit', handleOperationSubmit);
-            }
-
+            document.getElementById('operationForm').addEventListener('submit', handleOperationSubmit);
             document.getElementById('fournisseur').addEventListener('change', updateContratsList);
             
             // Calcul automatique du CA
             ['montant', 'pourcentageFrais', 'partieIncomprise'].forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.addEventListener('input', calculateCA);
-                }
+                document.getElementById(id).addEventListener('input', calculateCA);
             });
 
             // Filtres
             ['filterCGP', 'filterEtat', 'filterDomaine'].forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.addEventListener('change', applyFilters);
-                }
+                document.getElementById(id).addEventListener('change', applyFilters);
             });
 
-            // Système de sauvegarde
-            document.getElementById('manualSaveBtn').addEventListener('click', saveToExcel);
-            document.getElementById('loadFromExcelBtn').addEventListener('click', () => {
-                document.getElementById('fileInput').click();
-            });
-
-            // Input file caché pour l'import Excel
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.id = 'fileInput';
-            fileInput.accept = '.xlsx,.xls';
-            fileInput.addEventListener('change', loadFromExcel);
-            document.body.appendChild(fileInput);
-
-            // Événements admin
-            setupAdminEventListeners();
+            // Synchronisation manuelle
+            document.getElementById('manualSyncBtn').addEventListener('click', syncData);
         }
 
-        function setupAdminEventListeners() {
-            // Gestion des utilisateurs
-            const addCGPBtn = document.getElementById('addCGPBtn');
-            if (addCGPBtn) {
-                addCGPBtn.addEventListener('click', () => showAddUserModal('cgp'));
-                document.getElementById('addBOBtn').addEventListener('click', () => showAddUserModal('backoffice'));
-                document.getElementById('addAdminBtn').addEventListener('click', () => showAddUserModal('admin'));
-
-                // Gestion des listes
-                document.getElementById('manageFournisseursBtn').addEventListener('click', () => showManageListModal('fournisseurs'));
-                document.getElementById('manageDomainesBtn').addEventListener('click', () => showManageListModal('domaines'));
-                document.getElementById('manageContratsBtn').addEventListener('click', () => showManageListModal('contrats'));
-                document.getElementById('manageTypesActesBtn').addEventListener('click', () => showManageListModal('typesActes'));
-
-                // Google Sheets - Version avec fallback
-                const connectBtn = document.getElementById('connectGoogleSheetsBtn');
-                if (connectBtn) {
-                    connectBtn.addEventListener('click', () => {
-                        console.log('🖱️ Clic sur connexion Google Sheets');
-                        
-                        // Si pas encore chargé, réessayer l'initialisation
-                        if (!gapiLoaded) {
-                            showSavePopup('🔄 Réinitialisation Google API...');
-                            initializeGoogleAPI().then(() => {
-                                if (gapiLoaded) {
-                                    connectToGoogleSheets();
-                                } else {
-                                    alert('❌ Google API inaccessible.\n\nL\'application fonctionne en mode local avec sauvegarde Excel.');
-                                }
-                            });
-                            return;
-                        }
-                        
-                        // Test rapide avant connexion
-                        if (!testGoogleConfiguration()) {
-                            alert('❌ Configuration Google incomplète.\n\nPour activer Google Sheets :\n1. Obtenez une clé API Google\n2. Obtenez un Client ID\n3. Remplacez-les dans le code\n\nEn attendant, l\'app fonctionne en mode local.');
-                            return;
-                        }
-                        
-                        connectToGoogleSheets();
-                    });
-                }
-                
-                const disconnectBtn = document.getElementById('disconnectGoogleSheetsBtn');
-                if (disconnectBtn) {
-                    disconnectBtn.addEventListener('click', disconnectFromGoogleSheets);
-                }
-                
-                const refreshBtn = document.getElementById('refreshGoogleSheetsBtn');
-                if (refreshBtn) {
-                    refreshBtn.addEventListener('click', () => {
-                        findOrCreateMasterSheet();
-                        showSavePopup('Connexion Google Sheets actualisée');
-                    });
-                }
-                
-                const createBtn = document.getElementById('createGoogleSheetsBtn');
-                if (createBtn) {
-                    createBtn.addEventListener('click', createMasterGoogleSheet);
-                }
-                
-                const syncBtn = document.getElementById('syncNowBtn');
-                if (syncBtn) {
-                    syncBtn.addEventListener('click', syncWithGoogleSheets);
-                }
-
-                // Anciens événements
-                document.getElementById('createMasterFileBtn').addEventListener('click', createMasterFile);
-                document.getElementById('backupMasterFileBtn').addEventListener('click', backupMasterFile);
-                document.getElementById('resetMasterFileBtn').addEventListener('click', resetMasterFile);
-
-                // Import/Export
-                document.getElementById('exportCGPBtn').addEventListener('click', () => exportUsers('cgp'));
-                document.getElementById('importCGPBtn').addEventListener('click', () => importUsers('cgp'));
-                document.getElementById('exportConfigBtn').addEventListener('click', exportConfig);
-                document.getElementById('importConfigBtn').addEventListener('click', importConfig);
-                document.getElementById('clearLocalDataBtn').addEventListener('click', clearLocalData);
-                document.getElementById('exportLogsBtn').addEventListener('click', exportLogs);
-            }
-        }
-
-        // ============= FONCTIONS DE CONNEXION =============
-
+        // ============= GESTION CONNEXION =============
+        
         function handleUserTypeChange(e) {
             const cgpGroup = document.getElementById('cgpSelectGroup');
             const passwordGroup = document.getElementById('passwordGroup');
@@ -1965,210 +926,203 @@
             if (e.target.value === 'cgp') {
                 cgpGroup.style.display = 'block';
                 passwordGroup.style.display = 'block';
-                document.getElementById('cgpSelect').required = true;
-                document.getElementById('password').required = true;
-                document.getElementById('password').placeholder = 'Mot de passe CGP';
-            } else if (e.target.value === 'backoffice') {
+                loadCGPList();
+            } else if (e.target.value === 'backoffice' || e.target.value === 'admin') {
                 cgpGroup.style.display = 'none';
                 passwordGroup.style.display = 'block';
-                document.getElementById('cgpSelect').required = false;
-                document.getElementById('password').required = true;
-                document.getElementById('password').placeholder = 'Mot de passe Back Office';
-            } else if (e.target.value === 'admin') {
-                cgpGroup.style.display = 'none';
-                passwordGroup.style.display = 'block';
-                document.getElementById('cgpSelect').required = false;
-                document.getElementById('password').required = true;
-                document.getElementById('password').placeholder = 'Mot de passe Administrateur';
             } else {
                 cgpGroup.style.display = 'none';
                 passwordGroup.style.display = 'none';
-                document.getElementById('cgpSelect').required = false;
-                document.getElementById('password').required = false;
             }
         }
 
-        function handleLogin(e) {
+        async function loadCGPList() {
+            try {
+                const userData = await fetchUsers();
+                const cgpSelect = document.getElementById('cgpSelect');
+                cgpSelect.innerHTML = '<option value="">Sélectionner...</option>';
+                
+                userData.cgp.forEach(cgp => {
+                    const option = document.createElement('option');
+                    option.value = cgp.id;
+                    option.textContent = cgp.nom;
+                    cgpSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur chargement CGP:', error);
+            }
+        }
+
+        async function handleLogin(e) {
             e.preventDefault();
             const userType = document.getElementById('userType').value;
             const cgpId = document.getElementById('cgpSelect').value;
             const password = document.getElementById('password').value;
 
-            if (userType === 'cgp') {
-                if (!cgpId) {
-                    alert('Veuillez sélectionner un conseiller');
-                    return;
-                }
+            try {
+                const response = await authenticateUser(userType, cgpId, password);
                 
-                const selectedCGP = USERS_CONFIG.cgp.find(cgp => cgp.id === cgpId);
-                if (!selectedCGP) {
-                    alert('Conseiller non trouvé');
-                    return;
+                if (response.success) {
+                    currentUser = response.user;
+                    showMainPage();
+                    await syncData();
+                } else {
+                    alert('Connexion échouée : ' + (response.message || 'Identifiants incorrects'));
                 }
-                
-                if (selectedCGP.password !== password) {
-                    alert('Mot de passe incorrect');
-                    return;
-                }
-                
-                currentUser = {
-                    type: 'cgp',
-                    ...selectedCGP
-                };
-            } else if (userType === 'backoffice') {
-                const backOfficeUser = USERS_CONFIG.backOffice.find(bo => bo.password === password);
-                if (!backOfficeUser) {
-                    alert('Mot de passe Back Office incorrect');
-                    return;
-                }
-                
-                currentUser = {
-                    type: 'backoffice',
-                    ...backOfficeUser,
-                    backOfficeAutorise: true
-                };
-            } else if (userType === 'admin') {
-                const adminUser = USERS_CONFIG.admin.find(admin => admin.password === password);
-                if (!adminUser) {
-                    alert('Mot de passe Administrateur incorrect');
-                    return;
-                }
-                
-                currentUser = {
-                    type: 'admin',
-                    ...adminUser,
-                    backOfficeAutorise: true
-                };
-            } else {
-                alert('Veuillez sélectionner un type d\'utilisateur');
-                return;
-            }
-
-            showMainPage();
-            if (currentUser.type !== 'admin') {
-                startAutoSave();
+            } catch (error) {
+                alert('Erreur de connexion au serveur. Veuillez réessayer.');
+                console.error('Erreur login:', error);
             }
         }
 
         function handleLogout() {
             currentUser = null;
+            operations = [];
+            users = [];
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('mainPage').classList.add('hidden');
             document.getElementById('loginForm').reset();
-            document.getElementById('cgpSelectGroup').style.display = 'none';
-            document.getElementById('passwordGroup').style.display = 'none';
-            stopAutoSave();
+            stopSyncInterval();
         }
 
         function showMainPage() {
             document.getElementById('loginPage').classList.add('hidden');
             document.getElementById('mainPage').classList.remove('hidden');
-            
             updateUserInterface();
-            if (currentUser.type !== 'admin') {
-                displayOperations();
-                updateStats();
-            }
+            populateSelects();
         }
 
         function updateUserInterface() {
             const userBadge = document.getElementById('userBadge');
             const adminTab = document.getElementById('adminTabBtn');
-            const operationsTab = document.getElementById('operationsTabBtn');
-            const nouvelleTab = document.getElementById('nouvelleTabBtn');
-            const saveStatus = document.getElementById('saveStatus');
             const appTitle = document.getElementById('appTitle');
-            const adminOnlyMessage = document.getElementById('adminOnlyMessage');
             
             let badgeText = currentUser.nom;
             
             if (currentUser.type === 'cgp') {
                 badgeText += ' (CGP)';
                 if (currentUser.backOfficeAutorise) {
-                    badgeText += ' <span class="back-office-badge">BO Autorisé</span>';
+                    badgeText += ' <span class="back-office-badge">BO</span>';
                 }
                 adminTab.style.display = 'none';
-                operationsTab.style.display = 'block';
-                nouvelleTab.style.display = 'block';
-                saveStatus.style.display = 'flex';
-                adminOnlyMessage.classList.add('hidden');
                 appTitle.textContent = '📊 Suivi des Opérations';
             } else if (currentUser.type === 'backoffice') {
                 badgeText += ' (Back Office)';
                 adminTab.style.display = 'none';
-                operationsTab.style.display = 'block';
-                nouvelleTab.style.display = 'block';
-                saveStatus.style.display = 'flex';
-                adminOnlyMessage.classList.add('hidden');
                 appTitle.textContent = '📊 Suivi des Opérations';
             } else if (currentUser.type === 'admin') {
                 badgeText += ' <span class="admin-badge">ADMIN</span>';
                 adminTab.style.display = 'block';
-                operationsTab.style.display = 'none';
-                nouvelleTab.style.display = 'none';
-                saveStatus.style.display = 'none';
-                adminOnlyMessage.classList.remove('hidden');
                 appTitle.textContent = '⚙️ Administration Système';
-                
-                // Basculer directement vers l'onglet admin
-                switchTab('admin');
-                loadAdminInterface();
             }
             
             userBadge.innerHTML = badgeText;
 
-            // Gestion des droits d'accès au formulaire
-            const suiviSection = document.getElementById('suiviBackOfficeSection');
-            const suiviTitle = document.getElementById('suiviBackOfficeTitle');
-            
-            if (currentUser.type === 'cgp' && !currentUser.backOfficeAutorise) {
-                // CGP sans autorisation : section back office en lecture seule
-                suiviSection.querySelectorAll('input, select').forEach(field => {
-                    field.classList.add('readonly');
-                    field.disabled = true;
-                });
-                suiviTitle.innerHTML = '📋 Suivi Back Office <span style="color: #6c757d; font-size: 12px;">(Lecture seule)</span>';
-            }
-
-            // Pré-sélection du conseiller si CGP connecté
+            // Gestion des droits d'accès
             if (currentUser.type === 'cgp') {
                 const conseillerSelect = document.getElementById('conseiller');
-                if (conseillerSelect) {
-                    conseillerSelect.value = currentUser.id;
-                    conseillerSelect.disabled = true;
+                conseillerSelect.value = currentUser.id;
+                conseillerSelect.disabled = true;
+                
+                if (!currentUser.backOfficeAutorise) {
+                    const suiviSection = document.getElementById('suiviBackOfficeSection');
+                    suiviSection.querySelectorAll('input, select').forEach(field => {
+                        field.classList.add('readonly');
+                        field.disabled = true;
+                    });
                 }
             }
         }
 
         function switchTab(tabName) {
-            // Update active tab
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            const activeTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
-            if (activeTab && activeTab.style.display !== 'none') {
-                activeTab.classList.add('active');
-            }
+            document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
 
-            // Show/hide content
             document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-            const tabContent = document.getElementById(tabName + 'Tab');
-            if (tabContent) {
-                tabContent.classList.remove('hidden');
-            }
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
 
-            // Show/hide admin message
-            if (currentUser && currentUser.type === 'admin' && (tabName === 'operations' || tabName === 'nouvelle')) {
-                document.getElementById('adminOnlyMessage').classList.remove('hidden');
-            } else {
-                document.getElementById('adminOnlyMessage').classList.add('hidden');
-            }
-
-            if (tabName === 'operations' && currentUser.type !== 'admin') {
+            if (tabName === 'operations') {
                 displayOperations();
                 updateStats();
+            } else if (tabName === 'admin') {
+                updateAdminStats();
             }
         }
 
-        // ============= FONCTIONS OPÉRATIONS =============
+        // ============= GESTION DES DONNÉES =============
+        
+        async function syncData() {
+            if (!isOnline) {
+                showSavePopup('⚠️ Hors ligne - Synchronisation impossible');
+                return;
+            }
+
+            try {
+                updateSaveIndicator('syncing');
+                
+                // Charger les données depuis le serveur
+                const [operationsData, usersData] = await Promise.all([
+                    fetchOperations(),
+                    fetchUsers()
+                ]);
+                
+                operations = operationsData;
+                users = usersData;
+                lastSyncTime = new Date();
+                
+                // Mettre à jour l'interface
+                populateSelects();
+                displayOperations();
+                updateStats();
+                updateAdminStats();
+                
+                updateSaveIndicator('saved');
+                updateLastSyncInfo();
+                showSavePopup('✅ Données synchronisées');
+                
+            } catch (error) {
+                console.error('Erreur synchronisation:', error);
+                updateSaveIndicator('offline');
+                showSavePopup('❌ Erreur de synchronisation');
+            }
+        }
+
+        function populateSelects() {
+            if (!users.cgp) return;
+            
+            // CGP selects
+            const cgpSelects = ['conseiller', 'filterCGP'];
+            cgpSelects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                
+                const currentValue = select.value;
+                select.innerHTML = selectId === 'filterCGP' ? 
+                    '<option value="">Tous</option>' : 
+                    '<option value="">Sélectionner...</option>';
+                
+                users.cgp.forEach(cgp => {
+                    const option = document.createElement('option');
+                    option.value = cgp.id;
+                    option.textContent = cgp.nom;
+                    select.appendChild(option);
+                });
+                
+                if (currentValue) select.value = currentValue;
+            });
+
+            // Back Office select
+            const assistantSelect = document.getElementById('assistantBO');
+            if (assistantSelect && users.backOffice) {
+                assistantSelect.innerHTML = '<option value="">Sélectionner...</option>';
+                users.backOffice.forEach(bo => {
+                    const option = document.createElement('option');
+                    option.value = bo.id;
+                    option.textContent = bo.nom;
+                    assistantSelect.appendChild(option);
+                });
+            }
+        }
 
         function updateContratsList() {
             const fournisseur = document.getElementById('fournisseur').value;
@@ -2176,8 +1130,14 @@
             
             contratSelect.innerHTML = '<option value="">Sélectionner...</option>';
             
-            if (fournisseur && REFERENTIELS_CONFIG.contrats[fournisseur]) {
-                REFERENTIELS_CONFIG.contrats[fournisseur].forEach(contrat => {
+            const contrats = {
+                'Cardif': ['Cardif Liberté', 'Cardif Retraite Plus', 'Cardif Patrimoine'],
+                'Generali': ['Generali Patrimoine', 'Generali Retraite', 'Generali Privilège'],
+                'AXA': ['AXA Placement', 'AXA Retraite Entreprise', 'AXA Sélection']
+            };
+            
+            if (fournisseur && contrats[fournisseur]) {
+                contrats[fournisseur].forEach(contrat => {
                     const option = document.createElement('option');
                     option.value = contrat;
                     option.textContent = contrat;
@@ -2195,9 +1155,16 @@
             document.getElementById('caCalcule').value = Math.max(0, ca).toFixed(2);
         }
 
-        function handleOperationSubmit(e) {
+        // ============= GESTION DES OPÉRATIONS =============
+        
+        async function handleOperationSubmit(e) {
             e.preventDefault();
             
+            if (!isOnline) {
+                alert('❌ Impossible de sauvegarder hors ligne');
+                return;
+            }
+
             const form = e.target;
             const editingId = form.dataset.editingId;
             
@@ -2205,9 +1172,7 @@
                 nomClient: document.getElementById('nomClient').value,
                 nouveauClient: document.getElementById('nouveauClient').checked,
                 conseiller: document.getElementById('conseiller').value,
-                conseillerNom: USERS_CONFIG.cgp.find(cgp => cgp.id === document.getElementById('conseiller').value)?.nom || '',
                 assistantBO: document.getElementById('assistantBO').value,
-                assistantBONom: USERS_CONFIG.backOffice.find(bo => bo.id === document.getElementById('assistantBO').value)?.nom || '',
                 domaine: document.getElementById('domaine').value,
                 fournisseur: document.getElementById('fournisseur').value,
                 nomContrat: document.getElementById('nomContrat').value,
@@ -2221,37 +1186,38 @@
                 dateEnvoiCompagnie: document.getElementById('dateEnvoiCompagnie').value,
                 dateRelance: document.getElementById('dateRelance').value,
                 dateValidation: document.getElementById('dateValidation').value,
-                etatGlobal: document.getElementById('etatGlobal').value
+                etatGlobal: document.getElementById('etatGlobal').value,
+                createdBy: currentUser.id,
+                createdAt: new Date().toISOString()
             };
 
-            if (editingId) {
-                const index = operations.findIndex(op => op.id == editingId);
-                if (index !== -1) {
-                    operations[index] = { ...operations[index], ...operationData };
-                    alert('Opération mise à jour avec succès !');
+            try {
+                updateSaveIndicator('syncing');
+                
+                if (editingId) {
+                    await updateOperation(editingId, operationData);
+                    showSavePopup('✅ Opération mise à jour');
+                } else {
+                    await createOperation(operationData);
+                    showSavePopup('✅ Opération créée');
                 }
+                
+                form.reset();
+                document.getElementById('caCalcule').value = '';
                 delete form.dataset.editingId;
-                form.querySelector('button[type="submit"]').textContent = 'Enregistrer opération';
-            } else {
-                const operation = {
-                    id: Date.now(),
-                    ...operationData,
-                    dateCreation: new Date().toISOString().split('T')[0]
-                };
-                operations.push(operation);
-                alert('Opération enregistrée avec succès !');
+                
+                if (currentUser.type === 'cgp') {
+                    document.getElementById('conseiller').value = currentUser.id;
+                }
+                
+                await syncData();
+                switchTab('operations');
+                
+            } catch (error) {
+                console.error('Erreur sauvegarde:', error);
+                alert('❌ Erreur lors de la sauvegarde');
+                updateSaveIndicator('offline');
             }
-
-            localStorage.setItem('operations', JSON.stringify(operations));
-            form.reset();
-            document.getElementById('caCalcule').value = '';
-            
-            if (currentUser && currentUser.type === 'cgp') {
-                document.getElementById('conseiller').value = currentUser.id;
-            }
-            
-            switchTab('operations');
-            markUnsavedChanges();
         }
 
         function displayOperations() {
@@ -2259,7 +1225,7 @@
             let filteredOperations = operations;
 
             // Filtrer selon l'utilisateur connecté
-            if (currentUser.type === 'cgp') {
+            if (currentUser && currentUser.type === 'cgp') {
                 filteredOperations = operations.filter(op => op.conseiller === currentUser.id);
             }
 
@@ -2283,9 +1249,11 @@
                 'Annulé': 'status-annule'
             }[operation.etatGlobal] || 'status-encours';
 
+            const conseillerNom = users.cgp?.find(cgp => cgp.id === operation.conseiller)?.nom || operation.conseiller;
+
             row.innerHTML = `
                 <td>${operation.nomClient} ${operation.nouveauClient ? '<span style="color: #28a745;">●</span>' : ''}</td>
-                <td>${operation.conseillerNom}</td>
+                <td>${conseillerNom}</td>
                 <td>${operation.domaine}</td>
                 <td>${operation.typeActe}</td>
                 <td>${operation.montant?.toLocaleString('fr-FR')} €</td>
@@ -2293,7 +1261,7 @@
                 <td><span class="status-badge ${statusClass}">${operation.etatGlobal}</span></td>
                 <td class="actions-cell">
                     <button onclick="editOperation(${operation.id})" class="btn btn-small">Modifier</button>
-                    <button onclick="deleteOperation(${operation.id})" class="btn btn-small btn-danger">Supprimer</button>
+                    <button onclick="deleteOperationHandler(${operation.id})" class="btn btn-small btn-danger">Supprimer</button>
                 </td>
             `;
             return row;
@@ -2319,12 +1287,10 @@
         function updateStats() {
             let filteredOperations = operations;
 
-            // Filtrer selon l'utilisateur connecté
-            if (currentUser.type === 'cgp') {
+            if (currentUser && currentUser.type === 'cgp') {
                 filteredOperations = operations.filter(op => op.conseiller === currentUser.id);
             }
 
-            // Appliquer les filtres actuels
             filteredOperations = applyCurrentFilters(filteredOperations);
 
             const totalOperations = filteredOperations.length;
@@ -2338,17 +1304,17 @@
             document.getElementById('operationsEnCours').textContent = operationsEnCours;
         }
 
-        function editOperation(id) {
-            const operation = operations.find(op => op.id === id);
+        async function editOperation(id) {
+            const operation = operations.find(op => op.id == id);
             if (!operation) return;
 
-            // Vérifier les droits d'édition
+            // Vérifier les droits
             if (currentUser.type === 'cgp' && operation.conseiller !== currentUser.id) {
                 alert('Vous ne pouvez modifier que vos propres opérations.');
                 return;
             }
 
-            // Remplir le formulaire avec les données existantes
+            // Remplir le formulaire
             document.getElementById('nomClient').value = operation.nomClient || '';
             document.getElementById('nouveauClient').checked = operation.nouveauClient || false;
             document.getElementById('conseiller').value = operation.conseiller || '';
@@ -2356,7 +1322,6 @@
             document.getElementById('domaine').value = operation.domaine || '';
             document.getElementById('fournisseur').value = operation.fournisseur || '';
             
-            // Update contrats list based on fournisseur
             updateContratsList();
             document.getElementById('nomContrat').value = operation.nomContrat || '';
             
@@ -2371,792 +1336,114 @@
             document.getElementById('dateValidation').value = operation.dateValidation || '';
             document.getElementById('etatGlobal').value = operation.etatGlobal || 'En cours';
 
-            // Recalculer le CA
             calculateCA();
 
-            // Changer le comportement du formulaire pour la modification
             const form = document.getElementById('operationForm');
             form.dataset.editingId = id;
-            
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.textContent = 'Mettre à jour opération';
+            form.querySelector('button[type="submit"]').textContent = 'Mettre à jour opération';
 
-            // Basculer vers l'onglet de saisie
             switchTab('nouvelle');
         }
 
-        function deleteOperation(id) {
-            const operation = operations.find(op => op.id === id);
+        async function deleteOperationHandler(id) {
+            const operation = operations.find(op => op.id == id);
             if (!operation) return;
 
-            // Vérifier les droits de suppression
             if (currentUser.type === 'cgp' && operation.conseiller !== currentUser.id) {
                 alert('Vous ne pouvez supprimer que vos propres opérations.');
                 return;
             }
 
-            if (confirm('Êtes-vous sûr de vouloir supprimer cette opération ?')) {
-                operations = operations.filter(op => op.id !== id);
-                localStorage.setItem('operations', JSON.stringify(operations));
-                displayOperations();
-                updateStats();
-                markUnsavedChanges();
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette opération ?')) {
+                return;
+            }
+
+            try {
+                updateSaveIndicator('syncing');
+                await deleteOperation(id);
+                await syncData();
+                showSavePopup('✅ Opération supprimée');
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                alert('❌ Erreur lors de la suppression');
+                updateSaveIndicator('offline');
             }
         }
 
-        function loadSampleData() {
-            // Charger des données d'exemple si aucune donnée n'existe
-            if (operations.length === 0) {
-                const sampleOperations = [
-                    {
-                        id: 1,
-                        nomClient: 'Pierre Martin',
-                        nouveauClient: true,
-                        conseiller: 'manon',
-                        conseillerNom: 'Manon',
-                        assistantBO: 'bo1',
-                        assistantBONom: 'Alice Robert',
-                        domaine: 'AV',
-                        fournisseur: 'Cardif',
-                        nomContrat: 'Cardif Liberté',
-                        referenceContrat: 'CL123456',
-                        typeActe: 'Versement',
-                        montant: 50000,
-                        pourcentageFrais: 2.5,
-                        partieIncomprise: 100,
-                        ca: 1150,
-                        apporteurAffaire: 'Conseiller',
-                        dateEnvoiCompagnie: '2024-12-15',
-                        dateRelance: '',
-                        dateValidation: '2024-12-20',
-                        etatGlobal: 'Validé',
-                        dateCreation: '2024-12-15'
-                    },
-                    {
-                        id: 2,
-                        nomClient: 'Marie Dubois',
-                        nouveauClient: false,
-                        conseiller: 'audrey',
-                        conseillerNom: 'Audrey',
-                        assistantBO: 'bo2',
-                        assistantBONom: 'Thomas Bernard',
-                        domaine: 'Retraite',
-                        fournisseur: 'Generali',
-                        nomContrat: 'Generali Retraite',
-                        referenceContrat: 'GR789012',
-                        typeActe: 'Rachat partiel',
-                        montant: 25000,
-                        pourcentageFrais: 1.8,
-                        partieIncomprise: 50,
-                        ca: 400,
-                        apporteurAffaire: 'Direction',
-                        dateEnvoiCompagnie: '2024-12-18',
-                        dateRelance: '2024-12-25',
-                        dateValidation: '',
-                        etatGlobal: 'En cours',
-                        dateCreation: '2024-12-18'
-                    }
-                ];
-                
-                operations = sampleOperations;
-                localStorage.setItem('operations', JSON.stringify(operations));
+        // ============= GESTION DE L'ÉTAT =============
+        
+        function updateConnectionStatus(online) {
+            isOnline = online;
+            const statusEl = document.getElementById('connectionStatus');
+            
+            if (online) {
+                statusEl.className = 'connection-status online';
+                statusEl.innerHTML = '🟢 Connecté au serveur';
+            } else {
+                statusEl.className = 'connection-status offline';
+                statusEl.innerHTML = '🔴 Hors ligne';
             }
         }
 
-        // ============= FONCTIONS DE SAUVEGARDE =============
-
-        function markUnsavedChanges() {
-            unsavedChanges = true;
-            updateSaveStatus();
-        }
-
-        function markSaved() {
-            unsavedChanges = false;
-            lastSaveTime = new Date().toLocaleString('fr-FR');
-            localStorage.setItem('lastSaveTime', lastSaveTime);
-            updateSaveStatus();
-        }
-
-        function updateSaveStatus() {
+        function updateSaveIndicator(status) {
             const indicator = document.getElementById('saveIndicator');
-            const lastSaveInfo = document.getElementById('lastSaveInfo');
             
-            if (unsavedChanges) {
-                indicator.className = 'save-indicator unsaved';
-                indicator.innerHTML = '🔴 <span id="unsavedCount">' + getUnsavedCount() + '</span> opération(s) non sauvegardée(s)';
-            } else {
-                indicator.className = 'save-indicator saved';
-                indicator.innerHTML = '🟢 Toutes les données sont sauvegardées';
-            }
-            
-            if (lastSaveTime) {
-                lastSaveInfo.textContent = 'Dernière sauvegarde : ' + lastSaveTime;
+            switch (status) {
+                case 'saved':
+                    indicator.className = 'save-indicator saved';
+                    indicator.innerHTML = '✅ Données synchronisées';
+                    break;
+                case 'syncing':
+                    indicator.className = 'save-indicator syncing';
+                    indicator.innerHTML = '🔄 Synchronisation...';
+                    break;
+                case 'offline':
+                    indicator.className = 'save-indicator offline';
+                    indicator.innerHTML = '❌ Synchronisation échouée';
+                    break;
             }
         }
 
-        function getUnsavedCount() {
-            return operations.length;
+        function updateLastSyncInfo() {
+            if (lastSyncTime) {
+                const info = document.getElementById('lastSyncInfo');
+                info.textContent = 'Dernière sync : ' + lastSyncTime.toLocaleTimeString('fr-FR');
+            }
         }
 
-        function startAutoSave() {
-            autoSaveInterval = setInterval(() => {
-                if (unsavedChanges) {
-                    autoSaveToExcel();
+        function checkConnectionStatus() {
+            fetch(API_BASE_URL + '/api/health')
+                .then(() => updateConnectionStatus(true))
+                .catch(() => updateConnectionStatus(false));
+        }
+
+        function startSyncInterval() {
+            // Synchroniser toutes les 30 secondes
+            syncInterval = setInterval(() => {
+                if (isOnline && currentUser) {
+                    syncData();
                 }
-            }, 15 * 60 * 1000); // 15 minutes
+            }, 30000);
         }
 
-        function stopAutoSave() {
-            if (autoSaveInterval) {
-                clearInterval(autoSaveInterval);
-                autoSaveInterval = null;
+        function stopSyncInterval() {
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
             }
         }
 
-        function saveToExcel() {
-            if (googleSheetsConnected && masterSpreadsheetId) {
-                // Synchronisation automatique avec Google Sheets
-                syncWithGoogleSheets();
-            } else {
-                // Fallback: téléchargement local
-                const indicator = document.getElementById('saveIndicator');
-                indicator.className = 'save-indicator saving';
-                indicator.innerHTML = '🟡 Sauvegarde en cours...';
-                
-                const workbook = createExcelWorkbook();
-                const fileName = 'operations_patrimoine_' + new Date().toISOString().slice(0,16).replace(/[:]/g, 'h') + '.xlsx';
-                
-                downloadExcelFile(workbook, fileName);
-                
-                markSaved();
-                showSavePopup('Données sauvegardées vers ' + fileName + ' (Google Sheets non connecté)');
+        function updateAdminStats() {
+            if (currentUser && currentUser.type === 'admin') {
+                document.getElementById('totalUsers').textContent = 
+                    (users.cgp?.length || 0) + (users.backOffice?.length || 0);
+                document.getElementById('totalOpsAdmin').textContent = operations.length;
+                document.getElementById('lastActivityAdmin').textContent = 
+                    lastSyncTime ? lastSyncTime.toLocaleTimeString('fr-FR') : '-';
+                document.getElementById('appUrl').textContent = window.location.origin;
+                document.getElementById('lastServerSync').textContent = 
+                    lastSyncTime ? lastSyncTime.toLocaleString('fr-FR') : '-';
             }
-        }
-
-        function autoSaveToExcel() {
-            if (googleSheetsConnected && masterSpreadsheetId) {
-                // Auto-sync avec Google Sheets
-                const indicator = document.getElementById('saveIndicator');
-                indicator.className = 'save-indicator saving';
-                indicator.innerHTML = '🟡 Synchronisation automatique...';
-                
-                syncWithGoogleSheets().then(() => {
-                    showSavePopup('🔄 Synchronisation automatique Google Sheets effectuée');
-                }).catch(error => {
-                    console.error('Erreur auto-sync:', error);
-                    // Fallback vers sauvegarde locale
-                    setTimeout(() => {
-                        markSaved();
-                        showSavePopup('Sauvegarde automatique locale effectuée');
-                    }, 2000);
-                });
-            } else {
-                // Fallback: simulation auto-save local
-                const indicator = document.getElementById('saveIndicator');
-                indicator.className = 'save-indicator saving';
-                indicator.innerHTML = '🟡 Sauvegarde automatique en cours...';
-                
-                setTimeout(() => {
-                    markSaved();
-                    showSavePopup('Sauvegarde automatique effectuée');
-                }, 2000);
-            }
-        }
-
-        function createExcelWorkbook() {
-            const workbook = XLSX.utils.book_new();
-            
-            // === FEUILLE 1: OPERATIONS ===
-            const operationsData = operations.map(op => ({
-                'ID': op.id,
-                'Client': op.nomClient,
-                'Nouveau_Client': op.nouveauClient ? 'OUI' : 'NON',
-                'Conseiller_ID': op.conseiller,
-                'Conseiller_Nom': op.conseillerNom,
-                'Assistant_BO_ID': op.assistantBO,
-                'Assistant_BO_Nom': op.assistantBONom,
-                'Domaine': op.domaine,
-                'Fournisseur': op.fournisseur,
-                'Nom_Contrat': op.nomContrat,
-                'Reference_Contrat': op.referenceContrat,
-                'Type_Acte': op.typeActe,
-                'Montant': op.montant,
-                'Pourcentage_Frais': op.pourcentageFrais,
-                'Partie_Incompressible': op.partieIncomprise,
-                'CA_Calcule': op.ca,
-                'Apporteur_Affaire': op.apporteurAffaire,
-                'Date_Envoi_Compagnie': op.dateEnvoiCompagnie,
-                'Date_Relance': op.dateRelance,
-                'Date_Validation': op.dateValidation,
-                'Etat_Global': op.etatGlobal,
-                'Date_Creation': op.dateCreation
-            }));
-            
-            const operationsSheet = XLSX.utils.json_to_sheet(operationsData);
-            XLSX.utils.book_append_sheet(workbook, operationsSheet, 'Operations');
-            
-            // === FEUILLE 2: CONSEILLERS ===
-            const conseillersData = USERS_CONFIG.cgp.map(cgp => ({
-                'ID': cgp.id,
-                'Nom': cgp.nom,
-                'Mot_De_Passe': cgp.password,
-                'BackOffice_Autorise': cgp.backOfficeAutorise ? 'OUI' : 'NON'
-            }));
-            
-            const conseillersSheet = XLSX.utils.json_to_sheet(conseillersData);
-            XLSX.utils.book_append_sheet(workbook, conseillersSheet, 'Conseillers');
-            
-            // === FEUILLE 3: BACK OFFICE ===
-            const backOfficeData = USERS_CONFIG.backOffice.map(bo => ({
-                'ID': bo.id,
-                'Nom': bo.nom,
-                'Mot_De_Passe': bo.password
-            }));
-            
-            const backOfficeSheet = XLSX.utils.json_to_sheet(backOfficeData);
-            XLSX.utils.book_append_sheet(workbook, backOfficeSheet, 'BackOffice');
-            
-            // === FEUILLE 4: REFERENTIELS ===
-            const referentielsData = [
-                ...REFERENTIELS_CONFIG.fournisseurs.map(f => ({ 'Type': 'Fournisseur', 'Valeur': f })),
-                ...REFERENTIELS_CONFIG.domaines.map(d => ({ 'Type': 'Domaine', 'Valeur': d })),
-                ...REFERENTIELS_CONFIG.typesActes.map(t => ({ 'Type': 'Type_Acte', 'Valeur': t })),
-                ...REFERENTIELS_CONFIG.apporteurs.map(a => ({ 'Type': 'Apporteur', 'Valeur': a })),
-                { 'Type': 'Etat', 'Valeur': 'Envoyé compagnie' },
-                { 'Type': 'Etat', 'Valeur': 'En cours' },
-                { 'Type': 'Etat', 'Valeur': 'Validé' },
-                { 'Type': 'Etat', 'Valeur': 'Annulé' }
-            ];
-            
-            const referentielsSheet = XLSX.utils.json_to_sheet(referentielsData);
-            XLSX.utils.book_append_sheet(workbook, referentielsSheet, 'Referentiels');
-            
-            // === FEUILLE 5: METADATA ===
-            const metadataData = [
-                { 'Propriete': 'Version', 'Valeur': '1.0' },
-                { 'Propriete': 'Date_Sauvegarde', 'Valeur': new Date().toLocaleString('fr-FR') },
-                { 'Propriete': 'Utilisateur', 'Valeur': currentUser?.nom || 'System' },
-                { 'Propriete': 'Nombre_Operations', 'Valeur': operations.length },
-                { 'Propriete': 'Format', 'Valeur': 'Gestion Patrimoine v1.0' }
-            ];
-            
-            const metadataSheet = XLSX.utils.json_to_sheet(metadataData);
-            XLSX.utils.book_append_sheet(workbook, metadataSheet, 'Metadata');
-            
-            return workbook;
-        }
-
-        function downloadExcelFile(workbook, fileName) {
-            const excelBuffer = XLSX.write(workbook, { 
-                bookType: 'xlsx', 
-                type: 'array',
-                compression: true 
-            });
-            
-            const blob = new Blob([excelBuffer], { 
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-            });
-            
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function loadFromExcel(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    if (!workbook.SheetNames.includes('Operations')) {
-                        alert('Le fichier Excel ne contient pas la feuille "Operations"');
-                        return;
-                    }
-                    
-                    const operationsSheet = workbook.Sheets['Operations'];
-                    const operationsData = XLSX.utils.sheet_to_json(operationsSheet);
-                    
-                    const loadedOperations = operationsData.map(row => ({
-                        id: row.ID || Date.now() + Math.random(),
-                        nomClient: row.Client || '',
-                        nouveauClient: row.Nouveau_Client === 'OUI',
-                        conseiller: row.Conseiller_ID || '',
-                        conseillerNom: row.Conseiller_Nom || '',
-                        assistantBO: row.Assistant_BO_ID || '',
-                        assistantBONom: row.Assistant_BO_Nom || '',
-                        domaine: row.Domaine || '',
-                        fournisseur: row.Fournisseur || '',
-                        nomContrat: row.Nom_Contrat || '',
-                        referenceContrat: row.Reference_Contrat || '',
-                        typeActe: row.Type_Acte || '',
-                        montant: parseFloat(row.Montant) || 0,
-                        pourcentageFrais: parseFloat(row.Pourcentage_Frais) || 0,
-                        partieIncomprise: parseFloat(row.Partie_Incompressible) || 0,
-                        ca: parseFloat(row.CA_Calcule) || 0,
-                        apporteurAffaire: row.Apporteur_Affaire || '',
-                        dateEnvoiCompagnie: row.Date_Envoi_Compagnie || '',
-                        dateRelance: row.Date_Relance || '',
-                        dateValidation: row.Date_Validation || '',
-                        etatGlobal: row.Etat_Global || 'En cours',
-                        dateCreation: row.Date_Creation || new Date().toISOString().split('T')[0]
-                    }));
-                    
-                    operations = loadedOperations;
-                    localStorage.setItem('operations', JSON.stringify(operations));
-                    
-                    displayOperations();
-                    updateStats();
-                    markSaved();
-                    
-                    showSavePopup(`${loadedOperations.length} opérations chargées depuis ${file.name}`);
-                    
-                } catch (error) {
-                    console.error('Erreur lors du chargement:', error);
-                    alert('Erreur lors du chargement du fichier Excel : ' + error.message);
-                }
-            };
-            
-            reader.readAsArrayBuffer(file);
-            event.target.value = '';
-        }
-
-        // ============= FONCTIONS D'ADMINISTRATION =============
-
-        function loadAdminInterface() {
-            displayUserLists();
-            updateAdminStatus();
-            updateGoogleSheetsStatus();
-        }
-
-        function displayUserLists() {
-            displayCGPList();
-            displayBackOfficeList();
-            displayAdminList();
-        }
-
-        function displayCGPList() {
-            const container = document.getElementById('cgpList');
-            container.innerHTML = '';
-            
-            USERS_CONFIG.cgp.forEach(cgp => {
-                const userItem = document.createElement('div');
-                userItem.className = 'user-item';
-                userItem.innerHTML = `
-                    <div class="user-info-item">
-                        <div class="user-name">${cgp.nom} ${cgp.backOfficeAutorise ? '<span class="back-office-badge">BO</span>' : ''}</div>
-                        <div class="user-id">ID: ${cgp.id}</div>
-                    </div>
-                    <div class="user-actions">
-                        <button class="btn btn-small btn-secondary" onclick="editUser('cgp', '${cgp.id}')">✏️ Modifier</button>
-                        <button class="btn btn-small btn-danger" onclick="deleteUser('cgp', '${cgp.id}')">🗑️ Supprimer</button>
-                    </div>
-                `;
-                container.appendChild(userItem);
-            });
-        }
-
-        function displayBackOfficeList() {
-            const container = document.getElementById('backOfficeList');
-            container.innerHTML = '';
-            
-            USERS_CONFIG.backOffice.forEach(bo => {
-                const userItem = document.createElement('div');
-                userItem.className = 'user-item';
-                userItem.innerHTML = `
-                    <div class="user-info-item">
-                        <div class="user-name">${bo.nom}</div>
-                        <div class="user-id">ID: ${bo.id}</div>
-                    </div>
-                    <div class="user-actions">
-                        <button class="btn btn-small btn-secondary" onclick="editUser('backoffice', '${bo.id}')">✏️ Modifier</button>
-                        <button class="btn btn-small btn-danger" onclick="deleteUser('backoffice', '${bo.id}')">🗑️ Supprimer</button>
-                    </div>
-                `;
-                container.appendChild(userItem);
-            });
-        }
-
-        function displayAdminList() {
-            const container = document.getElementById('adminList');
-            container.innerHTML = '';
-            
-            USERS_CONFIG.admin.forEach(admin => {
-                const userItem = document.createElement('div');
-                userItem.className = 'user-item';
-                userItem.innerHTML = `
-                    <div class="user-info-item">
-                        <div class="user-name">${admin.nom}</div>
-                        <div class="user-id">ID: ${admin.id}</div>
-                    </div>
-                    <div class="user-actions">
-                        <button class="btn btn-small btn-secondary" onclick="editUser('admin', '${admin.id}')">✏️ Modifier</button>
-                        ${USERS_CONFIG.admin.length > 1 ? `<button class="btn btn-small btn-danger" onclick="deleteUser('admin', '${admin.id}')">🗑️ Supprimer</button>` : ''}
-                    </div>
-                `;
-                container.appendChild(userItem);
-            });
-        }
-
-        function showAddUserModal(userType) {
-            const modal = createModal('Ajouter un utilisateur');
-            const typeLabel = userType === 'cgp' ? 'Conseiller' : userType === 'backoffice' ? 'Assistant Back Office' : 'Administrateur';
-            
-            modal.querySelector('.modal').innerHTML = `
-                <h3>➕ Ajouter un ${typeLabel}</h3>
-                <form id="addUserForm">
-                    <div class="form-group">
-                        <label for="userId">ID utilisateur *</label>
-                        <input type="text" id="userId" required placeholder="Ex: jdupont">
-                    </div>
-                    <div class="form-group">
-                        <label for="userName">Nom complet *</label>
-                        <input type="text" id="userName" required placeholder="Ex: Jean Dupont">
-                    </div>
-                    <div class="form-group">
-                        <label for="userPassword">Mot de passe *</label>
-                        <input type="text" id="userPassword" required placeholder="Mot de passe">
-                        <button type="button" class="btn btn-small btn-secondary" onclick="generatePassword()" style="margin-top: 8px;">🎲 Générer</button>
-                    </div>
-                    ${userType === 'cgp' ? `
-                    <div class="form-group">
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="backOfficeAuth">
-                            <label for="backOfficeAuth">Autoriser l'accès Back Office</label>
-                        </div>
-                    </div>
-                    ` : ''}
-                    <div class="modal-buttons">
-                        <button type="submit" class="btn btn-success">✅ Ajouter</button>
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">❌ Annuler</button>
-                    </div>
-                </form>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            document.getElementById('addUserForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                addUser(userType);
-            });
-        }
-
-        function addUser(userType) {
-            const userId = document.getElementById('userId').value.trim();
-            const userName = document.getElementById('userName').value.trim();
-            const userPassword = document.getElementById('userPassword').value.trim();
-            const backOfficeAuth = userType === 'cgp' ? document.getElementById('backOfficeAuth').checked : false;
-            
-            if (!userId || !userName || !userPassword) {
-                alert('Tous les champs sont obligatoires');
-                return;
-            }
-            
-            // Vérifier si l'ID existe déjà
-            const allUsers = [...USERS_CONFIG.cgp, ...USERS_CONFIG.backOffice, ...USERS_CONFIG.admin];
-            if (allUsers.find(u => u.id === userId)) {
-                alert('Cet ID utilisateur existe déjà');
-                return;
-            }
-            
-            const newUser = {
-                id: userId,
-                nom: userName,
-                password: userPassword
-            };
-            
-            if (userType === 'cgp') {
-                newUser.backOfficeAutorise = backOfficeAuth;
-                USERS_CONFIG.cgp.push(newUser);
-            } else if (userType === 'backoffice') {
-                USERS_CONFIG.backOffice.push(newUser);
-            } else {
-                USERS_CONFIG.admin.push(newUser);
-            }
-            
-            saveUsersConfig();
-            displayUserLists();
-            populateSelects();
-            updateAdminStatus();
-            closeModal();
-            showSavePopup(`Utilisateur "${userName}" ajouté avec succès`);
-        }
-
-        function editUser(userType, userId) {
-            const userList = userType === 'cgp' ? USERS_CONFIG.cgp : 
-                           userType === 'backoffice' ? USERS_CONFIG.backOffice : 
-                           USERS_CONFIG.admin;
-            
-            const user = userList.find(u => u.id === userId);
-            if (!user) return;
-            
-            const modal = createModal('Modifier un utilisateur');
-            const typeLabel = userType === 'cgp' ? 'Conseiller' : userType === 'backoffice' ? 'Assistant Back Office' : 'Administrateur';
-            
-            modal.querySelector('.modal').innerHTML = `
-                <h3>✏️ Modifier ${typeLabel}</h3>
-                <form id="editUserForm">
-                    <div class="form-group">
-                        <label for="editUserId">ID utilisateur *</label>
-                        <input type="text" id="editUserId" value="${user.id}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="editUserName">Nom complet *</label>
-                        <input type="text" id="editUserName" value="${user.nom}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="editUserPassword">Mot de passe *</label>
-                        <input type="text" id="editUserPassword" value="${user.password}" required>
-                        <button type="button" class="btn btn-small btn-secondary" onclick="generatePassword('editUserPassword')" style="margin-top: 8px;">🎲 Générer nouveau</button>
-                    </div>
-                    ${userType === 'cgp' ? `
-                    <div class="form-group">
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="editBackOfficeAuth" ${user.backOfficeAutorise ? 'checked' : ''}>
-                            <label for="editBackOfficeAuth">Autoriser l'accès Back Office</label>
-                        </div>
-                    </div>
-                    ` : ''}
-                    <div class="modal-buttons">
-                        <button type="submit" class="btn btn-success">💾 Sauvegarder</button>
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">❌ Annuler</button>
-                    </div>
-                </form>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            document.getElementById('editUserForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                updateUser(userType, userId);
-            });
-        }
-
-        function updateUser(userType, originalUserId) {
-            const newUserId = document.getElementById('editUserId').value.trim();
-            const userName = document.getElementById('editUserName').value.trim();
-            const userPassword = document.getElementById('editUserPassword').value.trim();
-            const backOfficeAuth = userType === 'cgp' ? document.getElementById('editBackOfficeAuth').checked : false;
-            
-            if (!newUserId || !userName || !userPassword) {
-                alert('Tous les champs sont obligatoires');
-                return;
-            }
-            
-            // Vérifier si le nouvel ID existe déjà (sauf si c'est le même)
-            if (newUserId !== originalUserId) {
-                const allUsers = [...USERS_CONFIG.cgp, ...USERS_CONFIG.backOffice, ...USERS_CONFIG.admin];
-                if (allUsers.find(u => u.id === newUserId)) {
-                    alert('Cet ID utilisateur existe déjà');
-                    return;
-                }
-            }
-            
-            const userList = userType === 'cgp' ? USERS_CONFIG.cgp : 
-                           userType === 'backoffice' ? USERS_CONFIG.backOffice : 
-                           USERS_CONFIG.admin;
-            
-            const userIndex = userList.findIndex(u => u.id === originalUserId);
-            if (userIndex > -1) {
-                userList[userIndex] = {
-                    id: newUserId,
-                    nom: userName,
-                    password: userPassword,
-                    ...(userType === 'cgp' && { backOfficeAutorise: backOfficeAuth })
-                };
-                
-                saveUsersConfig();
-                displayUserLists();
-                populateSelects();
-                closeModal();
-                showSavePopup(`Utilisateur "${userName}" modifié avec succès`);
-            }
-        }
-
-        function deleteUser(userType, userId) {
-            const userList = userType === 'cgp' ? USERS_CONFIG.cgp : 
-                           userType === 'backoffice' ? USERS_CONFIG.backOffice : 
-                           USERS_CONFIG.admin;
-            
-            const user = userList.find(u => u.id === userId);
-            if (!user) return;
-            
-            if (userType === 'admin' && USERS_CONFIG.admin.length === 1) {
-                alert('Impossible de supprimer le dernier administrateur !');
-                return;
-            }
-            
-            if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${user.nom}" ?`)) {
-                return;
-            }
-            
-            const index = userList.findIndex(u => u.id === userId);
-            if (index > -1) {
-                userList.splice(index, 1);
-                saveUsersConfig();
-                displayUserLists();
-                populateSelects();
-                updateAdminStatus();
-                showSavePopup(`Utilisateur "${user.nom}" supprimé`);
-            }
-        }
-
-        function generatePassword(inputId = 'userPassword') {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-            let password = '';
-            for (let i = 0; i < 12; i++) {
-                password += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            document.getElementById(inputId).value = password;
-        }
-
-        function saveUsersConfig() {
-            localStorage.setItem('usersConfig', JSON.stringify(USERS_CONFIG));
-        }
-
-        function updateAdminStatus() {
-            document.getElementById('activeCGPCount').textContent = USERS_CONFIG.cgp.length;
-            document.getElementById('activeBOCount').textContent = USERS_CONFIG.backOffice.length;
-            document.getElementById('totalOpsAdmin').textContent = operations.length;
-        }
-
-        // Fonctions de gestion des listes et autres fonctions admin similaires à l'original...
-        function showManageListModal(listType) {
-            // Implementation similaire à l'original
-            alert('Fonction de gestion des listes à implémenter');
-        }
-
-        function createMasterFile() {
-            if (!confirm('Créer le fichier maître Excel ? Cela écrasera le fichier existant s\'il y en a un.')) {
-                return;
-            }
-            
-            const workbook = createExcelWorkbook();
-            const fileName = 'operations_patrimoine_maitre.xlsx';
-            
-            downloadExcelFile(workbook, fileName);
-            showSavePopup('Fichier maître créé ! Copiez-le dans votre dossier configuré.');
-            
-            localStorage.setItem('masterFileCreated', 'true');
-            updateAdminStatus();
-        }
-
-        function backupMasterFile() {
-            const workbook = createExcelWorkbook();
-            const fileName = 'backup_patrimoine_' + new Date().toISOString().slice(0,16).replace(/[:]/g, 'h') + '.xlsx';
-            
-            downloadExcelFile(workbook, fileName);
-            showSavePopup('Sauvegarde créée : ' + fileName);
-        }
-
-        function resetMasterFile() {
-            if (!confirm('⚠️ ATTENTION ⚠️\n\nCette action va :\n- Supprimer toutes les opérations du système\n- Créer un nouveau fichier maître vide\n\nÊtes-vous sûr ?')) {
-                return;
-            }
-            
-            if (!confirm('Dernière confirmation : Voulez-vous vraiment TOUT effacer ?')) {
-                return;
-            }
-            
-            operations = [];
-            localStorage.removeItem('operations');
-            localStorage.removeItem('lastSaveTime');
-            
-            createMasterFile();
-            showSavePopup('Système réinitialisé - Nouveau fichier maître créé');
-            updateAdminStatus();
-        }
-
-        function exportUsers(userType) {
-            alert('Fonction d\'export utilisateurs à implémenter');
-        }
-
-        function importUsers(userType) {
-            alert('Fonction d\'import utilisateurs à implémenter');
-        }
-
-        function exportConfig() {
-            const config = {
-                users: USERS_CONFIG,
-                referentiels: REFERENTIELS_CONFIG,
-                exportDate: new Date().toLocaleString('fr-FR'),
-                version: '1.0'
-            };
-            
-            downloadJSON(config, `config_complete_${new Date().toISOString().slice(0,10)}.json`);
-            showSavePopup('Configuration complète exportée');
-        }
-
-        function importConfig() {
-            alert('Fonction d\'import configuration à implémenter');
-        }
-
-        function clearLocalData() {
-            if (!confirm('Supprimer toutes les données en cache local ?\n\n(La configuration utilisateurs sera conservée)')) {
-                return;
-            }
-            
-            localStorage.removeItem('operations');
-            localStorage.removeItem('lastSaveTime');
-            operations = [];
-            
-            showSavePopup('Données locales supprimées');
-            updateAdminStatus();
-        }
-
-        function exportLogs() {
-            const logs = {
-                systemInfo: {
-                    userAgent: navigator.userAgent,
-                    timestamp: new Date().toISOString(),
-                    currentUser: currentUser?.nom || 'Admin',
-                    operationsCount: operations.length,
-                    lastSave: lastSaveTime,
-                    googleSheetsConfigured: GOOGLE_CONFIG.apiKey !== 'YOUR_GOOGLE_API_KEY',
-                    localStorageSize: JSON.stringify(localStorage).length
-                },
-                userStats: {
-                    cgpCount: USERS_CONFIG.cgp.length,
-                    backOfficeCount: USERS_CONFIG.backOffice.length,
-                    adminCount: USERS_CONFIG.admin.length
-                }
-            };
-            
-            downloadJSON(logs, `logs_system_${new Date().toISOString().slice(0,10)}.json`);
-            showSavePopup('Logs système exportés');
-        }
-
-        // ============= FONCTIONS UTILITAIRES =============
-
-        function createModal(title) {
-            const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
-            modal.innerHTML = `<div class="modal"></div>`;
-            return modal;
-        }
-
-        function closeModal() {
-            const modal = document.querySelector('.modal-overlay');
-            if (modal) {
-                modal.remove();
-            }
-        }
-
-        function downloadJSON(data, filename) {
-            const dataStr = JSON.stringify(data, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            link.click();
-            URL.revokeObjectURL(url);
         }
 
         function showSavePopup(message) {
@@ -3175,14 +1462,9 @@
             }, 3000);
         }
 
-        // Démarrage de l'application
-        window.addEventListener('beforeunload', (e) => {
-            if (unsavedChanges && currentUser && currentUser.type !== 'admin') {
-                e.preventDefault();
-                e.returnValue = 'Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter ?';
-                return e.returnValue;
-            }
-        });
+        // Fonctions globales pour les boutons
+        window.editOperation = editOperation;
+        window.deleteOperationHandler = deleteOperationHandler;
     </script>
 </body>
 </html>
