@@ -775,16 +775,46 @@
                     </div>
 
                     <div style="background: #f7f6f3; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
-                        <h3>🌐 Statut du Serveur</h3>
-                        <p id="serverStatus">✅ Serveur opérationnel - Base de données synchronisée</p>
+                        <h3>🌐 Statut du Serveur Vercel + Upstash</h3>
+                        <p id="serverStatus">✅ Serveur opérationnel - Base de données Redis synchronisée</p>
                         <p><strong>URL :</strong> <span id="appUrl">-</span></p>
+                        <p><strong>Backend :</strong> Vercel Serverless + Upstash Redis</p>
                         <p><strong>Dernière synchronisation :</strong> <span id="lastServerSync">-</span></p>
+                        <button onclick="window.open('/api/debug', '_blank')" class="btn btn-secondary">🔍 Debug serveur</button>
+                        <button onclick="testMultiUser()" class="btn btn-secondary">🔄 Test multi-utilisateurs</button>
+                    </div>
+
+                    <div style="background: #d4edda; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb; margin-bottom: 24px;">
+                        <h3>✅ Fonctionnalités Actives</h3>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>✅ Multi-utilisateurs temps réel</li>
+                            <li>✅ Synchronisation automatique toutes les 30 secondes</li>
+                            <li>✅ Sauvegarde cloud Redis</li>
+                            <li>✅ Authentification sécurisée</li>
+                            <li>✅ Interface responsive</li>
+                            <li>✅ Gestion des droits par rôle</li>
+                        </ul>
                     </div>
 
                     <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffeaa7;">
-                        <h3>📋 Fonctionnalités Admin</h3>
-                        <p>L'interface d'administration complète sera ajoutée dans une prochaine version.</p>
-                        <p>Actuellement disponible : visualisation temps réel des données partagées.</p>
+                        <h3>📋 Informations Système</h3>
+                        <p><strong>Version :</strong> 2.0 - Vercel Serverless</p>
+                        <p><strong>Base de données :</strong> Upstash Redis (Serverless)</p>
+                        <p><strong>Hébergement :</strong> Vercel (Edge Network)</p>
+                        <p><strong>Synchronisation :</strong> Temps réel via API REST</p>
+                        <p><strong>Conseillers configurés :</strong> <span id="configuredCGP">11</span></p>
+                        <p><strong>Assistants BO :</strong> <span id="configuredBO">2</span></p>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                        <h3>🚀 Guide d'utilisation</h3>
+                        <ol style="margin: 10px 0; padding-left: 20px;">
+                            <li><strong>Partage :</strong> Envoyez l'URL <code id="shareUrl">-</code> à vos conseillers</li>
+                            <li><strong>Connexion :</strong> Chaque conseiller utilise son ID et mot de passe</li>
+                            <li><strong>Synchronisation :</strong> Les modifications apparaissent automatiquement chez tous</li>
+                            <li><strong>Sauvegarde :</strong> Toutes les données sont sauvegardées dans le cloud</li>
+                            <li><strong>Support :</strong> Consultez l'API debug en cas de problème</li>
+                        </ol>
                     </div>
                 </div>
             </div>
@@ -1441,8 +1471,34 @@
                 document.getElementById('lastActivityAdmin').textContent = 
                     lastSyncTime ? lastSyncTime.toLocaleTimeString('fr-FR') : '-';
                 document.getElementById('appUrl').textContent = window.location.origin;
+                document.getElementById('shareUrl').textContent = window.location.origin;
                 document.getElementById('lastServerSync').textContent = 
                     lastSyncTime ? lastSyncTime.toLocaleString('fr-FR') : '-';
+            }
+        }
+
+        async function testMultiUser() {
+            try {
+                showSavePopup('🔄 Test multi-utilisateurs en cours...');
+                
+                // Créer une opération de test
+                const testOperation = {
+                    nomClient: `Test Multi-User ${new Date().getTime()}`,
+                    conseiller: currentUser.id,
+                    domaine: 'AV',
+                    fournisseur: 'Test',
+                    typeActe: 'Test',
+                    montant: 1000,
+                    ca: 25,
+                    createdBy: currentUser.id
+                };
+                
+                await createOperation(testOperation);
+                showSavePopup('✅ Test réussi ! Vérifiez sur un autre PC.');
+                
+            } catch (error) {
+                showSavePopup('❌ Erreur test multi-utilisateurs');
+                console.error('Erreur test:', error);
             }
         }
 
