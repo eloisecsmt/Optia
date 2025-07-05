@@ -1,0 +1,16 @@
+{
+  "name": "gestion-patrimoine",
+  "version": "1.0.0",
+  "description": "Application de gestion de patrimoine collaborative",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "@vercel/kv": "^0.2.3"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
