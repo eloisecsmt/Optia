@@ -26,7 +26,6 @@ export default async function handler(req, res) {
   
   else if (req.method === 'PUT') {
     try {
-      // Récupérer l'opération existante
       const existingOperation = await kv.get(operationKey);
       
       if (!existingOperation) {
@@ -40,7 +39,6 @@ export default async function handler(req, res) {
         dateEnvoiCompagnie, dateRelance, dateValidation, etatGlobal
       } = req.body;
 
-      // Mettre à jour l'opération
       const updatedOperation = {
         ...existingOperation,
         nomClient,
@@ -79,14 +77,12 @@ export default async function handler(req, res) {
   
   else if (req.method === 'DELETE') {
     try {
-      // Vérifier que l'opération existe
       const operation = await kv.get(operationKey);
       
       if (!operation) {
         return res.status(404).json({ error: 'Opération non trouvée' });
       }
 
-      // Supprimer l'opération et la retirer de la liste des IDs
       await Promise.all([
         kv.del(operationKey),
         kv.srem('operations:ids', id)
