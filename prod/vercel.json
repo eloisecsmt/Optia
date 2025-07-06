@@ -10,6 +10,8 @@
     "KV_REST_API_TOKEN": "@kv_rest_api_token",
     "KV_REST_API_READ_ONLY_TOKEN": "@kv_rest_api_read_only_token"
   },
+  "buildCommand": "echo 'No build needed'",
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/",
