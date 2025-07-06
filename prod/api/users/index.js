@@ -12,7 +12,6 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Utilisateurs non trouvés' });
     }
 
-    // Retourner la liste des utilisateurs (sans mots de passe)
     const sanitizedUsers = {
       cgp: users.cgp.map(({ password, ...user }) => user),
       backOffice: users.backOffice.map(({ password, ...user }) => user),
