@@ -1,6 +1,5 @@
 import { kv } from '@vercel/kv';
 
-// Configuration des utilisateurs (on va les stocker dans KV)
 const DEFAULT_USERS = {
   cgp: [
     { id: 'manon', nom: 'Manon', password: 'Manon4827', backOfficeAutorise: false },
@@ -29,7 +28,7 @@ async function initializeUsers() {
     const existingUsers = await kv.get('users');
     if (!existingUsers) {
       await kv.set('users', DEFAULT_USERS);
-      console.log('Utilisateurs par défaut initialisés dans KV');
+      console.log('Utilisateurs initialisés dans Vercel KV');
     }
   } catch (error) {
     console.error('Erreur initialisation utilisateurs:', error);
@@ -53,7 +52,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Récupérer les utilisateurs depuis KV
     const users = await kv.get('users') || DEFAULT_USERS;
     let user = null;
 
@@ -78,7 +76,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Retourner les infos utilisateur (sans le mot de passe)
     const { password: _, ...userInfo } = user;
     
     res.status(200).json({ 
