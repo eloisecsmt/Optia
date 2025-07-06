@@ -13,7 +13,6 @@ async function getAllOperations() {
       return [];
     }
     
-    // Récupérer toutes les opérations en parallèle
     const operations = await Promise.all(
       operationIds.map(async (id) => {
         const operation = await kv.get(`operation:${id}`);
@@ -21,7 +20,6 @@ async function getAllOperations() {
       })
     );
     
-    // Filtrer les opérations nulles et trier par date de création
     return operations
       .filter(op => op !== null)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -57,10 +55,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Champs obligatoires manquants' });
       }
 
-      // Générer un nouvel ID
       const id = await getNextId();
       
-      // Créer l'opération
       const operation = {
         id,
         nomClient,
@@ -86,7 +82,6 @@ export default async function handler(req, res) {
         updatedAt: new Date().toISOString()
       };
 
-      // Sauvegarder l'opération et l'ajouter à la liste des IDs
       await Promise.all([
         kv.set(`operation:${id}`, operation),
         kv.sadd('operations:ids', id)
