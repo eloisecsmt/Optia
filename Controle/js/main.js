@@ -1,0 +1,317 @@
+// main.js - Point d'entrée principal de l'application
+
+import { Utils } from './modules/utils.js';
+import { FileHandler } from './modules/fileHandler.js';
+import { DataProcessor } from './modules/dataProcessor.js';
+import { TableManager } from './modules/tableManager.js';
+import { ControlTypes } from './modules/controlTypes.js';
+import { DocumentController } from './modules/documentController.js';
+
+class DocumentControlApp {
+    constructor() {
+        this.modules = {};
+        this.init();
+    }
+
+    async init() {
+        try {
+            Utils.debugLog('=== INITIALISATION APPLICATION ===');
+            
+            // Initialiser les modules dans l'ordre
+            this.modules.fileHandler = new FileHandler();
+            this.modules.dataProcessor = new DataProcessor();
+            this.modules.tableManager = new TableManager();
+            this.modules.controlTypes = new ControlTypes();
+            this.modules.documentController = new DocumentController();
+            
+            // Exposer les modules globalement IMMÉDIATEMENT
+            window.fileHandler = this.modules.fileHandler;
+            window.dataProcessor = this.modules.dataProcessor;
+            window.tableManager = this.modules.tableManager;
+            window.controlTypes = this.modules.controlTypes;
+            window.documentController = this.modules.documentController;
+            
+            Utils.debugLog('Modules exposés globalement');
+            
+            // Configurer les gestionnaires d'événements globaux
+            this.setupGlobalEventHandlers();
+            
+            // Diagnostic initial
+            setTimeout(() => {
+                Utils.debugLog(`DataProcessor global: ${window.dataProcessor ? 'OK' : 'NON'}`);
+                Utils.debugLog(`TableManager global: ${window.tableManager ? 'OK' : 'NON'}`);
+                Utils.debugLog(`DocumentController global: ${window.documentController ? 'OK' : 'NON'}`);
+            }, 100);
+            
+            Utils.debugLog('Application initialisée avec succès');
+            
+        } catch (error) {
+            console.error('Erreur lors de l\'initialisation:', error);
+            Utils.showNotification('Erreur lors de l\'initialisation de l\'application', 'error');
+        }
+    }
+
+    setupGlobalEventHandlers() {
+        // Gestionnaires pour les boutons de navigation
+        this.setupNavigationHandlers();
+        
+        // Gestionnaires pour les contrôles
+        this.setupControlHandlers();
+        
+        // Gestionnaires pour les filtres
+        this.setupFilterHandlers();
+        
+        // Gestionnaires pour la sélection
+        this.setupSelectionHandlers();
+        
+        // Gestionnaires pour l'export
+        this.setupExportHandlers();
+        
+        // Gestionnaires pour le debug
+        this.setupDebugHandlers();
+        
+        // Événements personnalisés entre modules
+        this.setupCustomEvents();
+    }
+
+    setupNavigationHandlers() {
+        // Boutons de navigation entre sections
+        window.proceedToSelection = () => {
+            this.modules.tableManager.proceedToSelection();
+        };
+
+        window.showFileUpload = () => {
+            this.modules.tableManager.showFileUpload();
+        };
+
+        window.showDossierSelection = () => {
+            this.modules.tableManager.showDossierSelection();
+        };
+
+        window.showAutomaticControls = () => {
+            this.modules.tableManager.showAutomaticControls();
+        };
+
+        window.resetFile = () => {
+            this.modules.fileHandler.resetFileUpload();
+        };
+    }
+
+    setupControlHandlers() {
+        // Contrôles manuels
+        window.proceedToControl = () => {
+            this.modules.tableManager.proceedToControl();
+        };
+
+        // Navigation depuis l'interface de contrôle
+        window.returnToAutomaticControls = () => {
+            this.modules.controlTypes.returnToAutomaticControls();
+        };
+    }
+
+    setupFilterHandlers() {
+        // Application et effacement des filtres
+        window.applyFilters = () => {
+            this.modules.tableManager.applyFilters();
+        };
+
+        window.clearFilters = () => {
+            this.modules.tableManager.clearFilters();
+        };
+    }
+
+    setupSelectionHandlers() {
+        // Gestion de la sélection des dossiers
+        window.toggleSelectAll = () => {
+            this.modules.tableManager.toggleSelectAll();
+        };
+
+        window.clearSelection = () => {
+            this.modules.tableManager.clearSelection();
+        };
+
+        // La fonction toggleDossierSelection est gérée directement dans TableManager
+        // via window.tableManager?.toggleDossierSelection()
+    }
+
+    setupExportHandlers() {
+        // Export des résultats
+        window.downloadResults = () => {
+            this.modules.tableManager.downloadResults();
+        };
+    }
+
+    setupDebugHandlers() {
+        // Fonctions de debug
+        window.toggleDebug = () => {
+            Utils.toggleDebug();
+        };
+    }
+
+    // Méthodes utilitaires pour les autres modules
+    getModule(moduleName) {
+        return this.modules[moduleName];
+    }
+
+    getAllModules() {
+        return this.modules;
+    }
+
+    // Gestion des événements personnalisés entre modules
+    setupCustomEvents() {
+        // Écouter les événements entre modules
+        window.addEventListener('fileReset', () => {
+            Utils.debugLog('Événement fileReset reçu');
+            // Réinitialiser tous les modules concernés
+            if (this.modules.dataProcessor) {
+                this.modules.dataProcessor.reset();
+            }
+            if (this.modules.tableManager) {
+                this.modules.tableManager.reset();
+            }
+        });
+
+        window.addEventListener('dataProcessed', (e) => {
+            Utils.debugLog('Événement dataProcessed reçu dans main.js');
+            
+            // Vérifier que les instances sont cohérentes
+            const localDP = this.modules.dataProcessor;
+            const globalDP = window.dataProcessor;
+            
+            if (localDP !== globalDP) {
+                Utils.debugLog('ATTENTION: Instance locale différente de l\'instance globale');
+                Utils.debugLog(`Local: ${localDP.getAllDossiers().length}, Global: ${globalDP.getAllDossiers().length}`);
+                
+                // Synchroniser si nécessaire
+                if (localDP.getAllDossiers().length > 0 && globalDP.getAllDossiers().length === 0) {
+                    Utils.debugLog('Synchronisation des instances...');
+                    window.dataProcessor = localDP;
+                    this.modules.dataProcessor = localDP;
+                }
+            }
+        });
+
+        window.addEventListener('controlLaunched', (e) => {
+            Utils.debugLog('Événement controlLaunched reçu');
+            // Ici on pourrait ajouter de la logique globale si nécessaire
+        });
+
+        window.addEventListener('manualControlLaunched', (e) => {
+            Utils.debugLog('Événement manualControlLaunched reçu');
+            // Logique pour les contrôles manuels si nécessaire
+        });
+    }
+
+    // Méthodes de gestion d'état global
+    getAppState() {
+        return {
+            hasFile: !!this.modules.fileHandler.getCurrentFile(),
+            hasData: this.modules.dataProcessor.getAllDossiers().length > 0,
+            selectedCount: this.modules.tableManager.getSelectedDossiers().length,
+            currentControl: this.modules.controlTypes.getCurrentControl()
+        };
+    }
+
+    // Méthode pour diagnostiquer l'état de l'application
+    diagnose() {
+        const state = this.getAppState();
+        
+        Utils.debugLog('=== DIAGNOSTIC APPLICATION ===');
+        Utils.debugLog(`Fichier chargé: ${state.hasFile}`);
+        Utils.debugLog(`Données traitées: ${state.hasData}`);
+        Utils.debugLog(`Dossiers sélectionnés: ${state.selectedCount}`);
+        Utils.debugLog(`Contrôle en cours: ${state.currentControl ? state.currentControl.type : 'Aucun'}`);
+        
+        // Diagnostics des modules
+        Object.entries(this.modules).forEach(([name, module]) => {
+            Utils.debugLog(`Module ${name}: ${module ? 'Initialisé' : 'Non initialisé'}`);
+        });
+        
+        // Diagnostic spécifique DataProcessor
+        if (this.modules.dataProcessor) {
+            const allDossiers = this.modules.dataProcessor.getAllDossiers();
+            Utils.debugLog(`DataProcessor local: ${allDossiers.length} dossiers`);
+        }
+        
+        if (window.dataProcessor) {
+            const allDossiers = window.dataProcessor.getAllDossiers();
+            Utils.debugLog(`DataProcessor global: ${allDossiers.length} dossiers`);
+        }
+        
+        return state;
+    }
+
+    // Fonction spécifique pour débugger les données
+    debugData() {
+        Utils.debugLog('=== DEBUG DONNÉES ===');
+        
+        const localDP = this.modules.dataProcessor;
+        const globalDP = window.dataProcessor;
+        
+        Utils.debugLog(`Instance locale === Instance globale: ${localDP === globalDP}`);
+        
+        if (localDP) {
+            Utils.debugLog(`DataProcessor local.allDossiers: ${localDP.allDossiers ? localDP.allDossiers.length : 'undefined'}`);
+            Utils.debugLog(`DataProcessor local.filteredDossiers: ${localDP.filteredDossiers ? localDP.filteredDossiers.length : 'undefined'}`);
+        }
+        
+        if (globalDP) {
+            Utils.debugLog(`DataProcessor global.allDossiers: ${globalDP.allDossiers ? globalDP.allDossiers.length : 'undefined'}`);
+            Utils.debugLog(`DataProcessor global.filteredDossiers: ${globalDP.filteredDossiers ? globalDP.filteredDossiers.length : 'undefined'}`);
+        }
+        
+        if (window.tableManager) {
+            Utils.debugLog(`TableManager.dataProcessor: ${window.tableManager.dataProcessor ? 'défini' : 'undefined'}`);
+            if (window.tableManager.dataProcessor) {
+                Utils.debugLog(`TableManager.dataProcessor === global: ${window.tableManager.dataProcessor === globalDP}`);
+            }
+        }
+    }
+
+    // Fonction pour forcer la synchronisation
+    forceSync() {
+        Utils.debugLog('=== SYNCHRONISATION FORCÉE ===');
+        
+        const localDP = this.modules.dataProcessor;
+        if (localDP && localDP.getAllDossiers().length > 0) {
+            Utils.debugLog(`Synchronisation: ${localDP.getAllDossiers().length} dossiers`);
+            window.dataProcessor = localDP;
+            
+            // Forcer le TableManager à récupérer les bonnes données
+            if (window.tableManager) {
+                window.tableManager.dataProcessor = localDP;
+                window.tableManager.populateFilters();
+                window.tableManager.loadDossiersTable();
+            }
+            
+            Utils.debugLog('Synchronisation terminée');
+        }
+    }
+}
+
+// Initialisation de l'application au chargement du DOM
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new DocumentControlApp();
+    
+    // Exposer quelques méthodes utiles globalement
+    window.diagnoseApp = () => window.app.diagnose();
+    window.debugData = () => window.app.debugData();
+    window.forceSync = () => window.app.forceSync();
+    window.getAppState = () => window.app.getAppState();
+    
+    Utils.debugLog('Application Document Control démarrée');
+});
+
+// Gestion des erreurs globales
+window.addEventListener('error', (e) => {
+    console.error('Erreur globale:', e.error);
+    Utils.debugLog('ERREUR: ' + e.error.message);
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+    console.error('Promesse rejetée:', e.reason);
+    Utils.debugLog('PROMESSE REJETÉE: ' + e.reason);
+});
+
+// Export pour utilisation en module
+export default DocumentContr
