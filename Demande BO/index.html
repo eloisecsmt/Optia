@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Demandes Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #3498db;
+            border-radius: 50%;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .type-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .type-card {
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .type-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(52, 152, 219, 0.05);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .type-card:hover::before {
+            opacity: 1;
+        }
+
+        .type-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .type-card.active {
+            border-color: #3498db;
+            background: #3498db;
+            color: white;
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .type-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .type-card p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .file-upload {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-upload::before {
+            content: '📁';
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .file-upload:hover {
+            border-color: #2980b9;
+            background: #e8f4f8;
+            transform: translateY(-1px);
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+        }
+
+        .file-list {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item span {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .file-item button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .file-item button:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+
+        .submit-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+            margin: 40px auto 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+        }
+
+        .submit-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .checkbox-item:hover {
+            background: #e8f4f8;
+            border-color: #3498db;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #3498db;
+        }
+
+        .checkbox-item label {
+            font-weight: 500;
+            color: #555;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .type-selector {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+        }
+
+        function showDocumentUpload(type) {
+            const container = document.getElementById('documentsContainer');
+            const docs = documentTypes[type];
+            
+            if (!docs) return;
+
+            // Initialiser le stockage des fichiers pour ce type
+            documentFiles[type] = documentFiles[type] || {};
+
+            let html = '';
+            docs.forEach((docType, index) => {
+                const docId = `doc_${type}_${index}`;
+                html += `
+                    <div class="form-group" style="margin-bottom: 25px;">
+                        <label for="${docId}" style="font-weight: 600; color: #2c3e50; margin-bottom: 10px;">${docType}</label>
+                        <div class="file-upload" style="margin-bottom: 10px;">
+                            <input type="file" id="${docId}" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleFileUpload('${docId}', '${type}', '${docType}')">
+                            <div>
+                                <p>Cliquez pour sélectionner les documents</p>
+                                <p style="font-size: 0.9rem; opacity: 0.7; margin-top: 10px;">
+                                    Formats acceptés: PDF, DOC, DOCX, JPG, PNG
+                                </p>
+                            </div>
+                        </div>
+                        <div id="${docId}_list" class="file-list hidden"></div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function handleFileUpload(inputId, type, docType) {
+            const input = document.getElementById(inputId);
+            const fileList = document.getElementById(inputId + '_list');
+            
+            if (!documentFiles[type]) {
+                documentFiles[type] = {};
+            }
+            
+            if (!documentFiles[type][docType]) {
+                documentFiles[type][docType] = [];
+            }
+
+            // Ajouter les nouveaux fichiers
+            const files = Array.from(input.files);
+            files.forEach(file => {
+                if (!documentFiles[type][docType].some(f => f.name === file.name)) {
+                    documentFiles[type][docType].push(file);
+                }
+            });
+
+            updateDocumentList(inputId, type, docType);
+        }
+
+        function updateDocumentList(inputId, type, docType) {
+            const fileList = document.getElementById(inputId + '_list');
+            const files = documentFiles[type][docType] || [];
+            
+            if (files.length > 0) {
+                fileList.classList.remove('hidden');
+                fileList.innerHTML = '';
+                
+                files.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <span>${file.name}</span>
+                        <button type="button" onclick="removeDocumentFile('${type}', '${docType}', ${index}, '${inputId}')">Supprimer</button>
+                    `;
+                    fileList.appendChild(fileItem);
+                });
+            } else {
+                fileList.classList.add('hidden');
+            }
+        }
+
+        function removeDocumentFile(type, docType, index, inputId) {
+            if (documentFiles[type] && documentFiles[type][docType]) {
+                documentFiles[type][docType].splice(index, 1);
+                updateDocumentList(inputId, type, docType);
+            }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Gestion des Demandes Client</h1>
+            <p>Sélectionnez le type de demande et complétez les informations requises</p>
+        </div>
+
+        <div class="form-container">
+            <form id="demandeForm">
+                <!-- Sélection du type de demande -->
+                <div class="form-section">
+                    <div class="section-title">Type de demande</div>
+                    <div class="type-selector">
+                        <div class="type-card" data-type="versement">
+                            <h3>Versement</h3>
+                            <p>Ajout de fonds au patrimoine</p>
+                        </div>
+                        <div class="type-card" data-type="rachat">
+                            <h3>Rachat</h3>
+                            <p>Retrait de fonds</p>
+                        </div>
+                        <div class="type-card" data-type="arbitrage">
+                            <h3>Arbitrage</h3>
+                            <p>Patrimoine < 100k</p>
+                        </div>
+                        <div class="type-card" data-type="creation">
+                            <h3>Création</h3>
+                            <p>Nouveau prospect/client</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations communes -->
+                <div class="form-section">
+                    <div class="section-title">Informations générales</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="nom">Nom du client *</label>
+                            <input type="text" id="nom" name="nom" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prenom">Prénom du client *</label>
+                            <input type="text" id="prenom" name="prenom" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dateDemande">Date de la demande</label>
+                            <input type="date" id="dateDemande" name="dateDemande" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dateRdv">Date du prochain RDV</label>
+                            <input type="date" id="dateRdv" name="dateRdv">
+                        </div>
+                        <div class="form-group">
+                            <label for="urgence">Urgence</label>
+                            <select id="urgence" name="urgence">
+                                <option value="Normal">Normal</option>
+                                <option value="Urgent">Urgent</option>
+                                <option value="Très urgent">Très urgent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="origine">Origine du contact</label>
+                            <select id="origine" name="origine">
+                                <option value="Client PTF">Client PTF</option>
+                                <option value="Client apporté par la direction">Client apporté par la direction</option>
+                                <option value="Client apporté par salarié OC">Client apporté par salarié OC</option>
+                                <option value="Client apporté par Progressia">Client apporté par Progressia</option>
+                                <option value="Client externe apporter par le CGP">Client externe apporter par le CGP</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="modeSignature">Mode de signature</label>
+                            <select id="modeSignature" name="modeSignature">
+                                <option value="Papier">Papier</option>
+                                <option value="Electronique">Electronique</option>
+                                <option value="RDV">RDV</option>
+                                <option value="Mail/VP">Mail/VP</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations spécifiques par type -->
+                <div id="specificFields" class="form-section hidden">
+                    <div class="section-title">Informations spécifiques</div>
+                    <div id="specificContent"></div>
+                </div>
+
+                <!-- Upload de documents -->
+                <div class="form-section">
+                    <div class="section-title">Documents à joindre</div>
+                    <div id="documentsContainer"></div>
+                </div>
+
+                <button type="submit" class="submit-btn">Envoyer la demande</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let selectedType = '';
+        let documentFiles = {};
+
+        // Définition des documents par type de demande
+        const documentTypes = {
+            versement: [
+                'MAJ & profil signés (12 mois)',
+                'Etude signée',
+                'CNI en cours de validité',
+                'Justificatif de domicile (moins de 3 mois)',
+                'RIB à jour',
+                'Justificatif de provenance des fonds',
+                'Autre document'
+            ],
+            rachat: [
+                'MAJ & profil signée (12 mois)',
+                'RIB à jour',
+                'Justificatif de fiscalité',
+                'Autre document'
+            ],
+            arbitrage: [
+                'MAJ & profil signée (12 mois)',
+                'Document d\'allocation',
+                'Autre document'
+            ],
+            creation: [
+                'Fiche de renseignement signée',
+                'Profil client signé',
+                'Carto client signé',
+                'Lettre de mise en relation signée',
+                'FIL signé',
+                'Justificatif de domicile (moins de 3 mois)',
+                'CNI en cours de validité',
+                'Autre document'
+            ]
+        };
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Définir la date d'aujourd'hui
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateDemande').value = today;
+
+            // Événements
+            setupTypeSelection();
+            setupFormSubmission();
+        });
+
+        function setupTypeSelection() {
+            const typeCards = document.querySelectorAll('.type-card');
+            typeCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // Désélectionner toutes les cartes
+                    typeCards.forEach(c => c.classList.remove('active'));
+                    // Sélectionner la carte cliquée
+                    this.classList.add('active');
+                    selectedType = this.dataset.type;
+                    showSpecificFields(selectedType);
+                    showDocumentUpload(selectedType);
+                });
+            });
+        }
+
+        function showSpecificFields(type) {
+            const specificFields = document.getElementById('specificFields');
+            const specificContent = document.getElementById('specificContent');
+            
+            specificFields.classList.remove('hidden');
+            specificContent.innerHTML = '';
+
+            switch(type) {
+                case 'versement':
+                    specificContent.innerHTML = createVersementFields();
+                    break;
+                case 'rachat':
+                    specificContent.innerHTML = createRachatFields();
+                    break;
+                case 'arbitrage':
+                    specificContent.innerHTML = createArbitrageFields();
+                    break;
+                case 'creation':
+                    specificContent.innerHTML = createCreationFields();
+                    break;
+            }
+        }
+
+        function createVersementFields() {
+            return `
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="majProfil" name="majProfil">
+                        <label for="majProfil">MAJ & profil signés (12 mois)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="etudeSignee" name="etudeSignee">
+                        <label for="etudeSignee">Etude signée</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="cniValide" name="cniValide">
+                        <label for="cniValide">CNI en cours de validité</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="justifDom" name="justifDom">
+                        <label for="justifDom">Justif de DOM -3 mois</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ribJour" name="ribJour">
+                        <label for="ribJour">RIB à jour</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="claudeBeneficiaire" name="claudeBeneficiaire">
+                        <label for="claudeBeneficiaire">Claude bénéficiaire</label>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label for="provenanceFonds">Provenance des fonds</label>
+                        <input type="text" id="provenanceFonds" name="provenanceFonds">
+                    </div>
+                    <div class="form-group">
+                        <label for="justifProvenance">Justificatif de provenance</label>
+                        <input type="text" id="justifProvenance" name="justifProvenance">
+                    </div>
+                    <div class="form-group">
+                        <label for="montantVersement">Montant du versement</label>
+                        <input type="number" id="montantVersement" name="montantVersement" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="allocationVersement">Allocation du versement</label>
+                        <textarea id="allocationVersement" name="allocationVersement"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="fraisVersement">Frais du versement</label>
+                        <input type="number" id="fraisVersement" name="fraisVersement" min="0" step="0.01">
+                    </div>
+                </div>
+            `;
+        }
+
+        function createRachatFields() {
+            return `
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="majProfilRachat" name="majProfilRachat">
+                        <label for="majProfilRachat">MAJ & profil signée (12 mois)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ribJourRachat" name="ribJourRachat">
+                        <label for="ribJourRachat">RIB à jour</label>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label for="fiscaliteRachat">Fiscalité du rachat</label>
+                        <input type="text" id="fiscaliteRachat" name="fiscaliteRachat">
+                    </div>
+                    <div class="form-group">
+                        <label for="montantRachat">Montant</label>
+                        <input type="number" id="montantRachat" name="montantRachat" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="motifRachat">Motif</label>
+                        <input type="text" id="motifRachat" name="motifRachat">
+                    </div>
+                    <div class="form-group">
+                        <label for="supportDesinvestir">Support à désinvestir</label>
+                        <input type="text" id="supportDesinvestir" name="supportDesinvestir">
+                    </div>
+                    <div class="form-group">
+                        <label for="pourcentageReallouer">Pourcentage à réalouer</label>
+                        <input type="number" id="pourcentageReallouer" name="pourcentageReallouer" min="0" max="100" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="nouveauSupport">Nouveau support</label>
+                        <input type="text" id="nouveauSupport" name="nouveauSupport">
+                    </div>
+                </div>
+            `;
+        }
+
+        function createArbitrageFields() {
+            return `
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="majProfilArbitrage" name="majProfilArbitrage">
+                        <label for="majProfilArbitrage">MAJ & profil signée (12 mois)</label>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label for="allocationArbitrage">Allocation</label>
+                        <textarea id="allocationArbitrage" name="allocationArbitrage"></textarea>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createCreationFields() {
+            return `
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ficheRenseignement" name="ficheRenseignement">
+                        <label for="ficheRenseignement">Fiche de renseignement signée</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="profilClientSigne" name="profilClientSigne">
+                        <label for="profilClientSigne">Profil client signé</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="cartoClientSigne" name="cartoClientSigne">
+                        <label for="cartoClientSigne">Carto client signé</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="lettreMiseRelation" name="lettreMiseRelation">
+                        <label for="lettreMiseRelation">Lettre de mise en relation signée</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="filSigne" name="filSigne">
+                        <label for="filSigne">FIL signé</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="justifDomCreation" name="justifDomCreation">
+                        <label for="justifDomCreation">Justif de DOM -3 mois</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="cniValideCreation" name="cniValideCreation">
+                        <label for="cniValideCreation">CNI en cours de validité</label>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setupFileUpload() {
+            // Cette fonction n'est plus nécessaire car la gestion des fichiers
+            // est maintenant gérée par type de document
+        }
+
+        function updateFileList() {
+            // Cette fonction n'est plus nécessaire
+        }
+
+        function removeFile(index) {
+            // Cette fonction n'est plus nécessaire
+        }
+
+        function setupFormSubmission() {
+            const form = document.getElementById('demandeForm');
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (!selectedType) {
+                    alert('Veuillez sélectionner un type de demande');
+                    return;
+                }
+
+                // Collecter toutes les données du formulaire
+                const formData = new FormData(form);
+                
+                // Compter le nombre total de fichiers
+                let totalFiles = 0;
+                const filesByType = {};
+                
+                if (documentFiles[selectedType]) {
+                    Object.keys(documentFiles[selectedType]).forEach(docType => {
+                        const files = documentFiles[selectedType][docType];
+                        if (files && files.length > 0) {
+                            filesByType[docType] = files.map(f => f.name);
+                            totalFiles += files.length;
+                        }
+                    });
+                }
+
+                const data = {
+                    type: selectedType,
+                    documents: filesByType,
+                    totalFiles: totalFiles,
+                    formData: Object.fromEntries(formData)
+                };
+
+                // Simulation de l'envoi
+                console.log('Données de la demande:', data);
+                
+                let filesSummary = '';
+                if (totalFiles > 0) {
+                    filesSummary = '\n\nDocuments joints:';
+                    Object.keys(filesByType).forEach(docType => {
+                        filesSummary += `\n- ${docType}: ${filesByType[docType].join(', ')}`;
+                    });
+                }
+                
+                alert('Demande envoyée avec succès!\n\nType: ' + selectedType + '\nTotal fichiers: ' + totalFiles + filesSummary);
+                
+                // Réinitialiser le formulaire
+                form.reset();
+                document.querySelectorAll('.type-card').forEach(card => card.classList.remove('active'));
+                document.getElementById('specificFields').classList.add('hidden');
+                document.getElementById('documentsContainer').innerHTML = '';
+                selectedType = '';
+                documentFiles = {};
+                
+                // Remettre la date d'aujourd'hui
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('dateDemande').value = today;
+            });
+        }
+    </script>
+</body>
+</html>
