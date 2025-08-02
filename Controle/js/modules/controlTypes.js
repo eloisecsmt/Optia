@@ -1,10 +1,12 @@
-// controlTypes.js - Gestion des différents types de contrôles
+// controlTypes.js - Version modifiée avec boutons Remplacer et Régénérer échantillon
 
 import { Utils } from './utils.js';
 
 export class ControlTypes {
     constructor() {
         this.controlDefinitions = this.initializeControlDefinitions();
+        this.currentControl = null;
+        this.availableDossiers = []; // Pool des dossiers éligibles non encore sélectionnés
         this.setupEventListeners();
     }
 
@@ -294,7 +296,13 @@ export class ControlTypes {
         // Sélection aléatoire de l'échantillon
         const selectedDossiers = this.selectRandomSample(eligibleDossiers, control);
         
+        // NOUVEAU : Stocker les dossiers disponibles pour remplacement
+        this.availableDossiers = eligibleDossiers.filter(d => 
+            !selectedDossiers.some(s => s.originalIndex === d.originalIndex)
+        );
+        
         Utils.debugLog(`Dossiers sélectionnés pour contrôle ${controlType}: ${selectedDossiers.length}`);
+        Utils.debugLog(`Dossiers disponibles pour remplacement: ${this.availableDossiers.length}`);
         
         // Lancer l'interface de contrôle
         this.launchControlInterface(controlType, selectedDossiers);
@@ -379,20 +387,152 @@ export class ControlTypes {
 
         this.currentControl.selectedDossiers.forEach((dossier, index) => {
             const row = document.createElement('tr');
+            const canReplace = this.availableDossiers.length > 0;
+            
             row.innerHTML = `
                 <td><strong>${dossier.client}</strong></td>
                 <td>${dossier.codeDossier || 'N/A'}</td>
                 <td>${dossier.conseiller || 'N/A'}</td>
                 <td>${dossier.montant || 'N/A'}</td>
                 <td>${dossier.domaine || 'N/A'}</td>
-                <td>
+                <td class="sample-actions">
                     <button class="btn-control" onclick="window.controlTypes?.startDocumentControl(${index})">
                         Contrôler
+                    </button>
+                    <button class="btn-replace ${canReplace ? '' : 'disabled'}" 
+                            onclick="window.controlTypes?.replaceDossier(${index})"
+                            ${canReplace ? '' : 'disabled'}>
+                        Remplacer
                     </button>
                 </td>
             `;
             tbody.appendChild(row);
         });
+
+        // Ajouter le bouton "Régénérer échantillon" sous le tableau
+        this.addRegenerateButton();
+    }
+
+    // NOUVELLE MÉTHODE : Ajouter le bouton régénérer
+    addRegenerateButton() {
+        const section = document.getElementById('sample-selection-section');
+        if (!section) return;
+
+        // Chercher s'il existe déjà
+        let sampleActions = section.querySelector('.sample-actions-footer');
+        
+        if (!sampleActions) {
+            // Créer la section d'actions
+            sampleActions = document.createElement('div');
+            sampleActions.className = 'sample-actions-footer';
+            
+            // L'insérer avant les boutons de navigation existants
+            const existingBtnGroup = section.querySelector('.btn-group');
+            if (existingBtnGroup) {
+                section.insertBefore(sampleActions, existingBtnGroup);
+            } else {
+                section.appendChild(sampleActions);
+            }
+        }
+
+        sampleActions.innerHTML = `
+            <div class="regenerate-section">
+                <p class="regenerate-info">
+                    <strong>🔄 Échantillon complet :</strong> 
+                    ${this.currentControl.selectedDossiers.length} dossiers sélectionnés, 
+                    ${this.availableDossiers.length} dossiers disponibles pour remplacement
+                </p>
+                <button class="btn btn-warning btn-regenerate" onclick="window.controlTypes?.regenerateSample()">
+                    🔄 Régénérer l'échantillon complet
+                </button>
+            </div>
+        `;
+    }
+
+    // NOUVELLE MÉTHODE : Remplacer un dossier spécifique
+    replaceDossier(index) {
+        if (!this.currentControl || index >= this.currentControl.selectedDossiers.length) {
+            Utils.showNotification('Erreur: dossier non trouvé', 'error');
+            return;
+        }
+
+        if (this.availableDossiers.length === 0) {
+            Utils.showNotification('Aucun dossier disponible pour le remplacement', 'warning');
+            return;
+        }
+
+        const oldDossier = this.currentControl.selectedDossiers[index];
+        
+        // Sélectionner un nouveau dossier aléatoirement
+        const randomIndex = Math.floor(Math.random() * this.availableDossiers.length);
+        const newDossier = this.availableDossiers[randomIndex];
+        
+        // Effectuer le remplacement
+        this.currentControl.selectedDossiers[index] = newDossier;
+        
+        // Mettre à jour les listes
+        // Ajouter l'ancien dossier aux disponibles
+        this.availableDossiers.push(oldDossier);
+        // Retirer le nouveau des disponibles
+        this.availableDossiers.splice(randomIndex, 1);
+        
+        // Mettre à jour l'affichage
+        this.populateSampleTable();
+        
+        // Notification
+        Utils.showNotification(
+            `Dossier remplacé : ${oldDossier.client} → ${newDossier.client}`, 
+            'success'
+        );
+        
+        Utils.debugLog(`Remplacement: ${oldDossier.client} → ${newDossier.client}`);
+    }
+
+    // NOUVELLE MÉTHODE : Régénérer complètement l'échantillon
+    regenerateSample() {
+        if (!this.currentControl) {
+            Utils.showNotification('Aucun contrôle en cours', 'error');
+            return;
+        }
+
+        // Confirmation utilisateur
+        if (!confirm(`Êtes-vous sûr de vouloir régénérer complètement l'échantillon ?\n\nCela va remplacer tous les ${this.currentControl.selectedDossiers.length} dossiers actuels par de nouveaux dossiers.`)) {
+            return;
+        }
+
+        const controlType = this.currentControl.type;
+        const control = this.currentControl.definition;
+        
+        // Récupérer tous les dossiers éligibles
+        const allEligibleDossiers = this.getEligibleDossiers(controlType);
+        
+        if (allEligibleDossiers.length < control.sampleSize) {
+            Utils.showNotification(
+                `Pas assez de dossiers éligibles pour régénérer (${allEligibleDossiers.length}/${control.sampleSize})`, 
+                'error'
+            );
+            return;
+        }
+
+        // Sélectionner un nouvel échantillon
+        const newSelectedDossiers = this.selectRandomSample(allEligibleDossiers, control);
+        
+        // Mettre à jour les données
+        this.currentControl.selectedDossiers = newSelectedDossiers;
+        this.availableDossiers = allEligibleDossiers.filter(d => 
+            !newSelectedDossiers.some(s => s.originalIndex === d.originalIndex)
+        );
+        
+        // Mettre à jour l'affichage
+        this.populateSampleTable();
+        
+        // Notification
+        Utils.showNotification(
+            `Nouvel échantillon généré avec ${newSelectedDossiers.length} dossiers`, 
+            'success'
+        );
+        
+        Utils.debugLog(`Échantillon régénéré: ${newSelectedDossiers.length} nouveaux dossiers`);
     }
 
     startDocumentControl(dossierIndex) {
