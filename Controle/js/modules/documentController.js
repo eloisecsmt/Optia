@@ -1764,7 +1764,15 @@ export class DocumentController {
             return;
         }
 
-        this.generateControlSummary();
+        const summary = this.generateControlSummary();
+        
+        // Déclencher l'événement
+        window.dispatchEvent(new CustomEvent('controlCompleted', {
+            detail: summary
+        }));
+        
+        // Retour à l'interface principale
+        Utils.showSection('automatic-control-section');
     }
 
     generateControlSummary() {
@@ -1782,7 +1790,7 @@ export class DocumentController {
             detail: summary
         }));
 
-        this.exportControlResults(summary);
+        window.persistenceManager?.saveControl(summary);
         
         Utils.showSection('automatic-control-section');
     }
