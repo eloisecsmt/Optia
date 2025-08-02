@@ -1,4 +1,4 @@
-// historyInterface.js - Version enrichie avec toutes les fonctionnalités
+// historyInterface.js - Version complète enrichie avec export détaillé
 
 import { Utils } from './utils.js';
 
@@ -20,22 +20,22 @@ export class HistoryInterface {
     setupEventListeners() {
         // Écouter les contrôles terminés pour mise à jour automatique
         window.addEventListener('controlCompleted', (e) => {
-        Utils.debugLog('HistoryInterface: Contrôle terminé détecté');
-        
-        // SAUVEGARDER ICI (une seule fois)
-        if (window.persistenceManager) {
-            window.persistenceManager.saveControl(e.detail);
-            Utils.debugLog('Contrôle sauvegardé dans l\'historique');
-        }
-        
-        // Mettre à jour l'interface si visible
-        if (this.isHistorySectionActive()) {
-            setTimeout(() => {
-                this.loadHistoryData();
-                Utils.showNotification('Historique mis à jour automatiquement', 'success');
-            }, 1000);
-        }
-    });
+            Utils.debugLog('HistoryInterface: Contrôle terminé détecté');
+            
+            // SAUVEGARDER ICI (une seule fois)
+            if (window.persistenceManager) {
+                window.persistenceManager.saveControl(e.detail);
+                Utils.debugLog('Contrôle sauvegardé dans l\'historique');
+            }
+            
+            // Mettre à jour l'interface si visible
+            if (this.isHistorySectionActive()) {
+                setTimeout(() => {
+                    this.loadHistoryData();
+                    Utils.showNotification('Historique mis à jour automatiquement', 'success');
+                }, 1000);
+            }
+        });
 
         // Recherche en temps réel
         document.addEventListener('input', (e) => {
@@ -67,6 +67,10 @@ export class HistoryInterface {
         
         section.innerHTML = `
             <h2 class="section-title">📋 Historique des contrôles documentaires</h2>
+            
+            <!-- Input caché pour import JSON -->
+            <input type="file" id="import-backup" style="display:none" accept=".json" 
+                   onchange="window.persistenceManager?.importBackupJSON(this.files[0])">
             
             <!-- Filtres de recherche avancée -->
             <div class="filters-section">
@@ -186,20 +190,45 @@ export class HistoryInterface {
                 </div>
             </div>
             
-            <!-- Actions d'export et gestion -->
+            <!-- Actions de gestion (en haut) -->
+            <div class="history-management-actions" style="
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 25px;
+                border-left: 4px solid #6c757d;
+            ">
+                <h4 style="margin: 0 0 15px 0; color: #1a1a2e; font-size: 1.1rem;">⚙️ Gestion de l'historique</h4>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="window.persistenceManager?.exportBackupJSON()" 
+                            title="Créer une sauvegarde complète en JSON">
+                        💾 Sauvegarder
+                    </button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('import-backup').click()" 
+                            title="Importer une sauvegarde JSON">
+                        📂 Restaurer
+                    </button>
+                    <button class="btn btn-third" onclick="window.historyInterface?.clearHistory()"
+                            title="Effacer complètement l'historique (peut être récupéré avec le fichier JSON)">
+                        🗑️ Effacer tout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Actions d'export et consultation -->
             <div class="history-actions">
                 <div class="btn-group">
-                    <button class="btn btn-success" onclick="window.historyInterface?.exportComplete()" 
-                            title="Exporter tous les contrôles en Excel avec mise en forme">
-                        📊 Exporter historique complet
+                    <button class="btn btn-primary" onclick="window.historyInterface?.exportComplete()" 
+                            title="Exporter tout l'historique en Excel">
+                        📊 Exporter Historique
                     </button>
-                    <button class="btn btn-warning" onclick="window.historyInterface?.exportFiltered()" 
+                    <button class="btn btn-primary" onclick="window.historyInterface?.exportFiltered()" 
                             title="Exporter uniquement les résultats affichés">
-                        🔍 Exporter résultats filtrés (<span id="filtered-count">0</span>)
+                        📋 Exporter Résultats (<span id="filtered-count">0</span>)
                     </button>
-                    <button class="btn btn-info" onclick="window.historyInterface?.showStatistics()" 
-                            title="Voir les statistiques détaillées et graphiques">
-                        📈 Statistiques détaillées
+                    <button class="btn btn-primary" onclick="window.historyInterface?.showStatistics()" 
+                            title="Voir les statistiques détaillées">
+                        📈 Statistiques
                     </button>
                 </div>
                 
@@ -207,10 +236,6 @@ export class HistoryInterface {
                     <button class="btn btn-secondary" onclick="showAutomaticControls()" 
                             title="Retourner à l'interface principale de contrôle">
                         ⬅️ Retour aux contrôles
-                    </button>
-                    <button class="btn btn-danger" onclick="window.historyInterface?.clearHistory()"
-                            title="Effacer complètement l'historique (action irréversible)">
-                        🗑️ Effacer historique
                     </button>
                 </div>
             </div>
@@ -402,7 +427,7 @@ export class HistoryInterface {
         }
     }
 
-    // Affichage des résultats avec tri cliquable
+    // Affichage des résultats avec tri cliquable et actions enrichies
     displayResults(controles) {
         const resultsContainer = document.getElementById('history-results');
         
@@ -456,31 +481,48 @@ export class HistoryInterface {
                     </tr>
                 </thead>
                 <tbody>
-                    ${controles.map((controle, index) => `
-                        <tr class="${index % 2 === 0 ? 'even' : 'odd'} ${controle.conformiteGlobale === 'CONFORME' ? 'row-conforme' : 'row-non-conforme'}">
-                            <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
-                            <td><span class="badge control-type">${controle.type}</span></td>
-                            <td><strong>${controle.client}</strong></td>
-                            <td>${controle.codeDossier || 'N/A'}</td>
-                            <td>${controle.conseiller || 'N/A'}</td>
-                            <td>${controle.montant || 'N/A'}</td>
-                            <td><span class="badge secondary">${controle.documentsControles}</span></td>
-                            <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
-                            <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-info" 
-                                        onclick="window.historyInterface?.showDetails('${controle.id}')"
-                                        title="Voir les détails complets de ce contrôle">
-                                    📋 Détails
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('')}
+                    ${this.generateHistoryRows(controles)}
                 </tbody>
             </table>
         `;
         
         resultsContainer.innerHTML = tableHtml;
+    }
+
+    // Génération des lignes d'historique avec boutons export détaillé
+    generateHistoryRows(controles) {
+        return controles.map((controle, index) => {
+            const rowClass = index % 2 === 0 ? 'even' : 'odd';
+            const conformityClass = controle.conformiteGlobale === 'CONFORME' ? 'row-conforme' : 'row-non-conforme';
+            
+            return `
+                <tr class="${rowClass} ${conformityClass}">
+                    <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
+                    <td><span class="badge control-type">${controle.type}</span></td>
+                    <td><strong>${controle.client}</strong></td>
+                    <td>${controle.codeDossier || 'N/A'}</td>
+                    <td>${controle.conseiller || 'N/A'}</td>
+                    <td>${controle.montant || 'N/A'}</td>
+                    <td><span class="badge secondary">${controle.documentsControles}</span></td>
+                    <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
+                    <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
+                    <td>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                            <button class="btn btn-sm btn-secondary" 
+                                    onclick="window.historyInterface?.showDetails('${controle.id}')"
+                                    title="Voir les détails complets">
+                                📋 Détails
+                            </button>
+                            <button class="btn btn-sm btn-primary" 
+                                    onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
+                                    title="Export Excel détaillé avec onglets">
+                                📊 Export
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     // Icône de tri
@@ -537,113 +579,111 @@ export class HistoryInterface {
         }
     }
 
-    // Modal détails d'un contrôle (version simplifiée pour l'instant)
-    // Modal détails d'un contrôle (VERSION SANS ÉLÉMENTS FIXES)
-showDetails(controleId) {
-    if (!window.persistenceManager) return;
-    
-    const controle = window.persistenceManager.getHistoryData().controles.find(c => c.id == controleId);
-    if (!controle) {
-        Utils.showNotification('Contrôle non trouvé', 'error');
-        return;
-    }
+    // Modal détails enrichie avec boutons export détaillé
+    showDetails(controleId) {
+        if (!window.persistenceManager) return;
+        
+        const controle = window.persistenceManager.getHistoryData().controles.find(c => c.id == controleId);
+        if (!controle) {
+            Utils.showNotification('Contrôle non trouvé', 'error');
+            return;
+        }
 
-    this.closeAllModals();
+        this.closeAllModals();
 
-    const modal = document.createElement('div');
-    modal.className = 'justification-modal';
-    modal.id = `modal-details-${controleId}`;
-    
-    modal.innerHTML = `
-        <div class="modal-overlay" onclick="window.historyInterface?.closeModal('${controleId}')">
-            <div class="modal-content" style="
-                max-width: 95vw; 
-                max-height: 90vh; 
-                width: 1200px; 
-                overflow-y: auto; 
-                margin: 20px auto;
-                padding: 0;
-                " onclick="event.stopPropagation();">
-                
-                <!-- En-tête NORMAL (pas fixe) -->
-                <div style="
-                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-                    color: white;
-                    padding: 25px; 
-                    display: flex; 
-                    justify-content: space-between; 
-                    align-items: center;
-                    border-radius: 15px 15px 0 0;
-                ">
-                    <h3 style="margin: 0; font-size: 1.3rem;">📋 Détails du contrôle - ${controle.client}</h3>
-                    <button class="btn btn-sm" onclick="window.historyInterface?.closeModal('${controleId}')" 
-                            style="background: white; color: #1a1a2e; padding: 8px 12px; font-weight: 600;">❌ Fermer</button>
-                </div>
-                
-                <!-- Contenu principal -->
-                <div style="padding: 25px;">
+        const modal = document.createElement('div');
+        modal.className = 'justification-modal';
+        modal.id = `modal-details-${controleId}`;
+        
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="window.historyInterface?.closeModal('${controleId}')">
+                <div class="modal-content" style="
+                    max-width: 95vw; 
+                    max-height: 90vh; 
+                    width: 1200px; 
+                    overflow-y: auto; 
+                    margin: 20px auto;
+                    padding: 0;
+                    " onclick="event.stopPropagation();">
                     
-                    <!-- Informations principales - Grille VRAIMENT responsive -->
-                    <div class="control-summary" style="
-                        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                    <!-- En-tête -->
+                    <div style="
+                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                        color: white;
                         padding: 25px; 
-                        border-radius: 12px; 
-                        margin-bottom: 25px;
-                        border-left: 4px solid #d4af37;
+                        display: flex; 
+                        justify-content: space-between; 
+                        align-items: center;
+                        border-radius: 15px 15px 0 0;
                     ">
-                        <h4 style="margin: 0 0 20px 0; color: #1a1a2e;">📊 Informations du contrôle</h4>
-                        <div style="
-                            display: grid; 
-                            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-                            gap: 20px;
-                        ">
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📅 Date de contrôle</div>
-                                <div style="font-size: 1.1rem; color: #495057;">${controle.date.toLocaleDateString('fr-FR')}</div>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">🔍 Type de contrôle</div>
-                                <span class="badge control-type" style="font-size: 1rem; padding: 8px 12px;">${controle.type}</span>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">👤 Client</div>
-                                <div style="font-size: 1.1rem; font-weight: 600; color: #495057;">${controle.client}</div>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📋 Code dossier</div>
-                                <div style="font-size: 1rem; color: #495057;">${controle.codeDossier || 'Non renseigné'}</div>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">👨‍💼 Conseiller</div>
-                                <div style="font-size: 1rem; color: #495057;">${controle.conseiller || 'Non renseigné'}</div>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">💰 Montant</div>
-                                <div style="font-size: 1.1rem; font-weight: 600; color: #28a745;">${controle.montant || 'Non renseigné'}</div>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">🏢 Domaine</div>
-                                <div style="font-size: 1rem; color: #495057;">${controle.domaine || 'Non renseigné'}</div>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">⭐ Nouveau client</div>
-                                <div style="font-size: 1rem; color: #495057;">${controle.nouveauClient || 'Non renseigné'}</div>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                                <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📄 Documents contrôlés</div>
-                                <span class="badge secondary" style="font-size: 1rem; padding: 8px 12px;">${controle.documentsControles}</span>
-                            </div>
-                            <div class="info-item" style="padding: 10px 0;">
-                            <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem;">⚠️ Anomalies majeures</div>
-                            <span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}" 
-                                style="font-size: 0.9rem; padding: 4px 10px;">
-                                ${controle.anomaliesMajeures}
-                            </span>
-                        </div>
-
-                        </div>
+                        <h3 style="margin: 0; font-size: 1.3rem;">📋 Détails du contrôle - ${controle.client}</h3>
+                        <button class="btn btn-sm" onclick="window.historyInterface?.closeModal('${controleId}')" 
+                                style="background: white; color: #1a1a2e; padding: 8px 12px; font-weight: 600;">❌ Fermer</button>
+                    </div>
+                    
+                    <!-- Contenu principal -->
+                    <div style="padding: 25px;">
                         
-                        <!-- Conformité globale - Version compacte -->
+                        <!-- Informations principales -->
+                        <div class="control-summary" style="
+                            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                            padding: 25px; 
+                            border-radius: 12px; 
+                            margin-bottom: 25px;
+                            border-left: 4px solid #d4af37;
+                        ">
+                            <h4 style="margin: 0 0 20px 0; color: #1a1a2e;">📊 Informations du contrôle</h4>
+                            <div style="
+                                display: grid; 
+                                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+                                gap: 20px;
+                            ">
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📅 Date de contrôle</div>
+                                    <div style="font-size: 1.1rem; color: #495057;">${controle.date.toLocaleDateString('fr-FR')}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">🔍 Type de contrôle</div>
+                                    <span class="badge control-type" style="font-size: 1rem; padding: 8px 12px;">${controle.type}</span>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">👤 Client</div>
+                                    <div style="font-size: 1.1rem; font-weight: 600; color: #495057;">${controle.client}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📋 Code dossier</div>
+                                    <div style="font-size: 1rem; color: #495057;">${controle.codeDossier || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">👨‍💼 Conseiller</div>
+                                    <div style="font-size: 1rem; color: #495057;">${controle.conseiller || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">💰 Montant</div>
+                                    <div style="font-size: 1.1rem; font-weight: 600; color: #28a745;">${controle.montant || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">🏢 Domaine</div>
+                                    <div style="font-size: 1rem; color: #495057;">${controle.domaine || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">⭐ Nouveau client</div>
+                                    <div style="font-size: 1rem; color: #495057;">${controle.nouveauClient || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📄 Documents contrôlés</div>
+                                    <span class="badge secondary" style="font-size: 1rem; padding: 8px 12px;">${controle.documentsControles}</span>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem;">⚠️ Anomalies majeures</div>
+                                    <span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}" 
+                                        style="font-size: 0.9rem; padding: 4px 10px;">
+                                        ${controle.anomaliesMajeures}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Conformité globale -->
                             <div style="
                                 margin-top: 15px;
                                 padding: 12px 16px;
@@ -659,126 +699,132 @@ showDetails(controleId) {
                                     ${controle.conformiteGlobale}
                                 </span>
                             </div>
-                    
-                    ${controle.details && controle.details.length > 0 ? `
-                        <!-- Détails des vérifications -->
-                        <div style="margin-bottom: 25px;">
-                            <h4 style="color: #1a1a2e; margin-bottom: 15px;">📄 Détail des vérifications (${controle.details.length} points de contrôle)</h4>
-                            
-                            <!-- Tableau responsive avec scroll horizontal -->
-                            <div style="
-                                border: 2px solid #e9ecef; 
-                                border-radius: 12px; 
-                                overflow: hidden;
-                                background: white;
-                            ">
-                                <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
-                                    <table style="
-                                        width: 100%; 
-                                        border-collapse: collapse; 
-                                        font-size: 0.9rem;
-                                        min-width: 800px;
-                                    ">
-                                        <thead style="position: sticky; top: 0; z-index: 5;">
-                                            <tr style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
-                                                <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 120px;">📄 Document</th>
-                                                <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 300px;">❓ Question vérifiée</th>
-                                                <th style="color: white; padding: 15px 12px; text-align: center; font-weight: 600; min-width: 100px;">✅ Réponse</th>
-                                                <th style="color: white; padding: 15px 12px; text-align: center; font-weight: 600; min-width: 120px;">🔍 Qualité</th>
-                                                <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 250px;">📝 Justification</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${controle.details.map((detail, index) => `
-                                                <tr style="
-                                                    background: ${detail.conforme ? '#f0fff4' : '#fff5f5'}; 
-                                                    border-bottom: 1px solid #e9ecef;
-                                                    ${!detail.conforme ? 'border-left: 4px solid #dc3545;' : ''}
-                                                ">
-                                                    <td style="padding: 12px; vertical-align: top;">
-                                                        <strong style="color: #1a1a2e;">${detail.document}</strong>
-                                                    </td>
-                                                    <td style="
-                                                        padding: 12px; 
-                                                        vertical-align: top; 
-                                                        line-height: 1.4;
-                                                        word-wrap: break-word;
-                                                        max-width: 300px;
-                                                    ">
-                                                        ${detail.question}
-                                                    </td>
-                                                    <td style="padding: 12px; text-align: center; vertical-align: top;">
-                                                        <span class="badge ${detail.reponse === 'Oui' ? 'oui' : 'non'}" style="padding: 6px 12px;">
-                                                            ${detail.reponse}
-                                                        </span>
-                                                    </td>
-                                                    <td style="padding: 12px; text-align: center; vertical-align: top;">
-                                                        ${detail.qualite ? `<span style="font-size: 0.9rem; color: #495057;">${detail.qualite}</span>` : '<span style="color: #6c757d;">-</span>'}
-                                                    </td>
-                                                    <td style="
-                                                        padding: 12px; 
-                                                        vertical-align: top; 
-                                                        line-height: 1.4;
-                                                        word-wrap: break-word;
-                                                        max-width: 250px;
-                                                    ">
-                                                        ${detail.justification ? `<span style="font-size: 0.9rem; color: #495057; font-style: italic;">${detail.justification}</span>` : '<span style="color: #6c757d;">-</span>'}
-                                                    </td>
+                        </div>
+                        
+                        ${controle.details && controle.details.length > 0 ? `
+                            <!-- Détails des vérifications -->
+                            <div style="margin-bottom: 25px;">
+                                <h4 style="color: #1a1a2e; margin-bottom: 15px;">📄 Détail des vérifications (${controle.details.length} points de contrôle)</h4>
+                                
+                                <div style="
+                                    border: 2px solid #e9ecef; 
+                                    border-radius: 12px; 
+                                    overflow: hidden;
+                                    background: white;
+                                ">
+                                    <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                                        <table style="
+                                            width: 100%; 
+                                            border-collapse: collapse; 
+                                            font-size: 0.9rem;
+                                            min-width: 800px;
+                                        ">
+                                            <thead style="position: sticky; top: 0; z-index: 5;">
+                                                <tr style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 120px;">📄 Document</th>
+                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 300px;">❓ Question vérifiée</th>
+                                                    <th style="color: white; padding: 15px 12px; text-align: center; font-weight: 600; min-width: 100px;">✅ Réponse</th>
+                                                    <th style="color: white; padding: 15px 12px; text-align: center; font-weight: 600; min-width: 120px;">🔍 Qualité</th>
+                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 250px;">📝 Justification</th>
                                                 </tr>
-                                            `).join('')}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                ${controle.details.map((detail, index) => `
+                                                    <tr style="
+                                                        background: ${detail.conforme ? '#f0fff4' : '#fff5f5'}; 
+                                                        border-bottom: 1px solid #e9ecef;
+                                                        ${!detail.conforme ? 'border-left: 4px solid #dc3545;' : ''}
+                                                    ">
+                                                        <td style="padding: 12px; vertical-align: top;">
+                                                            <strong style="color: #1a1a2e;">${detail.document}</strong>
+                                                        </td>
+                                                        <td style="
+                                                            padding: 12px; 
+                                                            vertical-align: top; 
+                                                            line-height: 1.4;
+                                                            word-wrap: break-word;
+                                                            max-width: 300px;
+                                                        ">
+                                                            ${detail.question}
+                                                        </td>
+                                                        <td style="padding: 12px; text-align: center; vertical-align: top;">
+                                                            <span class="badge ${detail.reponse === 'Oui' ? 'oui' : 'non'}" style="padding: 6px 12px;">
+                                                                ${detail.reponse}
+                                                            </span>
+                                                        </td>
+                                                        <td style="padding: 12px; text-align: center; vertical-align: top;">
+                                                            ${detail.qualite ? `<span style="font-size: 0.9rem; color: #495057;">${detail.qualite}</span>` : '<span style="color: #6c757d;">-</span>'}
+                                                        </td>
+                                                        <td style="
+                                                            padding: 12px; 
+                                                            vertical-align: top; 
+                                                            line-height: 1.4;
+                                                            word-wrap: break-word;
+                                                            max-width: 250px;
+                                                        ">
+                                                            ${detail.justification ? `<span style="font-size: 0.9rem; color: #495057; font-style: italic;">${detail.justification}</span>` : '<span style="color: #6c757d;">-</span>'}
+                                                        </td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                            
+                            <!-- Résumé des anomalies -->
+                            ${this.generateAnomaliesResume(controle.details)}
+                            
+                        ` : `
+                            <div style="
+                                text-align: center; 
+                                padding: 40px; 
+                                color: #6c757d; 
+                                background: #f8f9fa; 
+                                border-radius: 12px;
+                                border: 2px dashed #dee2e6;
+                            ">
+                                <h4>📄 Aucun détail de vérification</h4>
+                                <p>Les détails des vérifications ne sont pas disponibles pour ce contrôle.</p>
+                                <small>Cela peut arriver pour les contrôles effectués avant la mise à jour du système.</small>
+                            </div>
+                        `}
                         
-                        <!-- Résumé des anomalies -->
-                        ${this.generateAnomaliesResume(controle.details)}
-                        
-                    ` : `
-                        <div style="
-                            text-align: center; 
-                            padding: 40px; 
-                            color: #6c757d; 
-                            background: #f8f9fa; 
-                            border-radius: 12px;
-                            border: 2px dashed #dee2e6;
-                        ">
-                            <h4>📄 Aucun détail de vérification</h4>
-                            <p>Les détails des vérifications ne sont pas disponibles pour ce contrôle.</p>
-                            <small>Cela peut arriver pour les contrôles effectués avant la mise à jour du système.</small>
-                        </div>
-                    `}
+                    </div>
                     
-                </div>
-                
-                <!-- Pied de page NORMAL (pas fixe) -->
-                <div style="
-                    background: #f8f9fa; 
-                    padding: 20px 25px; 
-                    border-top: 1px solid #e9ecef;
-                    display: flex; 
-                    justify-content: space-between; 
-                    gap: 15px;
-                    border-radius: 0 0 15px 15px;
-                    flex-wrap: wrap;
-                ">
-                    <button class="btn btn-info" onclick="window.historyInterface?.exportSingleControl('${controle.id}')" 
-                            title="Exporter ce contrôle spécifique en Excel">
-                        📊 Exporter ce contrôle
-                    </button>
-                    <button class="btn btn-secondary" onclick="window.historyInterface?.closeModal('${controleId}')">
-                        ❌ Fermer
-                    </button>
+                    <!-- Pied de page enrichi avec export détaillé -->
+                    <div style="
+                        background: #f8f9fa; 
+                        padding: 20px 25px; 
+                        border-top: 1px solid #e9ecef;
+                        display: flex; 
+                        justify-content: space-between; 
+                        gap: 15px;
+                        border-radius: 0 0 15px 15px;
+                        flex-wrap: wrap;
+                    ">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')" 
+                                    title="Export Excel détaillé avec onglets multiples">
+                                📋 Export Détaillé
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.historyInterface?.exportSingleControl('${controle.id}')" 
+                                    title="Export Excel simple d'une ligne">
+                                📊 Export Simple
+                            </button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="window.historyInterface?.closeModal('${controleId}')">
+                            ❌ Fermer
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
+        `;
+        
+        document.body.appendChild(modal);
+    }
 
-    // AJOUTER cette méthode pour le résumé des anomalies
+    // Génération du résumé des anomalies
     generateAnomaliesResume(details) {
         const anomalies = details.filter(d => !d.conforme);
         const anomaliesObligatoires = anomalies.filter(d => d.obligatoire);
@@ -863,7 +909,7 @@ showDetails(controleId) {
         }
     }
 
-    // Modal statistiques (version simple)
+    // Modal statistiques enrichie
     showStatistics() {
         if (!window.persistenceManager) {
             Utils.showNotification('Gestionnaire d\'historique non disponible', 'error');
@@ -872,7 +918,6 @@ showDetails(controleId) {
 
         const stats = window.persistenceManager.getStatistics();
         
-        // IMPORTANT : Supprimer toute modal existante d'abord
         this.closeAllModals();
         
         const modal = document.createElement('div');
@@ -959,7 +1004,6 @@ showDetails(controleId) {
         };
         document.addEventListener('keydown', handleEscape);
         
-        // Stocker la référence pour le nettoyage
         modal.escapeHandler = handleEscape;
     }
 
@@ -1004,44 +1048,7 @@ showDetails(controleId) {
         }
     }
 
-    // Utilitaires
-    isHistorySectionActive() {
-        const section = document.getElementById('history-section');
-        return section && section.classList.contains('active');
-    }
-
-    getHistoryData() {
-        return window.persistenceManager ? window.persistenceManager.getHistoryData() : { controles: [] };
-    }
-
-    getControlsCount() {
-        return this.getHistoryData().controles.length;
-    }
-
-    // Méthode pour rafraîchir l'interface (utile pour les mises à jour externes)
-    refresh() {
-        if (this.isHistorySectionActive()) {
-            this.loadHistoryData();
-            Utils.debugLog('Interface historique rafraîchie');
-        }
-    }
-
-    // Méthode pour obtenir les statistiques de la vue actuelle
-    getCurrentViewStats() {
-        const total = this.currentResults.length;
-        const conformes = this.currentResults.filter(c => c.conformiteGlobale === 'CONFORME').length;
-        const anomalies = this.currentResults.reduce((sum, c) => sum + c.anomaliesMajeures, 0);
-        
-        return {
-            total,
-            conformes,
-            tauxConformite: total > 0 ? Math.round((conformes / total) * 100) : 0,
-            anomalies,
-            nonConformes: total - conformes
-        };
-    }
-
-    // Méthode pour exporter un contrôle spécifique
+    // Méthode pour exporter un contrôle spécifique (export simple)
     exportSingleControl(controleId) {
         if (!window.persistenceManager) return;
         
@@ -1070,13 +1077,35 @@ showDetails(controleId) {
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Controle");
             
-            const fileName = `Controle_${controle.client.replace(/[^a-zA-Z0-9]/g, '_')}_${controle.date.toISOString().split('T')[0]}.xlsx`;
+            const fileName = `Controle_Simple_${controle.client.replace(/[^a-zA-Z0-9]/g, '_')}_${controle.date.toISOString().split('T')[0]}.xlsx`;
             XLSX.writeFile(wb, fileName);
             
-            Utils.showNotification(`Contrôle de ${controle.client} exporté`, 'success');
+            Utils.showNotification(`Contrôle simple de ${controle.client} exporté`, 'success');
         } catch (error) {
             Utils.showNotification('Erreur lors de l\'export du contrôle', 'error');
             console.error('Erreur export:', error);
+        }
+    }
+
+    // Utilitaires
+    isHistorySectionActive() {
+        const section = document.getElementById('history-section');
+        return section && section.classList.contains('active');
+    }
+
+    getHistoryData() {
+        return window.persistenceManager ? window.persistenceManager.getHistoryData() : { controles: [] };
+    }
+
+    getControlsCount() {
+        return this.getHistoryData().controles.length;
+    }
+
+    // Méthode pour rafraîchir l'interface
+    refresh() {
+        if (this.isHistorySectionActive()) {
+            this.loadHistoryData();
+            Utils.debugLog('Interface historique rafraîchie');
         }
     }
 
@@ -1102,27 +1131,17 @@ showDetails(controleId) {
     closeStatsModal() {
         const modal = document.getElementById('modal-statistics');
         if (modal) {
-            modal.remove();
-            Utils.debugLog('Modal statistiques fermée');
-        }
-    }
-
-    closeStatsModal() {
-        const modal = document.getElementById('modal-statistics');
-        if (modal) {
             // Nettoyer l'écouteur d'événement
             if (modal.escapeHandler) {
                 document.removeEventListener('keydown', modal.escapeHandler);
             }
             
-            // Supprimer la modal
             modal.remove();
-            
             Utils.debugLog('Modal statistiques fermée proprement');
         }
     }
 
-    // AJOUTER cette méthode à la fin de la classe pour le nettoyage général
+    // Nettoyage général
     cleanup() {
         this.closeAllModals();
         
@@ -1134,5 +1153,4 @@ showDetails(controleId) {
         
         Utils.debugLog('HistoryInterface nettoyé');
     }
-
 }
