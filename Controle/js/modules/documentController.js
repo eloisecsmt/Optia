@@ -1,4 +1,4 @@
-// documentController.js - Version corrigée avec tous les documents
+// documentController.js - Version modifiée avec question "document présent" et tuile Zeendoc
 
 import { Utils } from './utils.js';
 
@@ -14,20 +14,20 @@ export class DocumentController {
         this.setupEventListeners();
     }
 
-    // Méthode corrigée pour obtenir les documents requis selon le type de contrôle
+    // Méthode modifiée pour enlever FR et Profil Risques du contrôle CARTO_CLIENT
     getRequiredDocuments(controlType) {
         const documentSets = {
-            'LCB-FT': [1, 2, 7, 8], // FR, Profil Risques, CNI, Justificatif Domicile
-            'FINANCEMENT': [1, 2, 9, 10], // FR, Profil Risques, Etude, RIB  
-            'CARTO_CLIENT': [4, 1, 2], // Carto Client, FR, Profil Risques
-            'OPERATION': [1, 2, 6, 11, 10], // FR, Profil Risques, LM Entrée en Relation, Convention RTO, RIB
-            'NOUVEAU_CLIENT': [1, 2, 3, 5, 6, 7, 8, 10], // FR, Profil Risques, Profil ESG, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB
-            'CONTROLE_PPE': [1, 2, 7, 8, 9], // FR, Profil Risques, CNI, Justificatif Domicile, Etude
-            'AUDIT_CIF': [2, 6, 11], // Profil Risques, LM Entrée en Relation, Convention RTO
-            'REVUE_PERIODIQUE': [2, 3, 4] // Profil Risques, Profil ESG, Carto Client
+            'LCB-FT': [1, 2, 7, 8, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Zeendoc
+            'FINANCEMENT': [1, 2, 9, 10, 99], // FR, Profil Risques, Etude, RIB, Zeendoc  
+            'CARTO_CLIENT': [4, 99], // Harvest, Zeendoc (FR et Profil Risques supprimés)
+            'OPERATION': [1, 2, 6, 11, 10, 99], // FR, Profil Risques, LM Entrée en Relation, Convention RTO, RIB, Zeendoc
+            'NOUVEAU_CLIENT': [1, 2, 3, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
+            'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
+            'REVUE_PERIODIQUE': [2, 3, 4, 99] // Profil Risques, Profil ESG, Carto Client, Zeendoc
         };
 
-        return documentSets[controlType] || [1, 2, 7, 8];
+        return documentSets[controlType] || [1, 2, 7, 8, 99]; // Toujours inclure Zeendoc
     }
 
     initializeDocumentsConfig() {
@@ -37,6 +37,13 @@ export class DocumentController {
                 name: 'FR',
                 fullName: 'Fiche de Renseignements',
                 questions: [
+                    {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si la Fiche de Renseignements est présente dans le dossier client',
+                        skipIfNo: true // NOUVEAU : permet de passer les autres questions si "Non"
+                    },
                     {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
@@ -114,6 +121,13 @@ export class DocumentController {
                 fullName: 'Profil de Risques Client',
                 questions: [
                     {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si le Profil de Risques Client est présent dans le dossier client',
+                        skipIfNo: true
+                    },
+                    {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
                         required: true,
@@ -190,6 +204,13 @@ export class DocumentController {
                 fullName: 'Profil ESG Client',
                 questions: [
                     {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si le Profil ESG Client est présent dans le dossier client',
+                        skipIfNo: true
+                    },
+                    {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
                         required: true,
@@ -252,11 +273,18 @@ export class DocumentController {
             },
             4: {
                 id: 4,
-                name: 'Carto Client',
-                fullName: 'Cartographie Client - Informations Harvest',
+                name: 'Harvest',
+                fullName: 'Système Harvest - Cartographie Client',
                 questions: [
                     {
-                        text: 'Est-ce que toutes les informations du client sont bien remplies dans Harvest ?',
+                        text: 'Est-ce que les informations sur la cartographie du client sont présentes dans Harvest ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si les informations de cartographie client sont présentes dans Harvest',
+                        skipIfNo: true
+                    },
+                    {
+                        text: 'Est-ce que toutes les informations générales du client sont bien remplies dans Harvest ?',
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez que les champs obligatoires du profil client sont complétés dans Harvest',
@@ -315,14 +343,35 @@ export class DocumentController {
                         }
                     },
                     {
+                        text: 'Le justificatif de patrimoine requis est-il présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez la présence du justificatif selon le niveau de vigilance : Standard (FR) / Complémentaire ou Renforcée (déclaration d\'impôts)',
+                        qualityCheck: {
+                            text: 'Le justificatif de patrimoine est-il approprié ?',
+                            help: 'Vérifiez que le document fourni correspond bien aux exigences de vigilance'
+                        }
+                    },
+                    {
                         text: 'Quel est le niveau de vigilance client ?',
                         type: 'vigilance_level',
                         required: true,
                         help: 'Information à récupérer depuis le fichier source ou Harvest',
                         options: [
                             'Standard',
-                            'Complémentaire'
+                            'Complémentaire',
+                            'Renforcée'
                         ]
+                    },
+                    {
+                        text: 'Êtes-vous d\'accord avec la vigilance retenue ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Validez si le niveau de vigilance attribué au client vous semble approprié',
+                        qualityCheck: {
+                            text: 'Le niveau de vigilance est-il justifié au regard du profil client ?',
+                            help: 'Vérifiez la cohérence entre le profil de risque du client et le niveau de vigilance appliqué'
+                        }
                     },
                     {
                         text: 'Le justificatif patrimoine/revenus correspond-il au niveau de vigilance ?',
@@ -331,9 +380,29 @@ export class DocumentController {
                         help: 'Vérifiez la cohérence entre vigilance et justificatifs fournis',
                         qualityCheck: {
                             text: 'Le justificatif fourni est-il conforme au niveau de vigilance ?',
-                            help: 'Standard: FR acceptée / Complémentaire: Avis d\'impôts obligatoire'
+                            help: 'Standard: FR acceptée / Complémentaire: Déclaration d\'impôts obligatoire / Renforcée: Déclaration d\'impôts + justificatifs complémentaires'
                         }
-                    }
+                    },
+                    {
+                        text: 'Quel est le statut du GDA (Gel des Avoirs) dans Harvest ?',
+                        type: 'gda_status',
+                        required: true,
+                        help: 'Vérifiez le statut du Gel des Avoirs dans la tuile Harvest',
+                        options: [
+                            'Automatique',
+                            'Manuel',
+                            'Pas fait'
+                        ],
+                        followUp: {
+                            condition: 'Manuel',
+                            question: {
+                                text: 'Quelle est la date du GDA manuel ?',
+                                type: 'gda_date',
+                                required: true,
+                                help: 'Saisissez la date du Gel des Avoirs manuel (format JJ/MM/AAAA)'
+                            }
+                        }
+                    }                    
                 ]
             },
             5: {
@@ -341,6 +410,13 @@ export class DocumentController {
                 name: 'FIL',
                 fullName: 'Fiche d\'Information Légale',
                 questions: [
+                    {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si la Fiche d\'Information Légale est présente dans le dossier client',
+                        skipIfNo: true
+                    },
                     {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
@@ -417,6 +493,13 @@ export class DocumentController {
                 name: 'LM Entrée en Relation',
                 fullName: 'Lettre de Mission d\'Entrée en Relation',
                 questions: [
+                    {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si la Lettre de Mission d\'Entrée en Relation est présente dans le dossier client',
+                        skipIfNo: true
+                    },
                     {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
@@ -515,6 +598,13 @@ export class DocumentController {
                 fullName: 'Carte Nationale d\'Identité',
                 questions: [
                     {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si la Carte Nationale d\'Identité est présente dans le dossier client',
+                        skipIfNo: true
+                    },
+                    {
                         text: 'Quel est le type de document ?',
                         type: 'text',
                         required: true,
@@ -538,6 +628,13 @@ export class DocumentController {
                 fullName: 'Justificatif de Domicile',
                 questions: [
                     {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si le Justificatif de Domicile est présent dans le dossier client',
+                        skipIfNo: true
+                    },
+                    {
                         text: 'Quel est le type de document ?',
                         type: 'text',
                         required: true,
@@ -560,6 +657,13 @@ export class DocumentController {
                 name: 'Etude',
                 fullName: 'Etude Financière Client',
                 questions: [
+                    {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si l\'Etude Financière Client est présente dans le dossier client',
+                        skipIfNo: true
+                    },
                     {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
@@ -637,6 +741,13 @@ export class DocumentController {
                 fullName: 'Relevé d\'Identité Bancaire',
                 questions: [
                     {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si le Relevé d\'Identité Bancaire est présent dans le dossier client',
+                        skipIfNo: true
+                    },
+                    {
                         text: 'Le RIB est-il présent et lisible ?',
                         type: 'boolean',
                         required: true,
@@ -653,6 +764,13 @@ export class DocumentController {
                 name: 'Convention RTO',
                 fullName: 'Convention de Réception et Transmission d\'Ordres',
                 questions: [
+                    {
+                        text: 'Est-ce que le document est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si la Convention de Réception et Transmission d\'Ordres est présente dans le dossier client',
+                        skipIfNo: true
+                    },
                     {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
@@ -734,11 +852,49 @@ export class DocumentController {
                         }
                     }
                 ]
+            },
+            // NOUVEAU : Tuile Zeendoc pour tous les contrôles
+            99: {
+                id: 99,
+                name: 'Zeendoc',
+                fullName: 'Archivage Zeendoc',
+                questions: [
+                    {
+                        text: 'Tous les documents sont-ils bien ajoutés dans Zeendoc ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez que tous les documents du dossier client sont présents dans Zeendoc',
+                        qualityCheck: {
+                            text: 'Tous les documents obligatoires sont-ils archivés dans Zeendoc ?',
+                            help: 'Vérification exhaustive : FR, profils, CNI, justificatifs, contrats, etc.'
+                        }
+                    },
+                    {
+                        text: 'Les documents sont-ils affectés au bon client dans Zeendoc ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez que les documents sont correctement rattachés au dossier client dans Zeendoc',
+                        qualityCheck: {
+                            text: 'L\'affectation client est-elle correcte et cohérente ?',
+                            help: 'Nom, prénom, numéro de dossier correspondent au client contrôlé'
+                        }
+                    },
+                    {
+                        text: 'Les documents sont-ils correctement indexés et classés ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez que les documents sont bien indexés avec les bonnes métadonnées dans Zeendoc',
+                        qualityCheck: {
+                            text: 'L\'indexation permet-elle une recherche et un classement efficaces ?',
+                            help: 'Types de documents, dates, catégories correctement renseignés'
+                        }
+                    }
+                ]
             }
         };
     }
 
-    // Le reste des méthodes existantes...
+    // Le reste des méthodes reste identique...
     setupEventListeners() {
         window.addEventListener('startDocumentControl', (e) => {
             this.startDocumentControl(e.detail.dossier, e.detail.control);
@@ -777,6 +933,68 @@ export class DocumentController {
         Utils.debugLog(`Documents initialisés pour ${controlType}: ${requiredDocuments.join(', ')}`);
     }
 
+    // MODIFICATION : Gestion du skip si document absent
+    moveToNextQuestion() {
+        const docConfig = this.documentsConfig[this.currentDocument];
+        const questions = docConfig.questions;
+        const currentQuestion = questions[this.currentQuestionIndex];
+        
+        // Vérifier si on doit passer toutes les questions suivantes (document absent)
+        if (currentQuestion.skipIfNo) {
+            const lastResponse = this.documentResponses[this.currentDocument][this.currentQuestionIndex];
+            if (lastResponse && lastResponse.answer === 'Non') {
+                // Document absent, marquer le contrôle comme terminé directement
+                this.completeDocument();
+                return;
+            }
+        }
+        
+        // Vérifier s'il y a une question de suivi à injecter
+        if (currentQuestion.followUp) {
+            const lastResponse = this.documentResponses[this.currentDocument][this.currentQuestionIndex];
+            
+            if (lastResponse && lastResponse.answer === currentQuestion.followUp.condition) {
+                // Injecter la question de suivi
+                const followUpQuestion = {...currentQuestion.followUp.question};
+                followUpQuestion.isFollowUp = true;
+                followUpQuestion.parentQuestionIndex = this.currentQuestionIndex;
+                
+                // Insérer la question de suivi après la question actuelle
+                questions.splice(this.currentQuestionIndex + 1, 0, followUpQuestion);
+                
+                // Mettre à jour le nombre total de questions pour ce document
+                this.documentsState[this.currentDocument].totalQuestions = questions.length;
+            }
+        }
+        
+        if (this.currentQuestionIndex < questions.length - 1) {
+            this.currentQuestionIndex++;
+            this.updateQuestionInterface();
+        } else {
+            this.completeDocument();
+        }
+    }
+
+    // Méthode utilitaire pour récupérer les informations des documents (mise à jour avec Harvest)
+    getDocumentName(docId) {
+        const documentNames = {
+            1: 'FR',
+            2: 'Profil Risques',
+            3: 'Profil ESG',
+            4: 'Harvest', // MODIFIÉ : était 'Carto Client'
+            5: 'FIL',
+            6: 'LM Entrée en Relation',
+            7: 'CNI',
+            8: 'Justificatif Domicile',
+            9: 'Etude',
+            10: 'RIB',
+            11: 'Convention RTO',
+            99: 'Zeendoc'
+        };
+        return documentNames[docId] || `Document ${docId}`;
+    }
+
+    // Les autres méthodes restent identiques - je les ajoute pour completeness
     showDocumentControlInterface() {
         Utils.showSection('document-control-section');
         this.updateDocumentControlInterface();
@@ -1032,6 +1250,31 @@ export class DocumentController {
                 </div>
             `;
         }
+
+        if (questionData.type === 'gda_status') {
+            return `
+                <div class="response-group">
+                    <label>Statut du GDA :</label>
+                    <div class="radio-group">
+                        ${questionData.options.map(option => `
+                            <label class="radio-option">
+                                <input type="radio" name="response" value="${option}">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (questionData.type === 'gda_date') {
+            return `
+                <div class="response-group">
+                    <label>Date du GDA manuel :</label>
+                    <input type="date" id="date-response" class="form-input">
+                </div>
+            `;
+        }
         
         // Questions boolean standard avec ou sans qualityCheck
         let options = `
@@ -1058,7 +1301,7 @@ export class DocumentController {
             options += this.generateQualityCheckOptions(questionData.qualityCheck);
         }
 
-        // IMPORTANT: Setup des event listeners après génération du HTML
+        // Setup des event listeners après génération du HTML
         setTimeout(() => {
             this.setupQuestionEventListeners();
         }, 100);
@@ -1289,7 +1532,8 @@ export class DocumentController {
         // Gestion des nouveaux types de questions pour Carto Client
         if (questionData.type === 'patrimoine_tranche' || 
             questionData.type === 'revenus_tranche' || 
-            questionData.type === 'vigilance_level') {
+            questionData.type === 'vigilance_level' ||
+            questionData.type === 'gda_status') {
             const answerRadio = document.querySelector('input[name="response"]:checked');
             if (answerRadio) {
                 response.answer = answerRadio.value;
@@ -1301,6 +1545,14 @@ export class DocumentController {
         const answerRadio = document.querySelector('input[name="response"]:checked');
         if (answerRadio) {
             response.answer = answerRadio.value;
+        }
+
+        if (questionData.type === 'gda_date') {
+            const dateInput = document.getElementById('date-response');
+            if (dateInput) {
+                response.answer = dateInput.value;
+            }
+            return response;
         }
 
         if (response.answer === 'Oui' && questionData.qualityCheck) {
@@ -1365,6 +1617,22 @@ export class DocumentController {
         if (questionData.type === 'text') {
             if (!response.answer) {
                 Utils.showNotification('Veuillez saisir une réponse', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        if (questionData.type === 'gda_status') {
+            if (!response.answer) {
+                Utils.showNotification('Veuillez sélectionner le statut du GDA', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        if (questionData.type === 'gda_date') {
+            if (!response.answer) {
+                Utils.showNotification('Veuillez saisir la date du GDA manuel', 'error');
                 return false;
             }
             return true;
@@ -1442,37 +1710,6 @@ export class DocumentController {
         Utils.debugLog(`Réponse sauvegardée: Doc ${response.documentId}, Q ${response.questionIndex}, Réponse: ${response.answer}`);
     }
 
-    moveToNextQuestion() {
-        const docConfig = this.documentsConfig[this.currentDocument];
-        const questions = docConfig.questions;
-        const currentQuestion = questions[this.currentQuestionIndex];
-        
-        // Vérifier s'il y a une question de suivi à injecter
-        if (currentQuestion.followUp) {
-            const lastResponse = this.documentResponses[this.currentDocument][this.currentQuestionIndex];
-            
-            if (lastResponse && lastResponse.answer === currentQuestion.followUp.condition) {
-                // Injecter la question de suivi
-                const followUpQuestion = {...currentQuestion.followUp.question};
-                followUpQuestion.isFollowUp = true;
-                followUpQuestion.parentQuestionIndex = this.currentQuestionIndex;
-                
-                // Insérer la question de suivi après la question actuelle
-                questions.splice(this.currentQuestionIndex + 1, 0, followUpQuestion);
-                
-                // Mettre à jour le nombre total de questions pour ce document
-                this.documentsState[this.currentDocument].totalQuestions = questions.length;
-            }
-        }
-        
-        if (this.currentQuestionIndex < questions.length - 1) {
-            this.currentQuestionIndex++;
-            this.updateQuestionInterface();
-        } else {
-            this.completeDocument();
-        }
-    }
-
     completeDocument() {
         this.documentsState[this.currentDocument].status = 'completed';
         this.documentsState[this.currentDocument].completedQuestions = 
@@ -1546,7 +1783,6 @@ export class DocumentController {
         }));
 
         this.exportControlResults(summary);
-        
         
         Utils.showSection('automatic-control-section');
     }
@@ -1830,24 +2066,6 @@ export class DocumentController {
             total: totalDocs,
             percentage: Math.round((completedDocs / totalDocs) * 100)
         };
-    }
-
-    // Méthodes utilitaires pour récupérer les informations
-    getDocumentName(docId) {
-        const documentNames = {
-            1: 'FR',
-            2: 'Profil Risques',
-            3: 'Profil ESG',
-            4: 'Carto Client',
-            5: 'FIL',
-            6: 'LM Entrée en Relation',
-            7: 'CNI',
-            8: 'Justificatif Domicile',
-            9: 'Etude',
-            10: 'RIB',
-            11: 'Convention RTO'
-        };
-        return documentNames[docId] || `Document ${docId}`;
     }
 
     // Méthode pour diagnostiquer l'état du contrôle
