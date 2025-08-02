@@ -631,6 +631,11 @@ body {
     color: white;
 }
 
+.btn-third {
+    background: #c92727;
+    color: white;
+}
+
 .btn-success {
     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     color: white;
@@ -1958,3 +1963,4 @@ body {
     background: #dc3545;
     color: white;
 }
+
