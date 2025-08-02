@@ -1647,3 +1647,314 @@ body {
     background: #d1ecf1;
     color: #0c5460;
 }
+/* Styles pour les nouveaux boutons Remplacer et Régénérer */
+
+/* Actions dans le tableau échantillon */
+.sample-actions {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-control {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(26, 26, 46, 0.2);
+}
+
+.btn-control:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 26, 46, 0.3);
+}
+
+.btn-replace {
+    background: linear-gradient(135deg, #ff8c00 0%, #ff7300 100%);
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(255, 140, 0, 0.2);
+}
+
+.btn-replace:hover:not(.disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
+    background: linear-gradient(135deg, #ff9500 0%, #ff8000 100%);
+}
+
+.btn-replace.disabled {
+    background: #e9ecef !important;
+    color: #6c757d !important;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Section des actions de régénération */
+.sample-actions-footer {
+    margin: 25px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border: 2px solid #dee2e6;
+}
+
+.regenerate-section {
+    text-align: center;
+}
+
+.regenerate-info {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.regenerate-info strong {
+    color: #1a1a2e;
+}
+
+.btn-regenerate {
+    background: linear-gradient(135deg, #ffc107 0%, #ffcd39 100%);
+    color: #1a1a2e;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
+    border: 2px solid transparent;
+}
+
+.btn-regenerate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+    background: linear-gradient(135deg, #ffcd39 0%, #ffd60a 100%);
+    border-color: #ffb700;
+}
+
+.btn-regenerate:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
+}
+
+/* Icônes pour les boutons */
+.btn-regenerate::before {
+    content: "";
+    display: inline-block;
+    margin-right: 8px;
+}
+
+/* Améliorations du tableau échantillon */
+.sample-table td.sample-actions {
+    min-width: 200px;
+    text-align: center;
+    padding: 15px 12px;
+}
+
+.sample-table tr:hover .btn-control,
+.sample-table tr:hover .btn-replace:not(.disabled) {
+    transform: scale(1.05);
+}
+
+/* Animation pour les remplacements */
+@keyframes replaceDossier {
+    0% { 
+        background-color: #fff3cd; 
+        transform: scale(1); 
+    }
+    50% { 
+        background-color: #ffeaa7; 
+        transform: scale(1.02); 
+    }
+    100% { 
+        background-color: white; 
+        transform: scale(1); 
+    }
+}
+
+.sample-table tr.replacing {
+    animation: replaceDossier 0.8s ease;
+}
+
+/* États d'information */
+.sample-info-enhanced {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    border: 1px solid #28a745;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-left: 4px solid #28a745;
+}
+
+.sample-info-enhanced p {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #155724;
+    line-height: 1.6;
+}
+
+.sample-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(21, 87, 36, 0.2);
+}
+
+.sample-stat {
+    text-align: center;
+    flex: 1;
+}
+
+.sample-stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #155724;
+    margin-bottom: 4px;
+}
+
+.sample-stat-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Notification spéciale pour les remplacements */
+.notification-replacement {
+    border-left-color: #ff8c00 !important;
+}
+
+.notification-replacement .notification-content {
+    border-left-color: #ff8c00;
+}
+
+.notification-regenerate {
+    border-left-color: #ffc107 !important;
+}
+
+.notification-regenerate .notification-content {
+    border-left-color: #ffc107;
+}
+
+/* Responsive pour les nouveaux éléments */
+@media (max-width: 768px) {
+    .sample-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .btn-control,
+    .btn-replace {
+        font-size: 0.8rem;
+        padding: 8px 15px;
+        width: 100%;
+        max-width: 140px;
+    }
+    
+    .sample-actions-footer {
+        margin: 15px 0;
+        padding: 15px;
+    }
+    
+    .regenerate-info {
+        font-size: 0.9rem;
+    }
+    
+    .btn-regenerate {
+        font-size: 0.9rem;
+        padding: 10px 20px;
+    }
+    
+    .sample-stats {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .sample-table td.sample-actions {
+        min-width: auto;
+        padding: 12px 8px;
+    }
+}
+
+/* Animation de chargement pour la régénération */
+.btn-regenerate.loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn-regenerate.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #1a1a2e;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Amélioration de l'accessibilité */
+.btn-replace:focus,
+.btn-control:focus,
+.btn-regenerate:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.btn-replace.disabled:focus {
+    outline: 2px solid #6c757d;
+}
+
+/* Indicateur visuel pour les dossiers disponibles */
+.available-count {
+    display: inline-block;
+    background: #17a2b8;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.available-count.low {
+    background: #ffc107;
+    color: #1a1a2e;
+}
+
+.available-count.empty {
+    background: #dc3545;
+    color: white;
+}
