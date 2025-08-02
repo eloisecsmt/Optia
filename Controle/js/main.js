@@ -6,6 +6,9 @@ import { DataProcessor } from './modules/dataProcessor.js';
 import { TableManager } from './modules/tableManager.js';
 import { ControlTypes } from './modules/controlTypes.js';
 import { DocumentController } from './modules/documentController.js';
+import { PersistenceManager } from './modules/persistenceManager.js';
+import { HistoryInterface } from './modules/historyInterface.js';
+
 
 class DocumentControlApp {
     constructor() {
@@ -23,6 +26,8 @@ class DocumentControlApp {
             this.modules.tableManager = new TableManager();
             this.modules.controlTypes = new ControlTypes();
             this.modules.documentController = new DocumentController();
+            this.modules.persistenceManager = new PersistenceManager();
+            this.modules.historyInterface = new HistoryInterface();
             
             // Exposer les modules globalement IMMÉDIATEMENT
             window.fileHandler = this.modules.fileHandler;
@@ -30,6 +35,8 @@ class DocumentControlApp {
             window.tableManager = this.modules.tableManager;
             window.controlTypes = this.modules.controlTypes;
             window.documentController = this.modules.documentController;
+            window.persistenceManager = this.modules.persistenceManager;
+            window.historyInterface = this.modules.historyInterface;
             
             Utils.debugLog('Modules exposés globalement');
             
@@ -41,6 +48,8 @@ class DocumentControlApp {
                 Utils.debugLog(`DataProcessor global: ${window.dataProcessor ? 'OK' : 'NON'}`);
                 Utils.debugLog(`TableManager global: ${window.tableManager ? 'OK' : 'NON'}`);
                 Utils.debugLog(`DocumentController global: ${window.documentController ? 'OK' : 'NON'}`);
+                Utils.debugLog(`PersistenceManager global: ${window.persistenceManager ? 'OK' : 'NON'}`);
+                Utils.debugLog(`HistoryInterface global: ${window.historyInterface ? 'OK' : 'NON'}`);
             }, 100);
             
             Utils.debugLog('Application initialisée avec succès');
@@ -69,6 +78,9 @@ class DocumentControlApp {
         
         // Gestionnaires pour le debug
         this.setupDebugHandlers();
+        
+        // Gestionnaires pour l'historique (basique pour l'instant)
+        this.setupHistoryHandlers();
         
         // Événements personnalisés entre modules
         this.setupCustomEvents();
@@ -148,6 +160,16 @@ class DocumentControlApp {
         };
     }
 
+    setupHistoryHandlers() {
+        window.showHistory = () => {
+            if (window.historyInterface) {
+                window.historyInterface.show();
+            } else {
+                Utils.showNotification('Interface historique non disponible', 'error');
+            }
+        };
+    }
+
     // Méthodes utilitaires pour les autres modules
     getModule(moduleName) {
         return this.modules[moduleName];
@@ -159,10 +181,9 @@ class DocumentControlApp {
 
     // Gestion des événements personnalisés entre modules
     setupCustomEvents() {
-        // Écouter les événements entre modules
+        // Vos événements existants (ne pas toucher)
         window.addEventListener('fileReset', () => {
             Utils.debugLog('Événement fileReset reçu');
-            // Réinitialiser tous les modules concernés
             if (this.modules.dataProcessor) {
                 this.modules.dataProcessor.reset();
             }
@@ -174,7 +195,6 @@ class DocumentControlApp {
         window.addEventListener('dataProcessed', (e) => {
             Utils.debugLog('Événement dataProcessed reçu dans main.js');
             
-            // Vérifier que les instances sont cohérentes
             const localDP = this.modules.dataProcessor;
             const globalDP = window.dataProcessor;
             
@@ -182,7 +202,6 @@ class DocumentControlApp {
                 Utils.debugLog('ATTENTION: Instance locale différente de l\'instance globale');
                 Utils.debugLog(`Local: ${localDP.getAllDossiers().length}, Global: ${globalDP.getAllDossiers().length}`);
                 
-                // Synchroniser si nécessaire
                 if (localDP.getAllDossiers().length > 0 && globalDP.getAllDossiers().length === 0) {
                     Utils.debugLog('Synchronisation des instances...');
                     window.dataProcessor = localDP;
@@ -193,13 +212,22 @@ class DocumentControlApp {
 
         window.addEventListener('controlLaunched', (e) => {
             Utils.debugLog('Événement controlLaunched reçu');
-            // Ici on pourrait ajouter de la logique globale si nécessaire
         });
 
         window.addEventListener('manualControlLaunched', (e) => {
             Utils.debugLog('Événement manualControlLaunched reçu');
-            // Logique pour les contrôles manuels si nécessaire
         });
+
+        // REMPLACER cet événement par la version fonctionnelle
+        /*window.addEventListener('controlCompleted', (e) => {
+            Utils.debugLog('Événement controlCompleted reçu - Sauvegarde en cours');
+            
+            // Sauvegarder via PersistenceManager
+            if (window.persistenceManager) {
+                window.persistenceManager.saveControl(e.detail);
+                Utils.showNotification('Contrôle sauvegardé dans l\'historique', 'success');
+            }
+        }); */
     }
 
     // Méthodes de gestion d'état global
@@ -314,4 +342,4 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 // Export pour utilisation en module
-export default DocumentContr
+export default DocumentControlApp;
