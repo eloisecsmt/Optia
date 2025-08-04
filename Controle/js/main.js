@@ -130,6 +130,54 @@ class DocumentControlApp {
         window.clearFilters = () => {
             this.modules.tableManager.clearFilters();
         };
+
+         window.showManualControlTypeSelection = () => {
+        if (window.tableManager) {
+            window.tableManager.showManualControlTypeSelection();
+        } else {
+            Utils.showNotification('TableManager non disponible', 'error');
+        }
+    };
+    
+         window.startManualControl = (controlType) => {
+            if (window.tableManager) {
+                window.tableManager.startManualControl(controlType);
+            } else {
+                Utils.showNotification('TableManager non disponible', 'error');
+            }
+        };
+        
+         window.pauseManualControl = () => {
+            if (window.documentController) {
+                window.documentController.pauseManualControl();
+            } else {
+                Utils.showNotification('DocumentController non disponible', 'error');
+            }
+        };
+        
+         window.cancelManualControl = () => {
+            if (window.documentController) {
+                window.documentController.cancelManualControl();
+            } else {
+                Utils.showNotification('DocumentController non disponible', 'error');
+            }
+        };
+        
+         window.exportAllManualResults = () => {
+            if (window.documentController) {
+                window.documentController.exportAllManualResults();
+            } else {
+                Utils.showNotification('DocumentController non disponible', 'error');
+            }
+        };
+        
+         window.exportSingleManualResult = (index) => {
+            if (window.documentController) {
+                window.documentController.exportSingleManualResult(index);
+            } else {
+                Utils.showNotification('DocumentController non disponible', 'error');
+            }
+        };
     }
 
     setupSelectionHandlers() {
@@ -218,16 +266,26 @@ class DocumentControlApp {
             Utils.debugLog('Événement manualControlLaunched reçu');
         });
 
-        // REMPLACER cet événement par la version fonctionnelle
-        /*window.addEventListener('controlCompleted', (e) => {
-            Utils.debugLog('Événement controlCompleted reçu - Sauvegarde en cours');
+        // événement pour le contrôle manuel
+        window.addEventListener('manualControlStarted', (e) => {
+            Utils.debugLog('Événement manualControlStarted reçu dans main.js');
+            Utils.debugLog(`Contrôle manuel démarré: ${e.detail.controlType}, ${e.detail.dossiersCount} dossiers`);
+        });
+
+        window.addEventListener('manualControlCompleted', (e) => {
+            Utils.debugLog('Événement manualControlCompleted reçu dans main.js');
+            Utils.debugLog(`Contrôle manuel terminé: ${e.detail.completedDossiers} dossiers`);
             
-            // Sauvegarder via PersistenceManager
-            if (window.persistenceManager) {
-                window.persistenceManager.saveControl(e.detail);
-                Utils.showNotification('Contrôle sauvegardé dans l\'historique', 'success');
-            }
-        }); */
+            // Optionnel: Notification utilisateur
+            Utils.showNotification(
+                `Contrôle manuel terminé avec succès ! ${e.detail.completedDossiers} dossier(s) contrôlé(s)`, 
+                'success'
+            );
+        });
+
+        window.addEventListener('manualControlProgress', (e) => {
+            Utils.debugLog(`Progression contrôle manuel: ${e.detail.current}/${e.detail.total}`);
+        });
     }
 
     // Méthodes de gestion d'état global
