@@ -316,22 +316,11 @@ export class TableManager {
             return;
         }
         
-        Utils.showSection('control-section');
+        Utils.debugLog(`=== LANCEMENT CONTRÔLE MANUEL ===`);
+        Utils.debugLog(`${this.selectedDossiers.length} dossiers sélectionnés`);
         
-        // Log des dossiers sélectionnés pour développement
-        if (this.dataProcessor) {
-            const allDossiers = this.dataProcessor.getAllDossiers();
-            const selectedDossierData = allDossiers.filter(d => this.selectedDossiers.includes(d.originalIndex));
-            Utils.debugLog(`Dossiers sélectionnés pour contrôle: ${selectedDossierData.length}`);
-            
-            // Notifier les autres modules
-            window.dispatchEvent(new CustomEvent('manualControlLaunched', {
-                detail: {
-                    selectedDossiers: selectedDossierData,
-                    selectionType: 'manual'
-                }
-            }));
-        }
+        // Navigation vers l'interface de choix du type de contrôle
+        this.showManualControlTypeSelection();
     }
 
     downloadResults() {
@@ -428,6 +417,224 @@ export class TableManager {
         }, 100);
     }
 
+    showManualControlTypeSelection() {
+    const selectedData = this.getSelectedDossiersData();
+    
+    if (selectedData.length === 0) {
+        Utils.showNotification('Erreur: Aucun dossier sélectionné trouvé', 'error');
+        return;
+    }
+    
+    Utils.debugLog(`Affichage choix type contrôle pour ${selectedData.length} dossiers`);
+    
+    // Naviguer vers la nouvelle section
+    Utils.showSection('manual-control-type-section');
+    
+    // Peupler l'interface
+    this.populateManualControlTypeInterface(selectedData);
+}
+
+populateManualControlTypeInterface(selectedDossiers) {
+    // Mettre à jour le compteur
+    const countElement = document.getElementById('manual-selected-count');
+    if (countElement) {
+        countElement.textContent = selectedDossiers.length;
+    }
+    
+    // Générer la liste des dossiers sélectionnés
+    this.generateSelectedDossiersList(selectedDossiers);
+    
+    // Générer les cartes de types de contrôle pour le manuel
+    this.generateManualControlTypes(selectedDossiers);
+}
+
+generateSelectedDossiersList(selectedDossiers) {
+    const container = document.getElementById('selected-dossiers-list');
+    if (!container) return;
+    
+    container.innerHTML = selectedDossiers.map(dossier => `
+        <div class="dossier-preview-card">
+            <div class="dossier-preview-header">
+                ${dossier.client || 'Client non spécifié'}
+            </div>
+            <div class="dossier-preview-details">
+                <div class="detail"><strong>Code:</strong> ${dossier.codeDossier || 'N/A'}</div>
+                <div class="detail"><strong>Conseiller:</strong> ${dossier.conseiller || 'N/A'}</div>
+                <div class="detail"><strong>Montant:</strong> ${dossier.montant || 'N/A'}</div>
+                <div class="detail"><strong>Domaine:</strong> ${dossier.domaine || 'N/A'}</div>
+                ${dossier.nouveauClient && dossier.nouveauClient.toLowerCase() === 'oui' ? 
+                    '<div class="detail"><span class="badge nouveau">⭐ Nouveau Client</span></div>' : ''}
+                ${dossier.ppe && dossier.ppe.toLowerCase() === 'oui' ? 
+                    '<div class="detail"><span class="badge oui">PPE</span></div>' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+generateManualControlTypes(selectedDossiers) {
+    const container = document.getElementById('manual-control-types-grid');
+    if (!container) return;
+    
+    // Obtenir les définitions de contrôle depuis ControlTypes
+    const controlDefinitions = window.controlTypes?.getControlDefinitions() || this.getDefaultControlDefinitions();
+    
+    container.innerHTML = Object.entries(controlDefinitions).map(([key, control]) => {
+        const eligibleCount = this.countEligibleDossiers(selectedDossiers, control);
+        const canProceed = eligibleCount >= Math.min(control.sampleSize, selectedDossiers.length);
+        
+        return `
+            <div class="control-card ${canProceed ? '' : 'disabled'}">
+                <div class="control-header">
+                    <h3 class="control-title">${control.name}</h3>
+                    <span class="control-priority priority-${control.priority}">${control.priority.toUpperCase()}</span>
+                </div>
+                
+                <div class="control-description">
+                    ${control.description}
+                </div>
+                
+                <div class="control-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">${eligibleCount}</span>
+                        <span class="stat-label">Dossiers éligibles</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${selectedDossiers.length}</span>
+                        <span class="stat-label">Sélectionnés</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${control.frequency}</span>
+                        <span class="stat-label">Fréquence</span>
+                    </div>
+                </div>
+                
+                <div class="control-criteria">
+                    <h4>Critères de ce contrôle :</h4>
+                    <ul>
+                        ${control.criteria.montantMinimum > 0 ? 
+                            `<li>Montant ≥ ${control.criteria.montantMinimum.toLocaleString('fr-FR')} €</li>` : ''}
+                        ${control.criteria.nouveauxClients ? 
+                            '<li>Nouveaux clients uniquement</li>' : 
+                            '<li>Tous types de clients</li>'}
+                        <li>Documents requis : ${control.criteria.requiredDocuments.length} types</li>
+                    </ul>
+                </div>
+                
+                <button class="btn ${canProceed ? 'btn-manual-start' : 'btn-secondary'}" 
+                        onclick="window.tableManager?.startManualControl('${key}')"
+                        ${canProceed ? '' : 'disabled'}>
+                    ${canProceed ? 
+                        `🚀 Contrôler ${selectedDossiers.length} dossier(s)` : 
+                        `❌ Critères non remplis (${eligibleCount}/${selectedDossiers.length})`
+                    }
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+countEligibleDossiers(dossiers, controlCriteria) {
+    return dossiers.filter(dossier => {
+        // Critère montant minimum
+        if (controlCriteria.criteria.montantMinimum > 0) {
+            const montantValue = this.extractNumericAmount(dossier.montant);
+            if (montantValue < controlCriteria.criteria.montantMinimum) return false;
+        }
+
+        // Critère nouveaux clients
+        if (controlCriteria.criteria.nouveauxClients) {
+            if (!dossier.nouveauClient || dossier.nouveauClient.toLowerCase() !== 'oui') return false;
+        }
+
+        return true;
+    }).length;
+}
+
+extractNumericAmount(montantString) {
+    if (!montantString) return 0;
+    
+    const cleaned = montantString.toString()
+        .replace(/[^\d,.-]/g, '')
+        .replace(/,/g, '.');
+    
+    const number = parseFloat(cleaned);
+    return isNaN(number) ? 0 : number;
+}
+
+startManualControl(controlType) {
+    const selectedData = this.getSelectedDossiersData();
+    
+    if (selectedData.length === 0) {
+        Utils.showNotification('Erreur: Aucun dossier sélectionné', 'error');
+        return;
+    }
+    
+    Utils.debugLog(`=== DÉBUT CONTRÔLE MANUEL ${controlType} ===`);
+    Utils.debugLog(`${selectedData.length} dossiers à contrôler`);
+    
+    // Déclencher le contrôle manuel via DocumentController
+    if (window.documentController) {
+        window.documentController.startManualControl(selectedData, controlType);
+    } else {
+        Utils.showNotification('Erreur: DocumentController non disponible', 'error');
+        Utils.debugLog('DocumentController non trouvé dans window');
+    }
+}
+
+getDefaultControlDefinitions() {
+    // Définitions de base au cas où ControlTypes ne serait pas disponible
+    return {
+        'LCB-FT': {
+            name: 'LCB-FT',
+            description: 'Contrôle Lutte Contre le Blanchiment et Financement du Terrorisme',
+            frequency: 'Mensuel',
+            sampleSize: 5,
+            priority: 'high',
+            criteria: {
+                requiredDocuments: ['CNI', 'Justificatif domicile', 'FR', 'Profil Risques'],
+                montantMinimum: 10000,
+                nouveauxClients: false
+            }
+        },
+        'NOUVEAU_CLIENT': {
+            name: 'Nouveau Client',
+            description: 'Contrôle spécifique des nouveaux clients',
+            frequency: 'Hebdomadaire',
+            sampleSize: 6,
+            priority: 'high',
+            criteria: {
+                requiredDocuments: ['CNI', 'Justificatif domicile', 'FR', 'Profil Risques', 'Profil ESG'],
+                montantMinimum: 0,
+                nouveauxClients: true
+            }
+        },
+        'FINANCEMENT': {
+            name: 'Financement',
+            description: 'Contrôle des dossiers de financement et crédits',
+            frequency: 'Hebdomadaire',
+            sampleSize: 8,
+            priority: 'medium',
+            criteria: {
+                requiredDocuments: ['FR', 'Profil Risques', 'Etude', 'RIB'],
+                montantMinimum: 50000,
+                nouveauxClients: false
+            }
+        },
+        'CARTO_CLIENT': {
+            name: 'Carto Client',
+            description: 'Cartographie et classification des clients',
+            frequency: 'Trimestriel',
+            sampleSize: 10,
+            priority: 'medium',
+            criteria: {
+                requiredDocuments: ['Harvest'],
+                montantMinimum: 0,
+                nouveauxClients: false
+            }
+        }
+    };
+}
+
     // Getters pour les autres modules
     getSelectedDossiers() {
         return this.selectedDossiers;
@@ -438,6 +645,11 @@ export class TableManager {
         
         const allDossiers = this.dataProcessor.getAllDossiers();
         return allDossiers.filter(d => this.selectedDossiers.includes(d.originalIndex));
+    }
+
+    exposeGlobalMethods() {
+        // S'assurer que les méthodes sont disponibles globalement
+        window.tableManager = this;
     }
 
     reset() {
@@ -459,3 +671,4 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
