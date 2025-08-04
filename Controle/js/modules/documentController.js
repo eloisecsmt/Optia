@@ -19,6 +19,8 @@ export class DocumentController {
         this.manualControlResults = [];
         this.manualControlStartTime = null;
         this.manualControlDefinition = null;
+        this.currentControlId = null;
+        this.isResumingControl = false;
     }
 
     startManualControl(selectedDossiers, controlType) {
@@ -46,6 +48,24 @@ export class DocumentController {
         
         // Commencer par le premier dossier
         this.startNextDossierControl();
+    }
+
+     // Identifier un dossier de manière unique
+    generateDossierKey(dossier) {
+        return `${dossier.codeDossier || 'NO_CODE'}_${dossier.reference || 'NO_REF'}_${dossier.montant || 'NO_AMOUNT'}`;
+    }
+
+    // Vérifier si un dossier est déjà contrôlé pour un type donné
+    isDossierControlled(dossier, controlType) {
+        if (!window.persistenceManager) return false;
+        
+        const dossierKey = this.generateDossierKey(dossier);
+        return window.persistenceManager.isDossierControlled(dossierKey, controlType);
+    }
+
+    // Filtrer les dossiers déjà contrôlés
+    filterUncontrolledDossiers(dossiers, controlType) {
+        return dossiers.filter(dossier => !this.isDossierControlled(dossier, controlType));
     }
 
     getControlDefinition(controlType) {
@@ -184,17 +204,29 @@ export class DocumentController {
     // Méthode modifiée pour enlever FR et Profil Risques du contrôle CARTO_CLIENT
     getRequiredDocuments(controlType) {
         const documentSets = {
-            'LCB-FT': [1, 2, 7, 8, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Zeendoc
+            'LCB-FT': [1, 4, 7, 8, 12, 99], // FR, Carto Client, CNI, Justificatif Domicile, Zeendoc
             'FINANCEMENT': [1, 2, 9, 10, 99], // FR, Profil Risques, Etude, RIB, Zeendoc  
             'CARTO_CLIENT': [4, 99], // Harvest, Zeendoc (FR et Profil Risques supprimés)
-            'OPERATION': [1, 2, 6, 11, 10, 99], // FR, Profil Risques, LM Entrée en Relation, Convention RTO, RIB, Zeendoc
+            'OPERATION': [1, 2, 4, 6, 10, 11, 13, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
             'NOUVEAU_CLIENT': [1, 2, 3, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
             'REVUE_PERIODIQUE': [2, 3, 4, 99] // Profil Risques, Profil ESG, Carto Client, Zeendoc
         };
 
-        return documentSets[controlType] || [1, 2, 7, 8, 99]; // Toujours inclure Zeendoc
+            if (controlType === 'OPERATION') {
+            let documents = [1, 2, 4, 6, 10, 11, 13, 99]; // Base + Carto Opération
+            
+            // Ajouter conditionnellement selon le type d'opération
+            // NOTE: Dans une vraie implémentation, on récupérerait le type d'opération du dossier
+            // Pour l'instant, on inclut les deux et on gérera dans les questions
+            documents.push(12); // Origine des fonds (versement)
+            documents.push(14); // Destination des fonds (rachat)
+            
+            return documents;
+        }
+
+        return documentSets[controlType] || [1, 2, 7, 8, 99];
     }
 
     initializeDocumentsConfig() {
@@ -1020,6 +1052,339 @@ export class DocumentController {
                     }
                 ]
             },
+
+            12: {
+                id: 12,
+                name: 'Origine des fonds',
+                fullName: 'Déclaration et Justification de l\'Origine des Fonds',
+                questions: [
+                    {
+                        text: 'Est-ce que le document de déclaration d\'origine des fonds est présent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si la déclaration d\'origine des fonds est présente dans le dossier client (obligatoire LCB-FT)',
+                        skipIfNo: true
+                    },
+                    {
+                        text: 'Quel est le type de déclaration ?',
+                        type: 'origin_type',
+                        required: true,
+                        help: 'Type de déclaration selon le montant et la complexité de l\'opération',
+                        options: [
+                            'Déclaration simple (formulaire standard)',
+                            'Déclaration détaillée avec justificatifs',
+                            'Déclaration complexe (montants importants)',
+                            'Déclaration PPE (Personne Politiquement Exposée)'
+                        ]
+                    },
+                    {
+                        text: 'La source des fonds est-elle clairement identifiée ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification que l\'origine des fonds est précisément documentée',
+                        qualityCheck: {
+                            text: 'La source des fonds est-elle cohérente et vérifiable ?',
+                            help: 'Source précise : salaires, vente immobilière, héritage, épargne, etc. avec éléments de preuve'
+                        }
+                    },
+                    {
+                        text: 'Les justificatifs d\'origine des fonds sont-ils présents ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Documents prouvant l\'origine : bulletins de salaire, actes de vente, testament, relevés bancaires, etc.',
+                        qualityCheck: {
+                            text: 'Les justificatifs sont-ils appropriés et récents ?',
+                            help: 'Documents officiels, datés, cohérents avec les montants déclarés'
+                        }
+                    },
+                    {
+                        text: 'Y a-t-il cohérence entre les revenus déclarés et les montants investis ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification que les montants investis sont cohérents avec la capacité financière du client',
+                        qualityCheck: {
+                            text: 'La cohérence financière est-elle établie et documentée ?',
+                            help: 'Ratio investissement/revenus raisonnable, pas de disproportion inexpliquée'
+                        }
+                    },
+                    {
+                        text: 'Le client a-t-il été vérifié sur les listes de sanctions ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Contrôle obligatoire sur les listes OFAC, UE, ONU, etc.',
+                        qualityCheck: {
+                            text: 'Le contrôle des listes de sanctions est-il documenté et daté ?',
+                            help: 'Preuve du contrôle effectué avec date, résultat et conservation de la trace'
+                        }
+                    },
+                    {
+                        text: 'Si montant > 150 000€, une diligence renforcée a-t-elle été effectuée ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification spéciale pour les montants importants selon la réglementation',
+                        qualityCheck: {
+                            text: 'La diligence renforcée est-elle complète et documentée ?',
+                            help: 'Enquête approfondie, sources multiples vérifiées, validation hiérarchique'
+                        }
+                    },
+                    {
+                        text: 'La déclaration est-elle signée par le client ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Signature obligatoire du client attestant de la véracité des informations',
+                        qualityCheck: {
+                            text: 'La signature atteste-t-elle de la véracité sous peine de sanctions ?',
+                            help: 'Signature avec mention explicite d\'engagement sur la véracité des déclarations',
+                            type: 'signature_clients'
+                        }
+                    },
+                    {
+                        text: 'Le conseiller a-t-il validé et signé l\'analyse d\'origine des fonds ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Validation obligatoire par le conseiller de son analyse des éléments fournis',
+                        qualityCheck: {
+                            text: 'L\'analyse du conseiller est-elle motivée et complète ?',
+                            help: 'Analyse écrite des éléments, conclusion motivée, signature avec date',
+                            type: 'signature_conseiller'
+                        }
+                    },
+                    {
+                        text: 'En cas de doute, une déclaration de soupçon a-t-elle été envisagée/effectuée ?',
+                        type: 'suspicion_declaration',
+                        required: true,
+                        help: 'Vérification de la procédure en cas d\'éléments suspects',
+                        options: [
+                            'Aucun élément suspect identifié',
+                            'Éléments de doute mais analyse concluante',
+                            'Déclaration de soupçon envisagée mais non retenue (motivée)',
+                            'Déclaration de soupçon effectuée',
+                            'Situation non évaluée (anomalie)'
+                        ]
+                    }
+                ]
+            },
+
+            13: {
+                id: 13,
+                name: 'Carto Opération',
+                fullName: 'Cartographie et Suivi des Opérations',
+                questions: [
+                    {
+                        text: 'Les informations de l\'opération sont-elles présentes dans Harvest ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si les détails de l\'opération sont correctement saisis dans Harvest',
+                        skipIfNo: true
+                    },
+                    {
+                        text: 'Quel est le type d\'opération ?',
+                        type: 'operation_type',
+                        required: true,
+                        help: 'Type d\'opération effectuée par le client',
+                        options: [
+                            'Versement initial',
+                            'Versement complémentaire',
+                            'Rachat partiel',
+                            'Rachat total',
+                            'Arbitrage',
+                            'Transfert entrant',
+                            'Transfert sortant',
+                            'Avance sur contrat'
+                        ]
+                    },
+                    {
+                        text: 'Le montant de l\'opération est-il correctement renseigné ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification que le montant principal de l\'opération est bien saisi',
+                        qualityCheck: {
+                            text: 'Le montant correspond-il aux documents justificatifs ?',
+                            help: 'Cohérence entre le montant saisi et les pièces jointes (chèque, virement, etc.)'
+                        }
+                    },
+                    {
+                        text: 'Les frais appliqués sont-ils détaillés et corrects ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification de la présence et exactitude des frais (entrée, gestion, arbitrage, etc.)',
+                        qualityCheck: {
+                            text: 'Les frais correspondent-ils au barème en vigueur ?',
+                            help: 'Application correcte des grilles tarifaires selon le contrat et le type d\'opération'
+                        }
+                    },
+                    {
+                        text: 'La date d\'opération est-elle cohérente ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification de la cohérence des dates : demande, traitement, valeur',
+                        qualityCheck: {
+                            text: 'Les dates respectent-elles les délais réglementaires ?',
+                            help: 'Respect des délais de traitement et dates de valeur selon la réglementation'
+                        }
+                    },
+                    {
+                        text: 'Le support d\'investissement est-il correctement identifié ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification que le produit/support de destination est bien renseigné',
+                        qualityCheck: {
+                            text: 'Le support est-il éligible et autorisé pour ce client ?',
+                            help: 'Vérification éligibilité, profil de risque, contraintes réglementaires'
+                        }
+                    },
+                    {
+                        text: 'Les références bancaires sont-elles présentes et vérifiées ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'IBAN, coordonnées bancaires pour virements entrants/sortants',
+                        qualityCheck: {
+                            text: 'Les coordonnées bancaires sont-elles cohérentes avec le titulaire ?',
+                            help: 'Vérification nom titulaire compte, IBAN valide, BIC correct'
+                        }
+                    },
+                    {
+                        text: 'Si arbitrage, les modalités sont-elles documentées ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Pour les arbitrages : supports source et cible, montants, dates de valeur',
+                        qualityCheck: {
+                            text: 'L\'arbitrage respecte-t-il les conditions du contrat ?',
+                            help: 'Vérification nombre d\'arbitrages gratuits, frais applicables, supports autorisés'
+                        }
+                    },
+                    {
+                        text: 'Le statut de traitement de l\'opération est-il à jour ?',
+                        type: 'operation_status',
+                        required: true,
+                        help: 'État actuel du traitement de l\'opération dans Harvest',
+                        options: [
+                            'En attente de traitement',
+                            'En cours de traitement',
+                            'Traitée et validée',
+                            'Rejetée avec motif',
+                            'En attente de pièces',
+                            'Annulée à la demande du client'
+                        ]
+                    },
+                    {
+                        text: 'Les pièces justificatives sont-elles complètes ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Demande signée, chèque/ordre de virement, pièces complémentaires selon le type',
+                        qualityCheck: {
+                            text: 'Les pièces correspondent-elles au type d\'opération demandée ?',
+                            help: 'Exhaustivité et conformité des justificatifs selon la nature de l\'opération'
+                        }
+                    }
+                ]
+            },
+
+            14: {
+                id: 14,
+                name: 'Destination des fonds',
+                fullName: 'Destination et Motif des Fonds (Rachats)',
+                questions: [
+                    {
+                        text: 'Est-ce que la destination des fonds est présente ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si la destination des fonds de rachat est documentée',
+                        skipIfNo: true
+                    },
+                    {
+                        text: 'Quel est le motif du rachat ?',
+                        type: 'rachat_motif',
+                        required: true,
+                        help: 'Raison justifiant le rachat demandé par le client',
+                        options: [
+                            'Besoin de liquidités personnelles',
+                            'Investissement immobilier',
+                            'Achat véhicule/équipement',
+                            'Frais de scolarité/formation',
+                            'Frais médicaux/santé',
+                            'Travaux/rénovation',
+                            'Autre investissement financier',
+                            'Optimisation fiscale',
+                            'Situation familiale (mariage, divorce, etc.)',
+                            'Retraite/complément de revenus',
+                            'Urgence/imprévu',
+                            'Autre motif (à préciser)'
+                        ]
+                    },
+                    {
+                        text: 'Si "Autre motif", le motif est-il précisé et cohérent ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification que le motif libre est détaillé et plausible',
+                        qualityCheck: {
+                            text: 'Le motif précisé est-il suffisamment détaillé et crédible ?',
+                            help: 'Motif explicite, cohérent avec la situation du client, pas de formulation vague'
+                        }
+                    },
+                    {
+                        text: 'La destination bancaire est-elle identifiée ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Compte de destination pour le virement de rachat',
+                        qualityCheck: {
+                            text: 'Le compte de destination appartient-il au titulaire du contrat ?',
+                            help: 'Vérification nom titulaire, IBAN cohérent, pas de compte tiers sans justification'
+                        }
+                    },
+                    {
+                        text: 'Si compte tiers, y a-t-il une procuration ou justification ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification des autorisations pour virement sur compte tiers',
+                        qualityCheck: {
+                            text: 'La procuration ou justification est-elle valide et à jour ?',
+                            help: 'Document officiel, signé, dans les délais de validité'
+                        }
+                    },
+                    {
+                        text: 'Le montant du rachat est-il cohérent avec le motif ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification de la proportionnalité montant/besoin exprimé',
+                        qualityCheck: {
+                            text: 'Y a-t-il cohérence entre le montant demandé et l\'usage déclaré ?',
+                            help: 'Montant adapté au motif, pas de disproportion manifeste'
+                        }
+                    },
+                    {
+                        text: 'Des rachats répétés ont-ils été effectués récemment ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérification de l\'historique des rachats sur les 12 derniers mois',
+                        qualityCheck: {
+                            text: 'La fréquence des rachats est-elle normale et justifiée ?',
+                            help: 'Pas de pattern suspect, motifs cohérents dans le temps'
+                        }
+                    },
+                    {
+                        text: 'Le client a-t-il été informé des conséquences fiscales ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Information sur les implications fiscales du rachat (plus-values, etc.)',
+                        qualityCheck: {
+                            text: 'L\'information fiscale est-elle tracée et complète ?',
+                            help: 'Document signé, information adaptée au type de contrat et à la durée de détention'
+                        }
+                    },
+                    {
+                        text: 'Le conseiller a-t-il validé la cohérence de la demande ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Validation par le conseiller de l\'opportunité et de la cohérence du rachat',
+                        qualityCheck: {
+                            text: 'L\'analyse du conseiller est-elle documentée et motivée ?',
+                            help: 'Avis écrit du conseiller sur la pertinence du rachat dans la stratégie du client',
+                            type: 'signature_conseiller'
+                        }
+                    }
+                ]
+            },
             // NOUVEAU : Tuile Zeendoc pour tous les contrôles
             99: {
                 id: 99,
@@ -1066,6 +1431,9 @@ export class DocumentController {
         window.addEventListener('startDocumentControl', (e) => {
             this.startDocumentControl(e.detail.dossier, e.detail.control);
         });
+        
+        // Initialiser les vérifications périodiques
+        this.initializePeriodicChecks();
     }
 
     startDocumentControl(dossier, control) {
@@ -1075,26 +1443,50 @@ export class DocumentController {
 
         this.currentDossier = dossier;
         this.currentControl = control;
+        this.isResumingControl = false;
         
-        this.initializeDocumentsForControl(control.type);
+        // Vérifier s'il existe un contrôle suspendu pour ce dossier/type
+        const dossierKey = this.generateDossierKey(dossier);
+        const suspendedControl = window.persistenceManager?.getSuspendedControl(dossierKey, control.type);
+        
+        if (suspendedControl) {
+            this.showResumeControlDialog(suspendedControl);
+            return;
+        }
+        
+        this.initializeNewControl(control.type);
         this.showDocumentControlInterface();
     }
 
     initializeDocumentsForControl(controlType) {
-        const requiredDocuments = this.getRequiredDocuments(controlType);
+        let requiredDocuments;
+    
+        if (controlType === 'OPERATION') {
+            // Utiliser la logique conditionnelle pour les opérations
+            requiredDocuments = this.determineOperationDocuments(this.currentDossier);
+            Utils.debugLog(`Documents sélectionnés pour l'opération: ${requiredDocuments.join(', ')}`);
+        } else {
+            // Pour les autres contrôles, utiliser la méthode standard
+            requiredDocuments = this.getRequiredDocuments(controlType);
+        }
         
         this.documentsState = {};
         this.documentResponses = {};
         
         requiredDocuments.forEach(docId => {
-            this.documentsState[docId] = {
-                id: docId,
-                status: 'pending',
-                responses: {},
-                completedQuestions: 0,
-                totalQuestions: this.documentsConfig[docId].questions.length
-            };
-            this.documentResponses[docId] = {};
+            // Vérifier que la configuration du document existe
+            if (this.documentsConfig[docId]) {
+                this.documentsState[docId] = {
+                    id: docId,
+                    status: 'pending',
+                    responses: {},
+                    completedQuestions: 0,
+                    totalQuestions: this.documentsConfig[docId].questions.length
+                };
+                this.documentResponses[docId] = {};
+            } else {
+                Utils.debugLog(`Attention: Configuration manquante pour le document ${docId}`);
+            }
         });
 
         Utils.debugLog(`Documents initialisés pour ${controlType}: ${requiredDocuments.join(', ')}`);
@@ -1156,6 +1548,9 @@ export class DocumentController {
             9: 'Etude',
             10: 'RIB',
             11: 'Convention RTO',
+            12: 'Origine des fonds',
+            13: 'Carto Opération',
+            14: 'Destination des fonds',
             99: 'Zeendoc'
         };
         return documentNames[docId] || `Document ${docId}`;
@@ -1173,10 +1568,12 @@ export class DocumentController {
 
         const titleEl = section.querySelector('.section-title');
         if (titleEl) {
+            // Garder un titre simple sans détails de l'opération
             titleEl.textContent = `Contrôle Documentaire - ${this.currentControl.definition.name}`;
         }
 
         this.updateDossierInfo();
+
         this.updateDocumentsGrid();
         this.updateControlButtons();
     }
@@ -1312,6 +1709,7 @@ export class DocumentController {
                 <h3>${docConfig.fullName}</h3>
                 <div class="question-progress">
                     Question ${this.currentQuestionIndex + 1} sur ${questions.length}
+                    ${this.isResumingControl ? '<span class="resume-badge">🔄 Reprise</span>' : ''}
                 </div>
             </div>
             
@@ -1330,14 +1728,22 @@ export class DocumentController {
                 
                 <div class="question-actions">
                     <button class="btn btn-secondary" onclick="window.documentController?.cancelQuestion()">
-                        Annuler
+                        ⬅️ Retour
+                    </button>
+                    <button class="btn btn-danger" onclick="window.documentController?.suspendControl()">
+                        ⏸️ Suspendre
                     </button>
                     <button class="btn btn-primary" onclick="window.documentController?.saveQuestionResponse()">
-                        ${this.currentQuestionIndex === questions.length - 1 ? 'Terminer le document' : 'Question suivante'}
+                        ${this.currentQuestionIndex === questions.length - 1 ? 'Terminer le document' : 'Question suivante'} ➡️
                     </button>
                 </div>
             </div>
         `;
+
+        // Pré-remplir les réponses existantes si on reprend un contrôle
+        if (this.isResumingControl) {
+            this.prefillExistingResponses();
+        }
 
         this.addHelpBubbleStyles();
     }
@@ -1368,6 +1774,54 @@ export class DocumentController {
                 </div>
             `;
         }
+
+        if (questionData.type === 'operation_type') {
+        return `
+            <div class="response-group operation-type-group">
+                <label>Type d'opération :</label>
+                <div class="radio-group">
+                    ${questionData.options.map(option => `
+                        <label class="radio-option">
+                            <input type="radio" name="response" value="${option}">
+                            <span>${option}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    if (questionData.type === 'operation_status') {
+        return `
+            <div class="response-group operation-status-group">
+                <label>Statut de l'opération :</label>
+                <div class="radio-group">
+                    ${questionData.options.map(option => `
+                        <label class="radio-option">
+                            <input type="radio" name="response" value="${option}">
+                            <span>${option}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    if (questionData.type === 'rachat_motif') {
+        return `
+            <div class="response-group rachat-motif-group">
+                <label>Motif du rachat :</label>
+                <div class="radio-group">
+                    ${questionData.options.map(option => `
+                        <label class="radio-option">
+                            <input type="radio" name="response" value="${option}">
+                            <span>${option}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
 
         // Nouveaux types pour Carto Client
         if (questionData.type === 'patrimoine_tranche') {
@@ -1463,6 +1917,38 @@ export class DocumentController {
                 </div>
             </div>
         `;
+
+         if (questionData.type === 'origin_type') {
+            return `
+                <div class="response-group">
+                    <label>Type de déclaration d'origine des fonds :</label>
+                    <div class="radio-group">
+                        ${questionData.options.map(option => `
+                            <label class="radio-option">
+                                <input type="radio" name="response" value="${option}">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (questionData.type === 'suspicion_declaration') {
+            return `
+                <div class="response-group">
+                    <label>Évaluation du risque de blanchiment :</label>
+                    <div class="radio-group">
+                        ${questionData.options.map(option => `
+                            <label class="radio-option">
+                                <input type="radio" name="response" value="${option}">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
         if (questionData.qualityCheck) {
             options += this.generateQualityCheckOptions(questionData.qualityCheck);
@@ -1805,6 +2291,24 @@ export class DocumentController {
             return true;
         }
 
+        if (questionData.type === 'origin_type' || questionData.type === 'suspicion_declaration') {
+            if (!response.answer) {
+                Utils.showNotification('Veuillez sélectionner une option', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        if (questionData.type === 'operation_type' || 
+            questionData.type === 'operation_status' || 
+            questionData.type === 'rachat_motif') {
+            if (!response.answer) {
+                Utils.showNotification('Veuillez sélectionner une option', 'error');
+                return false;
+            }
+            return true;
+        }
+
         // Validation pour les nouveaux types
         if (questionData.type === 'patrimoine_tranche' || 
             questionData.type === 'revenus_tranche' || 
@@ -1931,11 +2435,15 @@ export class DocumentController {
             return;
         }
 
+        // Supprimer le contrôle suspendu s'il existait
+        if (this.isResumingControl && this.currentControlId) {
+            const dossierKey = this.generateDossierKey(this.currentDossier);
+            window.persistenceManager?.removeSuspendedControl(dossierKey, this.currentControl.type);
+        }
+
         if (this.manualControlMode) {
-            // Mode contrôle manuel : traiter le dossier actuel
             this.completeCurrentManualDossier();
         } else {
-            // Mode contrôle automatique : logique existante
             const summary = this.generateControlSummary();
             
             window.dispatchEvent(new CustomEvent('controlCompleted', {
@@ -2495,6 +3003,429 @@ generateManualResultsTable(results) {
             window.fileHandler.exportToExcel(exportData, fileName);
             Utils.showNotification(`Export réalisé: ${fileName}`, 'success');
         }
+    }
+
+     showResumeControlDialog(suspendedControl) {
+        const modal = document.createElement('div');
+        modal.className = 'justification-modal';
+        modal.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-content">
+                    <h3>🔄 Contrôle suspendu détecté</h3>
+                    <div class="resume-info">
+                        <p>Un contrôle <strong>${suspendedControl.type}</strong> a été suspendu pour ce dossier le <strong>${new Date(suspendedControl.suspendedAt).toLocaleDateString('fr-FR')}</strong>.</p>
+                        <div class="suspend-details">
+                            <p><strong>Progress:</strong> ${Object.keys(suspendedControl.responses || {}).length} question(s) déjà répondue(s)</p>
+                            <p><strong>Dernier document:</strong> ${this.getDocumentName(suspendedControl.lastDocument) || 'Non défini'}</p>
+                            ${suspendedControl.suspendReason ? `<p><strong>Raison:</strong> ${suspendedControl.suspendReason}</p>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" onclick="window.documentController?.resumeControl('${suspendedControl.id}')">
+                            🔄 Reprendre le contrôle
+                        </button>
+                        <button class="btn btn-warning" onclick="window.documentController?.startNewControl()">
+                            🆕 Recommencer à zéro
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.documentController?.cancelControlStart()">
+                            ❌ Annuler
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    initializeNewControl(controlType) {
+        this.currentControlId = `control_${Date.now()}`;
+        this.isResumingControl = false;
+        this.initializeDocumentsForControl(controlType);
+    }
+
+    // NOUVEAU : Reprendre un contrôle suspendu
+    resumeControl(suspendedControlId) {
+        this.closeResumeDialog();
+        
+        const suspendedControl = window.persistenceManager?.getSuspendedControlById(suspendedControlId);
+        if (!suspendedControl) {
+            Utils.showNotification('Contrôle suspendu introuvable', 'error');
+            return;
+        }
+        
+        Utils.debugLog(`=== REPRISE CONTRÔLE SUSPENDU ${suspendedControlId} ===`);
+        
+        // Restaurer l'état du contrôle
+        this.currentControlId = suspendedControlId;
+        this.isResumingControl = true;
+        this.documentsState = suspendedControl.documents || {};
+        this.documentResponses = suspendedControl.responses || {};
+        
+        // Restaurer la progression
+        if (suspendedControl.lastDocument && suspendedControl.lastQuestionIndex !== undefined) {
+            this.currentDocument = suspendedControl.lastDocument;
+            this.currentQuestionIndex = suspendedControl.lastQuestionIndex;
+        }
+        
+        this.showDocumentControlInterface();
+        Utils.showNotification('Contrôle repris avec succès', 'success');
+    }
+
+    // NOUVEAU : Recommencer un contrôle à zéro
+    startNewControl() {
+        this.closeResumeDialog();
+        
+        // Supprimer l'ancien contrôle suspendu
+        const dossierKey = this.generateDossierKey(this.currentDossier);
+        window.persistenceManager?.removeSuspendedControl(dossierKey, this.currentControl.type);
+        
+        this.initializeNewControl(this.currentControl.type);
+        this.showDocumentControlInterface();
+        Utils.showNotification('Nouveau contrôle démarré', 'info');
+    }
+
+    // NOUVEAU : Annuler le démarrage du contrôle
+    cancelControlStart() {
+        this.closeResumeDialog();
+        Utils.showSection('automatic-control-section');
+    }
+
+    // NOUVEAU : Fermer le dialog de reprise
+    closeResumeDialog() {
+        const modal = document.querySelector('.justification-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    // NOUVEAU : Pré-remplir les réponses existantes
+    prefillExistingResponses() {
+        const existingResponse = this.documentResponses[this.currentDocument]?.[this.currentQuestionIndex];
+        if (!existingResponse) return;
+
+        // Pré-remplir les champs selon le type de réponse
+        if (existingResponse.answer) {
+            const responseRadio = document.querySelector(`input[name="response"][value="${existingResponse.answer}"]`);
+            if (responseRadio) {
+                responseRadio.checked = true;
+                // Déclencher l'événement pour afficher les champs de qualité si nécessaire
+                responseRadio.dispatchEvent(new Event('change'));
+            }
+        }
+
+        if (existingResponse.quality) {
+            setTimeout(() => {
+                const qualityRadio = document.querySelector(`input[name="quality"][value="${existingResponse.quality}"]`);
+                if (qualityRadio) {
+                    qualityRadio.checked = true;
+                }
+            }, 100);
+        }
+
+        // Pré-remplir les champs texte
+        if (existingResponse.answer && existingResponse.answer !== 'Oui' && existingResponse.answer !== 'Non' && existingResponse.answer !== 'NC') {
+            const textInput = document.getElementById('text-response');
+            if (textInput) {
+                textInput.value = existingResponse.answer;
+            }
+        }
+    }
+
+    // NOUVEAU : Suspendre le contrôle avec commentaire optionnel
+    suspendControl() {
+        const modal = document.createElement('div');
+        modal.className = 'justification-modal';
+        modal.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-content">
+                    <h3>⏸️ Suspendre le contrôle</h3>
+                    <p>Le contrôle sera sauvegardé et vous pourrez le reprendre plus tard.</p>
+                    <p><strong>Dossier:</strong> ${this.currentDossier.client} (${this.currentControl.definition.name})</p>
+                    
+                    <div class="suspend-form">
+                        <label>Commentaire (optionnel):</label>
+                        <textarea id="suspend-reason" rows="3" placeholder="Raison de la suspension, éléments manquants, etc."></textarea>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn btn-warning" onclick="window.documentController?.confirmSuspendControl()">
+                            ⏸️ Confirmer la suspension
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.documentController?.closeSuspendDialog()">
+                            ❌ Continuer le contrôle
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    // NOUVEAU : Confirmer la suspension
+    confirmSuspendControl() {
+        const reasonTextarea = document.getElementById('suspend-reason');
+        const suspendReason = reasonTextarea ? reasonTextarea.value.trim() : '';
+        
+        const dossierKey = this.generateDossierKey(this.currentDossier);
+        
+        const suspendedControl = {
+            id: this.currentControlId || `suspended_${Date.now()}`,
+            dossierKey: dossierKey,
+            dossier: this.currentDossier,
+            control: this.currentControl,
+            type: this.currentControl.type,
+            documents: this.documentsState,
+            responses: this.documentResponses,
+            lastDocument: this.currentDocument,
+            lastQuestionIndex: this.currentQuestionIndex,
+            suspendedAt: new Date(),
+            suspendReason: suspendReason,
+            status: 'suspended'
+        };
+        
+        // Sauvegarder le contrôle suspendu
+        if (window.persistenceManager) {
+            window.persistenceManager.saveSuspendedControl(suspendedControl);
+        }
+        
+        this.closeSuspendDialog();
+        this.resetControlState();
+        
+        Utils.showNotification('Contrôle suspendu et sauvegardé', 'warning');
+        Utils.showSection('automatic-control-section');
+        
+        // Notifier les autres modules de la suspension
+        window.dispatchEvent(new CustomEvent('controlSuspended', {
+            detail: suspendedControl
+        }));
+    }
+
+    // NOUVEAU : Fermer le dialog de suspension
+    closeSuspendDialog() {
+        const modal = document.querySelector('.justification-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    // NOUVEAU : Méthode pour diagnostiquer les contrôles suspendus
+    diagnoseSuspendedControls() {
+        if (!window.persistenceManager) {
+            Utils.debugLog('PersistenceManager non disponible');
+            return;
+        }
+
+        const suspended = window.persistenceManager.getSuspendedControls();
+        Utils.debugLog(`=== CONTRÔLES SUSPENDUS (${suspended.length}) ===`);
+        
+        suspended.forEach(control => {
+            const daysSuspended = Math.floor((new Date() - new Date(control.suspendedAt)) / (1000 * 60 * 60 * 24));
+            Utils.debugLog(`${control.dossier.client} (${control.type}) - ${daysSuspended} jours`);
+            
+            if (daysSuspended >= 14) {
+                Utils.showNotification(
+                    `⚠️ Contrôle suspendu depuis ${daysSuspended} jours: ${control.dossier.client} (${control.type})`,
+                    'warning'
+                );
+            }
+        });
+    }
+
+    determineOperationDocuments(dossier) {
+    const baseDocuments = [1, 2, 4, 6, 10, 11, 13, 99]; // Documents de base pour toute opération
+    
+    // Analyser le type d'opération depuis les données du dossier
+    const typeOperation = this.extractOperationType(dossier);
+    
+    Utils.debugLog(`Type d'opération détecté: ${typeOperation}`);
+    
+    switch (typeOperation) {
+        case 'versement':
+        case 'versement_initial':
+        case 'versement_complementaire':
+        case 'transfert_entrant':
+            // Pour les versements : origine des fonds obligatoire
+            return [...baseDocuments, 12]; // Ajouter document 12 (Origine des fonds)
+            
+        case 'rachat':
+        case 'rachat_partiel':
+        case 'rachat_total':
+        case 'transfert_sortant':
+            // Pour les rachats : destination des fonds obligatoire
+            return [...baseDocuments, 14]; // Ajouter document 14 (Destination des fonds)
+            
+        case 'arbitrage':
+            // Pour les arbitrages : aucun mouvement de fonds externe
+            return baseDocuments; // Pas besoin de doc 12 ou 14
+            
+        case 'avance':
+            // Pour les avances : destination des fonds
+            return [...baseDocuments, 14];
+            
+        default:
+            // Par défaut : inclure les deux pour être sûr
+            Utils.debugLog('Type d\'opération non reconnu, inclusion des deux documents');
+            return [...baseDocuments, 12, 14];
+    }
+}
+
+    // AJOUTER cette méthode pour extraire le type d'opération depuis le dossier
+    extractOperationType(dossier) {
+        // Chercher dans différents champs possibles
+        const typeActe = (dossier.typeActe || '').toLowerCase();
+        const contrat = (dossier.contrat || '').toLowerCase();
+        const etatBO = (dossier.etatBO || '').toLowerCase();
+        
+        // Mots-clés pour versements
+        const versementKeywords = ['versement', 'apport', 'entrée', 'souscription', 'dépôt'];
+        // Mots-clés pour rachats
+        const rachatKeywords = ['rachat', 'retrait', 'sortie', 'liquidation'];
+        // Mots-clés pour arbitrages
+        const arbitrageKeywords = ['arbitrage', 'switch', 'réallocation'];
+        // Mots-clés pour transferts
+        const transfertKeywords = ['transfert', 'portabilité'];
+        // Mots-clés pour avances
+        const avanceKeywords = ['avance', 'prêt'];
+        
+        // Analyser le type d'acte en priorité
+        if (versementKeywords.some(keyword => typeActe.includes(keyword))) {
+            if (typeActe.includes('initial') || typeActe.includes('ouverture')) {
+                return 'versement_initial';
+            }
+            return 'versement';
+        }
+        
+        if (rachatKeywords.some(keyword => typeActe.includes(keyword))) {
+            if (typeActe.includes('partiel')) {
+                return 'rachat_partiel';
+            } else if (typeActe.includes('total')) {
+                return 'rachat_total';
+            }
+            return 'rachat';
+        }
+        
+        if (arbitrageKeywords.some(keyword => typeActe.includes(keyword))) {
+            return 'arbitrage';
+        }
+        
+        if (transfertKeywords.some(keyword => typeActe.includes(keyword))) {
+            if (typeActe.includes('entrant') || typeActe.includes('arrivée')) {
+                return 'transfert_entrant';
+            } else if (typeActe.includes('sortant') || typeActe.includes('départ')) {
+                return 'transfert_sortant';
+            }
+            return 'transfert_entrant'; // Par défaut
+        }
+        
+        if (avanceKeywords.some(keyword => typeActe.includes(keyword))) {
+            return 'avance';
+        }
+        
+        // Si pas trouvé dans typeActe, chercher dans d'autres champs
+        if (versementKeywords.some(keyword => contrat.includes(keyword) || etatBO.includes(keyword))) {
+            return 'versement';
+        }
+        
+        if (rachatKeywords.some(keyword => contrat.includes(keyword) || etatBO.includes(keyword))) {
+            return 'rachat';
+        }
+        
+        // Par défaut, si on ne peut pas déterminer
+        return 'unknown';
+    }
+
+    // AJOUTER une méthode pour obtenir des informations contextuelles sur l'opération
+    getOperationContext() {
+        if (!this.currentDossier) return null;
+        
+        const typeOperation = this.extractOperationType(this.currentDossier);
+        const montant = this.currentDossier.montant || '';
+        
+        return {
+            type: typeOperation,
+            isVersement: ['versement', 'versement_initial', 'versement_complementaire', 'transfert_entrant'].includes(typeOperation),
+            isRachat: ['rachat', 'rachat_partiel', 'rachat_total', 'transfert_sortant', 'avance'].includes(typeOperation),
+            isArbitrage: typeOperation === 'arbitrage',
+            montant: montant,
+            needsOriginFunds: ['versement', 'versement_initial', 'versement_complementaire', 'transfert_entrant'].includes(typeOperation),
+            needsDestinationFunds: ['rachat', 'rachat_partiel', 'rachat_total', 'transfert_sortant', 'avance'].includes(typeOperation)
+        };
+    }
+
+    // AJOUTER cette méthode pour afficher le contexte d'opération
+    updateOperationContext() {
+        const infoContainer = document.getElementById('dossier-info');
+        if (!infoContainer || !this.currentControl || this.currentControl.type !== 'OPERATION') return;
+        
+        const operationContext = this.getOperationContext();
+        if (!operationContext) return;
+        
+        // Ajouter une section contexte opération après les infos du dossier
+        const contextHtml = `
+            <div class="operation-context-card" style="margin-top: 20px;">
+                <div class="operation-context-header">
+                    <h4>🔄 Contexte de l'opération</h4>
+                </div>
+                <div class="operation-context-body">
+                    <div class="context-details">
+                        <div class="context-item">
+                            <span class="context-label">Type d'opération :</span>
+                            <span class="context-value">
+                                ${operationContext.type.replace('_', ' ').toUpperCase()}
+                                <span class="operation-type-indicator ${operationContext.type}">
+                                    ${operationContext.isVersement ? 'VERSEMENT' : 
+                                    operationContext.isRachat ? 'RACHAT' : 
+                                    operationContext.isArbitrage ? 'ARBITRAGE' : 'AUTRE'}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="context-item">
+                            <span class="context-label">Documents requis :</span>
+                            <span class="context-value">
+                                ${operationContext.needsOriginFunds ? '📥 Origine des fonds' : ''}
+                                ${operationContext.needsDestinationFunds ? '📤 Destination des fonds' : ''}
+                                ${!operationContext.needsOriginFunds && !operationContext.needsDestinationFunds ? '⚙️ Documents standard uniquement' : ''}
+                            </span>
+                        </div>
+                        <div class="context-item">
+                            <span class="context-label">Montant :</span>
+                            <span class="context-value">${operationContext.montant || 'Non renseigné'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Insérer le contexte après les infos du dossier
+        infoContainer.insertAdjacentHTML('beforeend', contextHtml);
+    }
+
+    // NOUVEAU : Initialiser les vérifications périodiques
+    initializePeriodicChecks() {
+        // Vérifier les contrôles suspendus toutes les heures
+        setInterval(() => {
+            this.diagnoseSuspendedControls();
+        }, 60 * 60 * 1000); // 1 heure
+        
+        // Vérification initiale après 5 secondes
+        setTimeout(() => {
+            this.diagnoseSuspendedControls();
+        }, 5000);
+    }
+
+    // NOUVEAU : Réinitialiser l'état du contrôle
+    resetControlState() {
+        this.currentDossier = null;
+        this.currentControl = null;
+        this.documentsState = {};
+        this.currentDocument = null;
+        this.currentQuestionIndex = 0;
+        this.documentResponses = {};
+        this.currentControlId = null;
+        this.isResumingControl = false;
     }
 
     // Reset pour nouvelle session
