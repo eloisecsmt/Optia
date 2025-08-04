@@ -8,6 +8,7 @@ export class HistoryInterface {
         this.searchTimeout = null;
         this.sortField = 'date';
         this.sortDirection = 'desc';
+        this.showSuspended = false;
         this.init();
     }
 
@@ -72,6 +73,18 @@ export class HistoryInterface {
             <input type="file" id="import-backup" style="display:none" accept=".json" 
                    onchange="window.persistenceManager?.importBackupJSON(this.files[0])">
             
+            <!-- NOUVEAU : Onglets pour filtrer les contrôles -->
+            <div class="history-tabs">
+                <button class="tab-btn ${!this.showSuspended ? 'active' : ''}" 
+                        onclick="window.historyInterface?.switchTab(false)">
+                    ✅ Contrôles terminés
+                </button>
+                <button class="tab-btn ${this.showSuspended ? 'active' : ''}" 
+                        onclick="window.historyInterface?.switchTab(true)">
+                    ⏸️ Contrôles suspendus <span class="tab-badge" id="suspended-count-badge">0</span>
+                </button>
+            </div>
+            
             <!-- Filtres de recherche avancée -->
             <div class="filters-section">
                 <h3 style="margin-bottom: 15px; color: #1a1a2e;">🔍 Recherche et filtres</h3>
@@ -100,68 +113,56 @@ export class HistoryInterface {
                     <div class="filter-group">
                         <label class="filter-label">👨‍💼 Conseiller</label>
                         <input type="text" id="history-conseiller" class="filter-input" 
-                               placeholder="Nom du conseiller..." autocomplete="off"
-                               title="Rechercher par nom de conseiller">
+                               placeholder="Nom du conseiller..." autocomplete="off">
                     </div>
                     <div class="filter-group">
                         <label class="filter-label">👤 Client</label>
                         <input type="text" id="history-client" class="filter-input" 
-                               placeholder="Nom du client..." autocomplete="off"
-                               title="Rechercher par nom de client">
+                               placeholder="Nom du client..." autocomplete="off">
                     </div>
                     <div class="filter-group">
-                        <label class="filter-label">✅ Conformité</label>
+                        <label class="filter-label">${this.showSuspended ? '⏰ Durée suspension' : '✅ Conformité'}</label>
                         <select id="history-conformite" class="filter-select">
-                            <option value="">📊 Toutes</option>
-                            <option value="CONFORME">✅ Conforme</option>
-                            <option value="NON CONFORME">❌ Non conforme</option>
+                            ${this.showSuspended ? `
+                                <option value="">⏰ Toutes durées</option>
+                                <option value="recent">📅 Récents (-7j)</option>
+                                <option value="old">⚠️ Anciens (14j+)</option>
+                                <option value="very-old">🚨 Très anciens (30j+)</option>
+                            ` : `
+                                <option value="">📊 Toutes</option>
+                                <option value="CONFORME">✅ Conforme</option>
+                                <option value="NON CONFORME">❌ Non conforme</option>
+                            `}
                         </select>
                     </div>
                 </div>
                 
                 <div class="btn-group">
-                    <button class="btn btn-primary" onclick="window.historyInterface?.searchHistory()"
-                            title="Lancer la recherche avec les critères sélectionnés">
+                    <button class="btn btn-primary" onclick="window.historyInterface?.searchHistory()">
                         🔍 Rechercher
                     </button>
-                    <button class="btn btn-secondary" onclick="window.historyInterface?.clearFilters()"
-                            title="Effacer tous les filtres et afficher tout l'historique">
+                    <button class="btn btn-secondary" onclick="window.historyInterface?.clearFilters()">
                         🗑️ Effacer filtres
                     </button>
-                    <button class="btn btn-info" onclick="window.historyInterface?.showAll()"
-                            title="Afficher tous les contrôles">
+                    <button class="btn btn-info" onclick="window.historyInterface?.showAll()">
                         📋 Afficher tout
                     </button>
-                    <button class="btn btn-warning" onclick="window.historyInterface?.setDatePreset('thisMonth')"
-                            title="Afficher les contrôles de ce mois">
-                        📅 Ce mois
-                    </button>
+                    ${this.showSuspended ? `
+                        <button class="btn btn-warning" onclick="window.historyInterface?.cleanOldSuspended()">
+                            🧹 Nettoyer anciens
+                        </button>
+                    ` : `
+                        <button class="btn btn-warning" onclick="window.historyInterface?.setDatePreset('thisMonth')">
+                            📅 Ce mois
+                        </button>
+                    `}
                 </div>
             </div>
             
             <!-- Statistiques détaillées -->
             <div class="history-summary" id="history-stats">
-                <div class="summary-cards">
-                    <div class="summary-card">
-                        <div class="card-value">0</div>
-                        <div class="card-label">Total contrôles</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="card-value">0%</div>
-                        <div class="card-label">Taux conformité</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="card-value">0</div>
-                        <div class="card-label">Anomalies majeures</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="card-value">0</div>
-                        <div class="card-label">Ce mois-ci</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="card-value">Aucun</div>
-                        <div class="card-label">Type le plus fréquent</div>
-                    </div>
+                <div class="summary-cards" id="summary-cards-container">
+                    <!-- Statistiques générées dynamiquement -->
                 </div>
             </div>
             
@@ -190,7 +191,7 @@ export class HistoryInterface {
                 </div>
             </div>
             
-            <!-- Actions de gestion (en haut) -->
+            <!-- Actions de gestion -->
             <div class="history-management-actions" style="
                 background: #f8f9fa;
                 padding: 20px;
@@ -200,16 +201,13 @@ export class HistoryInterface {
             ">
                 <h4 style="margin: 0 0 15px 0; color: #1a1a2e; font-size: 1.1rem;">⚙️ Gestion de l'historique</h4>
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="window.persistenceManager?.exportBackupJSON()" 
-                            title="Créer une sauvegarde complète en JSON">
+                    <button class="btn btn-secondary" onclick="window.persistenceManager?.exportBackupJSON()">
                         💾 Sauvegarder
                     </button>
-                    <button class="btn btn-secondary" onclick="document.getElementById('import-backup').click()" 
-                            title="Importer une sauvegarde JSON">
+                    <button class="btn btn-secondary" onclick="document.getElementById('import-backup').click()">
                         📂 Restaurer
                     </button>
-                    <button class="btn btn-third" onclick="window.historyInterface?.clearHistory()"
-                            title="Effacer complètement l'historique (peut être récupéré avec le fichier JSON)">
+                    <button class="btn btn-third" onclick="window.historyInterface?.clearHistory()">
                         🗑️ Effacer tout
                     </button>
                 </div>
@@ -218,40 +216,41 @@ export class HistoryInterface {
             <!-- Actions d'export et consultation -->
             <div class="history-actions">
                 <div class="btn-group">
-                    <button class="btn btn-primary" onclick="window.historyInterface?.exportComplete()" 
-                            title="Exporter tout l'historique en Excel">
+                    <button class="btn btn-primary" onclick="window.historyInterface?.exportComplete()">
                         📊 Exporter Historique
                     </button>
-                    <button class="btn btn-primary" onclick="window.historyInterface?.exportFiltered()" 
-                            title="Exporter uniquement les résultats affichés">
+                    <button class="btn btn-primary" onclick="window.historyInterface?.exportFiltered()">
                         📋 Exporter Résultats (<span id="filtered-count">0</span>)
                     </button>
-                    <button class="btn btn-primary" onclick="window.historyInterface?.showStatistics()" 
-                            title="Voir les statistiques détaillées">
-                        📈 Statistiques
-                    </button>
+                    ${this.showSuspended ? `
+                        <button class="btn btn-warning" onclick="window.persistenceManager?.exportSuspendedControls()">
+                            ⏸️ Exporter Suspendus
+                        </button>
+                    ` : `
+                        <button class="btn btn-primary" onclick="window.historyInterface?.showStatistics()">
+                            📈 Statistiques
+                        </button>
+                    `}
                 </div>
                 
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="showAutomaticControls()" 
-                            title="Retourner à l'interface principale de contrôle">
+                    <button class="btn btn-secondary" onclick="showAutomaticControls()">
                         ⬅️ Retour aux contrôles
                     </button>
                 </div>
             </div>
         `;
         
-        // Ajouter la section au container
         const container = document.querySelector('.container');
         if (container) {
             container.appendChild(section);
-            Utils.debugLog('Section historique enrichie créée');
+            Utils.debugLog('Section historique avec onglets suspendus créée');
         }
     }
 
     // Navigation vers l'historique
     show() {
-        Utils.debugLog('Affichage interface historique enrichie');
+         Utils.debugLog('Affichage interface historique avec suspendus');
         
         if (!window.persistenceManager) {
             Utils.showNotification('Gestionnaire d\'historique non disponible', 'error');
@@ -259,23 +258,35 @@ export class HistoryInterface {
         }
         
         Utils.showSection('history-section');
+        this.updateSuspendedBadge();
         this.loadHistoryData();
     }
 
     // Chargement des données avec tri
     loadHistoryData() {
-        if (!window.persistenceManager) {
+         if (!window.persistenceManager) {
             Utils.showNotification('Gestionnaire d\'historique non disponible', 'error');
             return;
         }
         
-        const allControles = window.persistenceManager.getHistoryData().controles;
-        this.currentResults = this.sortControles(allControles);
+        if (this.showSuspended) {
+            // Charger les contrôles suspendus
+            const suspendedControls = window.persistenceManager.getSuspendedControls();
+            this.currentResults = this.formatSuspendedForDisplay(suspendedControls);
+        } else {
+            // Charger les contrôles terminés
+            const allControles = window.persistenceManager.getHistoryData().controles;
+            this.currentResults = this.sortControles(allControles);
+        }
+        
         this.displayResults(this.currentResults);
         this.updateStats();
         this.hideResultsInfo();
         
-        Utils.debugLog(`Historique chargé: ${allControles.length} contrôles`);
+        // Mettre à jour le badge du nombre de suspendus
+        this.updateSuspendedBadge();
+        
+        Utils.debugLog(`Historique chargé (${this.showSuspended ? 'suspendus' : 'terminés'}): ${this.currentResults.length} contrôles`);
     }
 
     // Tri des contrôles
@@ -291,7 +302,7 @@ export class HistoryInterface {
             }
             
             // Gestion des nombres
-            if (this.sortField === 'anomaliesMajeures') {
+            if (this.sortField === 'anomaliesMajeures' || this.sortField === 'daysSuspended') {
                 valueA = parseInt(valueA) || 0;
                 valueB = parseInt(valueB) || 0;
             }
@@ -318,14 +329,23 @@ export class HistoryInterface {
         }
 
         const criteria = this.getSearchCriteria();
-        const results = window.persistenceManager.searchControls(criteria);
         
-        this.currentResults = this.sortControles(results);
+        if (this.showSuspended) {
+            criteria.includeSuspended = true;
+            const results = window.persistenceManager.searchControls(criteria)
+                .filter(result => result.isSuspended);
+
+                // Appliquer les filtres spéciaux pour les suspendus
+            this.currentResults = this.applySuspendedFilters(results, criteria);
+        } else {
+            const results = window.persistenceManager.searchControls(criteria);
+            this.currentResults = this.sortControles(results.filter(result => !result.isSuspended));
+        }
+        
         this.displayResults(this.currentResults);
         this.updateResultsInfo(this.currentResults.length, criteria);
         
         Utils.showNotification(`${this.currentResults.length} résultat(s) trouvé(s)`, 'info');
-        Utils.debugLog(`Recherche effectuée: ${this.currentResults.length} résultats`);
     }
 
     // Presets de dates
@@ -397,11 +417,45 @@ export class HistoryInterface {
         if (!window.persistenceManager) return;
         
         const stats = window.persistenceManager.getStatistics();
-        const statsContainer = document.getElementById('history-stats');
+        const statsContainer = document.getElementById('summary-cards-container');
         
         if (statsContainer) {
-            statsContainer.innerHTML = `
-                <div class="summary-cards">
+            if (this.showSuspended) {
+                // Statistiques pour les suspendus
+                const suspended = window.persistenceManager.getSuspendedControls();
+                const oldSuspended = suspended.filter(s => {
+                    const days = Math.floor((new Date() - new Date(s.suspendedAt)) / (1000 * 60 * 60 * 24));
+                    return days >= 14;
+                }).length;
+                const veryOldSuspended = suspended.filter(s => {
+                    const days = Math.floor((new Date() - new Date(s.suspendedAt)) / (1000 * 60 * 60 * 24));
+                    return days >= 30;
+                }).length;
+                
+                statsContainer.innerHTML = `
+                    <div class="summary-card ${suspended.length === 0 ? 'empty' : 'warning'}">
+                        <div class="card-value">${suspended.length}</div>
+                        <div class="card-label">Total suspendus</div>
+                    </div>
+                    <div class="summary-card ${oldSuspended === 0 ? 'success' : 'warning'}">
+                        <div class="card-value">${oldSuspended}</div>
+                        <div class="card-label">Anciens (14j+)</div>
+                    </div>
+                    <div class="summary-card ${veryOldSuspended === 0 ? 'success' : 'danger'}">
+                        <div class="card-value">${veryOldSuspended}</div>
+                        <div class="card-label">Très anciens (30j+)</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-value">${suspended.length > 0 ? Math.round(suspended.reduce((sum, s) => {
+                            const days = Math.floor((new Date() - new Date(s.suspendedAt)) / (1000 * 60 * 60 * 24));
+                            return sum + days;
+                        }, 0) / suspended.length) : 0}j</div>
+                        <div class="card-label">Durée moyenne</div>
+                    </div>
+                `;
+            } else {
+                // Statistiques normales pour les terminés
+                statsContainer.innerHTML = `
                     <div class="summary-card ${stats.totalControles === 0 ? 'empty' : ''}">
                         <div class="card-value">${stats.totalControles}</div>
                         <div class="card-label">Total contrôles</div>
@@ -418,12 +472,14 @@ export class HistoryInterface {
                         <div class="card-value">${stats.controlesMoisActuel}</div>
                         <div class="card-label">Ce mois-ci</div>
                     </div>
-                    <div class="summary-card">
-                        <div class="card-value">${stats.typePlusFrequent}</div>
-                        <div class="card-label">Type le plus fréquent</div>
-                    </div>
-                </div>
-            `;
+                    ${stats.totalSuspended > 0 ? `
+                        <div class="summary-card warning">
+                            <div class="card-value">${stats.totalSuspended}</div>
+                            <div class="card-label">En attente</div>
+                        </div>
+                    ` : ''}
+                `;
+            }
         }
     }
 
@@ -433,17 +489,23 @@ export class HistoryInterface {
         
         if (!resultsContainer) return;
         
-        // Mettre à jour le compteur filtré
         const filteredCountSpan = document.getElementById('filtered-count');
         if (filteredCountSpan) {
             filteredCountSpan.textContent = controles.length;
         }
         
         if (controles.length === 0) {
+            const emptyMessage = this.showSuspended ? 
+                '❌ Aucun contrôle suspendu trouvé' : 
+                '❌ Aucun contrôle terminé trouvé';
+            const emptyDescription = this.showSuspended ?
+                'Aucun contrôle suspendu ne correspond aux critères.' :
+                'Aucun contrôle terminé ne correspond aux critères.';
+                
             resultsContainer.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: #6c757d;">
-                    <h3>❌ Aucun résultat</h3>
-                    <p>Aucun contrôle ne correspond aux critères de recherche.</p>
+                    <h3>${emptyMessage}</h3>
+                    <p>${emptyDescription}</p>
                     <button class="btn btn-secondary" onclick="window.historyInterface?.clearFilters()">
                         🗑️ Effacer les filtres
                     </button>
@@ -453,11 +515,11 @@ export class HistoryInterface {
         }
         
         const tableHtml = `
-            <table class="data-table">
+            <table class="data-table ${this.showSuspended ? 'suspended-history-table' : ''}">
                 <thead>
                     <tr>
                         <th onclick="window.historyInterface?.sortBy('date')" style="cursor: pointer;" title="Trier par date">
-                            📅 Date ${this.getSortIcon('date')}
+                            📅 ${this.showSuspended ? 'Suspendu le' : 'Date'} ${this.getSortIcon('date')}
                         </th>
                         <th onclick="window.historyInterface?.sortBy('type')" style="cursor: pointer;" title="Trier par type">
                             🔍 Type ${this.getSortIcon('type')}
@@ -470,13 +532,20 @@ export class HistoryInterface {
                             👨‍💼 Conseiller ${this.getSortIcon('conseiller')}
                         </th>
                         <th>💰 Montant</th>
-                        <th>📄 Documents</th>
-                        <th onclick="window.historyInterface?.sortBy('anomaliesMajeures')" style="cursor: pointer;" title="Trier par anomalies">
-                            ⚠️ Anomalies ${this.getSortIcon('anomaliesMajeures')}
-                        </th>
-                        <th onclick="window.historyInterface?.sortBy('conformiteGlobale')" style="cursor: pointer;" title="Trier par conformité">
-                            ✅ Conformité ${this.getSortIcon('conformiteGlobale')}
-                        </th>
+                        <th>${this.showSuspended ? '📄 Progress' : '📄 Documents'}</th>
+                        ${this.showSuspended ? `
+                            <th onclick="window.historyInterface?.sortBy('daysSuspended')" style="cursor: pointer;" title="Trier par durée">
+                                ⏰ Durée ${this.getSortIcon('daysSuspended')}
+                            </th>
+                            <th>📝 Raison</th>
+                        ` : `
+                            <th onclick="window.historyInterface?.sortBy('anomaliesMajeures')" style="cursor: pointer;" title="Trier par anomalies">
+                                ⚠️ Anomalies ${this.getSortIcon('anomaliesMajeures')}
+                            </th>
+                            <th onclick="window.historyInterface?.sortBy('conformiteGlobale')" style="cursor: pointer;" title="Trier par conformité">
+                                ✅ Conformité ${this.getSortIcon('conformiteGlobale')}
+                            </th>
+                        `}
                         <th>🔧 Actions</th>
                     </tr>
                 </thead>
@@ -493,7 +562,15 @@ export class HistoryInterface {
     generateHistoryRows(controles) {
         return controles.map((controle, index) => {
             const rowClass = index % 2 === 0 ? 'even' : 'odd';
-            const conformityClass = controle.conformiteGlobale === 'CONFORME' ? 'row-conforme' : 'row-non-conforme';
+            let conformityClass = '';
+            
+            if (this.showSuspended) {
+                if (controle.daysSuspended >= 30) conformityClass = 'row-very-old-suspended';
+                else if (controle.daysSuspended >= 14) conformityClass = 'row-old-suspended';
+                else conformityClass = 'row-suspended';
+            } else {
+                conformityClass = controle.conformiteGlobale === 'CONFORME' ? 'row-conforme' : 'row-non-conforme';
+            }
             
             return `
                 <tr class="${rowClass} ${conformityClass}">
@@ -504,20 +581,38 @@ export class HistoryInterface {
                     <td>${controle.conseiller || 'N/A'}</td>
                     <td>${controle.montant || 'N/A'}</td>
                     <td><span class="badge secondary">${controle.documentsControles}</span></td>
-                    <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
-                    <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
+                    ${this.showSuspended ? `
+                        <td><span class="badge duration ${this.getDurationClass(controle.daysSuspended)}">${controle.daysSuspended}j</span></td>
+                        <td class="reason-cell">${controle.suspendReason || 'Non spécifiée'}</td>
+                    ` : `
+                        <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
+                        <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
+                    `}
                     <td>
                         <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
-                            <button class="btn btn-sm btn-secondary" 
-                                    onclick="window.historyInterface?.showDetails('${controle.id}')"
-                                    title="Voir les détails complets">
-                                📋 Détails
-                            </button>
-                            <button class="btn btn-sm btn-primary" 
-                                    onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
-                                    title="Export Excel détaillé avec onglets">
-                                📊 Export
-                            </button>
+                            ${this.showSuspended ? `
+                                <button class="btn btn-sm btn-primary" 
+                                        onclick="window.historyInterface?.resumeSuspended('${controle.id}')"
+                                        title="Reprendre le contrôle suspendu">
+                                    🔄 Reprendre
+                                </button>
+                                <button class="btn btn-sm btn-danger" 
+                                        onclick="window.historyInterface?.deleteSuspended('${controle.id}')"
+                                        title="Supprimer définitivement">
+                                    🗑️
+                                </button>
+                            ` : `
+                                <button class="btn btn-sm btn-secondary" 
+                                        onclick="window.historyInterface?.showDetails('${controle.id}')"
+                                        title="Voir les détails complets">
+                                    📋 Détails
+                                </button>
+                                <button class="btn btn-sm btn-primary" 
+                                        onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
+                                        title="Export Excel détaillé">
+                                    📊 Export
+                                </button>
+                            `}
                         </div>
                     </td>
                 </tr>
@@ -1085,6 +1180,277 @@ export class HistoryInterface {
             Utils.showNotification('Erreur lors de l\'export du contrôle', 'error');
             console.error('Erreur export:', error);
         }
+    }
+
+     // NOUVEAU : Appliquer les filtres spéciaux pour les suspendus
+    applySuspendedFilters(results, criteria) {
+        if (criteria.conformite) {
+            const now = new Date();
+            results = results.filter(result => {
+                const daysSuspended = Math.floor((now - result.date) / (1000 * 60 * 60 * 24));
+                
+                switch(criteria.conformite) {
+                    case 'recent':
+                        return daysSuspended <= 7;
+                    case 'old':
+                        return daysSuspended >= 14 && daysSuspended < 30;
+                    case 'very-old':
+                        return daysSuspended >= 30;
+                    default:
+                        return true;
+                }
+            });
+        }
+        
+        return this.sortControles(results);
+    }
+
+    // NOUVEAU : Obtenir la classe CSS selon la durée de suspension
+    getDurationClass(daysSuspended) {
+        if (daysSuspended >= 30) return 'very-old';
+        if (daysSuspended >= 14) return 'old';
+        return 'recent';
+    }
+
+    // NOUVEAU : Reprendre un contrôle suspendu depuis l'historique
+    resumeSuspended(controlId) {
+        const suspendedControl = window.persistenceManager?.getSuspendedControlById(controlId);
+        if (!suspendedControl) {
+            Utils.showNotification('Contrôle suspendu introuvable', 'error');
+            return;
+        }
+        
+        const confirmed = confirm(
+            `Reprendre le contrôle suspendu ?\n\n` +
+            `Client: ${suspendedControl.dossier.client}\n` +
+            `Type: ${suspendedControl.type}\n` +
+            `Suspendu le: ${new Date(suspendedControl.suspendedAt).toLocaleDateString('fr-FR')}\n` +
+            `Progress: ${Object.keys(suspendedControl.responses || {}).length} question(s) répondue(s)`
+        );
+        
+        if (confirmed) {
+            // Naviguer vers le contrôle
+            if (window.documentController) {
+                window.documentController.currentDossier = suspendedControl.dossier;
+                window.documentController.currentControl = suspendedControl.control;
+                window.documentController.resumeControl(controlId);
+            } else {
+                Utils.showNotification('DocumentController non disponible', 'error');
+            }
+        }
+    }
+
+    // NOUVEAU : Supprimer un contrôle suspendu depuis l'historique
+    deleteSuspended(controlId) {
+        const suspendedControl = window.persistenceManager?.getSuspendedControlById(controlId);
+        if (!suspendedControl) {
+            Utils.showNotification('Contrôle suspendu introuvable', 'error');
+            return;
+        }
+        
+        const confirmed = confirm(
+            `Supprimer définitivement ce contrôle suspendu ?\n\n` +
+            `Client: ${suspendedControl.dossier.client}\n` +
+            `Type: ${suspendedControl.type}\n` +
+            `Suspendu le: ${new Date(suspendedControl.suspendedAt).toLocaleDateString('fr-FR')}\n\n` +
+            `⚠️ Cette action est irréversible !`
+        );
+        
+        if (confirmed) {
+            const dossierKey = window.documentController?.generateDossierKey(suspendedControl.dossier);
+            if (dossierKey && window.persistenceManager?.removeSuspendedControl(dossierKey, suspendedControl.type)) {
+                Utils.showNotification('Contrôle suspendu supprimé', 'success');
+                this.loadHistoryData();
+            } else {
+                Utils.showNotification('Erreur lors de la suppression', 'error');
+            }
+        }
+    }
+
+    // NOUVEAU : Nettoyer les contrôles suspendus anciens
+    cleanOldSuspended() {
+        if (!window.persistenceManager) return;
+        
+        const confirmed = confirm(
+            'Supprimer tous les contrôles suspendus depuis plus de 90 jours ?\n\n' +
+            '⚠️ Cette action est irréversible !'
+        );
+        
+        if (confirmed) {
+            const cleanedCount = window.persistenceManager.cleanOldSuspendedControls(90);
+            
+            if (cleanedCount > 0) {
+                Utils.showNotification(`${cleanedCount} ancien(s) contrôle(s) suspendu(s) supprimé(s)`, 'success');
+                this.loadHistoryData();
+            } else {
+                Utils.showNotification('Aucun contrôle ancien à supprimer', 'info');
+            }
+        }
+    }
+    // NOUVEAU : Changer d'onglet (terminés/suspendus)
+    switchTab(showSuspended) {
+        this.showSuspended = showSuspended;
+        
+        // Mettre à jour les onglets
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        event.target.classList.add('active');
+        
+        // Mettre à jour les filtres selon l'onglet
+        this.updateFiltersForCurrentTab();
+        
+        // Recharger les données
+        this.loadHistoryData();
+        
+        Utils.debugLog(`Onglet changé: ${showSuspended ? 'suspendus' : 'terminés'}`);
+    }
+
+    // NOUVEAU : Mettre à jour les filtres selon l'onglet actif
+    updateFiltersForCurrentTab() {
+        const conformiteSelect = document.getElementById('history-conformite');
+        const conformiteLabel = conformiteSelect.parentNode.querySelector('.filter-label');
+        
+        if (this.showSuspended) {
+            conformiteLabel.textContent = '⏰ Durée suspension';
+            conformiteSelect.innerHTML = `
+                <option value="">⏰ Toutes durées</option>
+                <option value="recent">📅 Récents (-7j)</option>
+                <option value="old">⚠️ Anciens (14j+)</option>
+                <option value="very-old">🚨 Très anciens (30j+)</option>
+            `;
+        } else {
+            conformiteLabel.textContent = '✅ Conformité';
+            conformiteSelect.innerHTML = `
+                <option value="">📊 Toutes</option>
+                <option value="CONFORME">✅ Conforme</option>
+                <option value="NON CONFORME">❌ Non conforme</option>
+            `;
+        }
+    }
+
+    // NOUVEAU : Formater les contrôles suspendus pour l'affichage
+    formatSuspendedForDisplay(suspendedControls) {
+        return suspendedControls.map(suspended => ({
+            id: suspended.id,
+            date: new Date(suspended.suspendedAt),
+            type: suspended.type,
+            client: suspended.dossier.client,
+            codeDossier: suspended.dossier.codeDossier,
+            conseiller: suspended.dossier.conseiller,
+            montant: suspended.dossier.montant,
+            domaine: suspended.dossier.domaine,
+            nouveauClient: suspended.dossier.nouveauClient,
+            statut: 'Suspendu',
+            anomaliesMajeures: 0,
+            documentsControles: `${Object.keys(suspended.responses || {}).length} questions`,
+            conformiteGlobale: 'EN ATTENTE',
+            suspendReason: suspended.suspendReason,
+            daysSuspended: Math.floor((new Date() - new Date(suspended.suspendedAt)) / (1000 * 60 * 60 * 24)),
+            isSuspended: true,
+            suspendedData: suspended
+        }));
+    }
+
+    // NOUVEAU : Mettre à jour le badge du nombre de suspendus
+    updateSuspendedBadge() {
+        const badge = document.getElementById('suspended-count-badge');
+        if (badge && window.persistenceManager) {
+            const suspendedCount = window.persistenceManager.getSuspendedControls().length;
+            badge.textContent = suspendedCount;
+            badge.style.display = suspendedCount > 0 ? 'inline' : 'none';
+        }
+    }
+
+    // NOUVEAU : CSS supplémentaire pour les onglets
+    addTabStyles() {
+        if (document.getElementById('history-tabs-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'history-tabs-styles';
+        style.textContent = `
+            .history-tabs {
+                display: flex;
+                margin-bottom: 30px;
+                border-radius: 10px;
+                overflow: hidden;
+                background: #e9ecef;
+                padding: 4px;
+            }
+            
+            .tab-btn {
+                flex: 1;
+                padding: 12px 20px;
+                border: none;
+                background: transparent;
+                color: #6c757d;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                font-size: 1rem;
+            }
+            
+            .tab-btn.active {
+                background: white;
+                color: #1a1a2e;
+                border-radius: 6px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            
+            .tab-btn:hover:not(.active) {
+                color: #495057;
+                background: rgba(255,255,255,0.5);
+            }
+            
+            .tab-badge {
+                background: #dc3545;
+                color: white;
+                padding: 2px 6px;
+                border-radius: 10px;
+                font-size: 0.75rem;
+                margin-left: 6px;
+                font-weight: 700;
+            }
+            
+            .tab-btn.active .tab-badge {
+                background: #ffc107;
+                color: #1a1a2e;
+            }
+            
+            .suspended-history-table tbody tr.row-very-old-suspended {
+                background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
+                border-left: 4px solid #dc3545;
+            }
+            
+            .suspended-history-table tbody tr.row-old-suspended {
+                background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+                border-left: 4px solid #ffc107;
+            }
+            
+            .suspended-history-table tbody tr.row-suspended {
+                background: linear-gradient(135deg, #fffbf0 0%, #fff8e1 100%) !important;
+                border-left: 4px solid #28a745;
+            }
+            
+            .badge.duration.very-old {
+                background: #dc3545;
+                color: white;
+            }
+            
+            .badge.duration.old {
+                background: #ffc107;
+                color: #1a1a2e;
+            }
+            
+            .badge.duration.recent {
+                background: #28a745;
+                color: white;
+            }
+        `;
+        
+        document.head.appendChild(style);
     }
 
     // Utilitaires
