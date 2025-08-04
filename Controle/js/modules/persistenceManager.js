@@ -5,6 +5,8 @@ import { Utils } from './utils.js';
 export class PersistenceManager {
     constructor() {
         this.controles = [];
+        this.suspendedControls = [];
+        this.controlledDossiers = new Map();
         this.lastSaveTime = 0;
         this.companyColors = {
             primary: 'FF1A1A2E',      // Bleu foncé
@@ -21,6 +23,8 @@ export class PersistenceManager {
     init() {
         Utils.debugLog('PersistenceManager initialisé');
         this.loadFromStorage();
+        this.loadSuspendedFromStorage(); // Charger les suspendus
+        this.loadControlledDossiersFromStorage(); // Charger les dossiers contrôlés
     }
 
     // Sauvegarder un contrôle (inchangé)
@@ -69,7 +73,14 @@ export class PersistenceManager {
             this.controles.push(controle);
             this.saveToStorage();
             
-            Utils.debugLog(`Contrôle sauvegardé: ${controle.client}`);
+            // NOUVEAU : Marquer le dossier comme contrôlé
+            const dossierKey = this.generateDossierKey(controlData.dossier);
+            this.markDossierAsControlled(dossierKey, controle.type);
+            
+            // NOUVEAU : Supprimer le contrôle suspendu s'il existait
+            this.removeSuspendedControl(dossierKey, controle.type);
+            
+            Utils.debugLog(`Contrôle sauvegardé et dossier marqué: ${controle.client}`);
             return controle;
 
         } catch (error) {
@@ -78,6 +89,7 @@ export class PersistenceManager {
             return null;
         }
     }
+
 
     // NOUVELLE MÉTHODE : Export Excel détaillé d'un contrôle spécifique
     exportDetailedControl(controleId, fileName = null) {
@@ -592,6 +604,9 @@ export class PersistenceManager {
             9: 'Etude',
             10: 'RIB',
             11: 'Convention RTO',
+            12: 'Origine des fonds',
+            13: 'Carto Opération',
+            14: 'Destination des fonds',
             99: 'Zeendoc'
         };
         return documentNames[docId] || `Document ${docId}`;
@@ -1267,8 +1282,14 @@ export class PersistenceManager {
 
     clearHistory() {
         this.controles = [];
+        this.suspendedControls = [];
+        this.controlledDossiers = new Map();
+        
         localStorage.removeItem('controles_historique');
-        Utils.showNotification('Historique effacé', 'info');
+        localStorage.removeItem('controles_suspendus');
+        localStorage.removeItem('dossiers_controles');
+        
+        Utils.showNotification('Historique complet effacé (terminés, suspendus et dossiers marqués)', 'info');
     }
 
     getControlsCount() {
@@ -1278,36 +1299,659 @@ export class PersistenceManager {
     // NOUVELLE MÉTHODE : Export de sauvegarde JSON pour backup
     exportBackupJSON() {
         const backupData = {
-            version: "1.0",
-            exportDate: new Date().toISOString(),
-            totalControles: this.controles.length,
-            controles: this.controles.map(c => ({
-                ...c,
-                date: c.date.toISOString() // Sérialiser les dates
-            }))
-        };
+        version: "1.1", // Augmenter la version pour inclure les suspendus
+        exportDate: new Date().toISOString(),
+        totalControles: this.controles.length,
+        totalSuspended: this.suspendedControls.length, // NOUVEAU
+        controles: this.controles.map(c => ({
+            ...c,
+            date: c.date.toISOString() // Sérialiser les dates
+        })),
+        // NOUVEAU : Inclure les contrôles suspendus
+        suspendedControles: this.suspendedControls.map(sc => ({
+            ...sc,
+            suspendedAt: sc.suspendedAt.toISOString() // Sérialiser les dates
+        })),
+        // NOUVEAU : Inclure les dossiers contrôlés
+        controlledDossiers: Array.from(this.controlledDossiers.entries()).map(([key, value]) => ({
+            key,
+            ...value,
+            controlledAt: value.controlledAt.toISOString()
+        }))
+    };
 
+    try {
+        const dataStr = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Backup_Complet_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        Utils.showNotification(
+            `Sauvegarde complète créée: ${this.controles.length} terminés + ${this.suspendedControls.length} suspendus`, 
+            'success'
+        );
+        return true;
+        
+    } catch (error) {
+        console.error('Erreur export JSON:', error);
+        Utils.showNotification('Erreur lors de la création de la sauvegarde JSON', 'error');
+        return false;
+    }
+}
+
+    // NOUVEAU : Sauvegarder un contrôle suspendu
+    saveSuspendedControl(suspendedControl) {
         try {
-            const dataStr = JSON.stringify(backupData, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Backup_Historique_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            Utils.showNotification('Sauvegarde JSON créée avec succès', 'success');
-            return true;
-            
+            // Vérifier si un contrôle suspendu existe déjà pour ce dossier/type
+            const existingIndex = this.suspendedControls.findIndex(sc => 
+                sc.dossierKey === suspendedControl.dossierKey && 
+                sc.type === suspendedControl.type
+            );
+
+            if (existingIndex !== -1) {
+                // Remplacer le contrôle existant
+                this.suspendedControls[existingIndex] = suspendedControl;
+                Utils.debugLog(`Contrôle suspendu mis à jour: ${suspendedControl.dossier.client}`);
+            } else {
+                // Ajouter un nouveau contrôle suspendu
+                this.suspendedControls.push(suspendedControl);
+                Utils.debugLog(`Nouveau contrôle suspendu: ${suspendedControl.dossier.client}`);
+            }
+
+            this.saveSuspendedToStorage();
+            return suspendedControl;
+
         } catch (error) {
-            console.error('Erreur export JSON:', error);
-            Utils.showNotification('Erreur lors de la création de la sauvegarde JSON', 'error');
+            Utils.debugLog('Erreur sauvegarde contrôle suspendu: ' + error.message);
+            console.error('Erreur sauvegarde suspendu:', error);
+            return null;
+        }
+    }
+
+    // NOUVEAU : Obtenir un contrôle suspendu
+    getSuspendedControl(dossierKey, controlType) {
+        return this.suspendedControls.find(sc => 
+            sc.dossierKey === dossierKey && 
+            sc.type === controlType
+        );
+    }
+
+    // NOUVEAU : Obtenir un contrôle suspendu par ID
+    getSuspendedControlById(controlId) {
+        return this.suspendedControls.find(sc => sc.id === controlId);
+    }
+
+    // NOUVEAU : Supprimer un contrôle suspendu
+    removeSuspendedControl(dossierKey, controlType) {
+        const initialLength = this.suspendedControls.length;
+        this.suspendedControls = this.suspendedControls.filter(sc => 
+            !(sc.dossierKey === dossierKey && sc.type === controlType)
+        );
+        
+        if (this.suspendedControls.length < initialLength) {
+            this.saveSuspendedToStorage();
+            Utils.debugLog(`Contrôle suspendu supprimé: ${dossierKey} (${controlType})`);
+            return true;
+        }
+        return false;
+    }
+
+    // NOUVEAU : Obtenir tous les contrôles suspendus
+    getSuspendedControls() {
+        return this.suspendedControls.sort((a, b) => new Date(b.suspendedAt) - new Date(a.suspendedAt));
+    }
+
+    // NOUVEAU : Marquer un dossier comme contrôlé
+    markDossierAsControlled(dossierKey, controlType) {
+        const key = `${dossierKey}_${controlType}`;
+        this.controlledDossiers.set(key, {
+            dossierKey,
+            controlType,
+            controlledAt: new Date(),
+            status: 'controlled'
+        });
+        
+        this.saveControlledDossiersToStorage();
+        Utils.debugLog(`Dossier marqué comme contrôlé: ${dossierKey} (${controlType})`);
+    }
+
+    // NOUVEAU : Vérifier si un dossier est contrôlé
+    isDossierControlled(dossierKey, controlType) {
+        const key = `${dossierKey}_${controlType}`;
+        return this.controlledDossiers.has(key);
+    }
+
+    // NOUVEAU : Obtenir le statut d'un dossier
+    getDossierStatus(dossierKey, controlType) {
+        // Vérifier d'abord les contrôles suspendus
+        const suspended = this.getSuspendedControl(dossierKey, controlType);
+        if (suspended) {
+            return {
+                status: 'suspended',
+                suspendedAt: suspended.suspendedAt,
+                suspendReason: suspended.suspendReason
+            };
+        }
+
+        // Vérifier les contrôles terminés
+        if (this.isDossierControlled(dossierKey, controlType)) {
+            const key = `${dossierKey}_${controlType}`;
+            const controlled = this.controlledDossiers.get(key);
+            return {
+                status: 'controlled',
+                controlledAt: controlled.controlledAt
+            };
+        }
+
+        return { status: 'not_controlled' };
+    }
+
+    // NOUVEAU : Générer une clé unique pour un dossier
+    generateDossierKey(dossier) {
+        return `${dossier.codeDossier || 'NO_CODE'}_${dossier.reference || 'NO_REF'}_${dossier.montant || 'NO_AMOUNT'}`;
+    }
+
+    // NOUVEAU : Recherche avec filtres incluant les suspendus
+    searchControls(criteria) {
+        let results = this.controles.filter(controle => {
+            if (criteria.dateDebut && controle.date < criteria.dateDebut) return false;
+            if (criteria.dateFin && controle.date > criteria.dateFin) return false;
+            if (criteria.type && controle.type !== criteria.type) return false;
+            if (criteria.conseiller && !controle.conseiller.toLowerCase().includes(criteria.conseiller.toLowerCase())) return false;
+            if (criteria.client && !controle.client.toLowerCase().includes(criteria.client.toLowerCase())) return false;
+            if (criteria.conformite && controle.conformiteGlobale !== criteria.conformite) return false;
+            
+            return true;
+        });
+
+        // NOUVEAU : Ajouter les contrôles suspendus si demandé
+        if (criteria.includeSuspended) {
+            const suspendedResults = this.suspendedControls
+                .filter(suspended => {
+                    if (criteria.dateDebut && new Date(suspended.suspendedAt) < criteria.dateDebut) return false;
+                    if (criteria.dateFin && new Date(suspended.suspendedAt) > criteria.dateFin) return false;
+                    if (criteria.type && suspended.type !== criteria.type) return false;
+                    if (criteria.conseiller && !suspended.dossier.conseiller?.toLowerCase().includes(criteria.conseiller.toLowerCase())) return false;
+                    if (criteria.client && !suspended.dossier.client?.toLowerCase().includes(criteria.client.toLowerCase())) return false;
+                    
+                    return true;
+                })
+                .map(suspended => ({
+                    id: suspended.id,
+                    date: new Date(suspended.suspendedAt),
+                    type: suspended.type,
+                    client: suspended.dossier.client,
+                    codeDossier: suspended.dossier.codeDossier,
+                    conseiller: suspended.dossier.conseiller,
+                    montant: suspended.dossier.montant,
+                    domaine: suspended.dossier.domaine,
+                    nouveauClient: suspended.dossier.nouveauClient,
+                    statut: 'Suspendu',
+                    anomaliesMajeures: 0,
+                    documentsControles: `${Object.keys(suspended.responses || {}).length} questions`,
+                    conformiteGlobale: 'EN ATTENTE',
+                    suspendReason: suspended.suspendReason,
+                    isSuspended: true
+                }));
+                
+            results = [...results, ...suspendedResults];
+        }
+
+        return results;
+    }
+
+    // NOUVEAU : Statistiques incluant les contrôles suspendus
+    getStatistics() {
+        const totalControles = this.controles.length;
+        const totalSuspended = this.suspendedControls.length;
+        const conformes = this.controles.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        
+        const thisMonth = new Date();
+        thisMonth.setDate(1);
+        const controlesMoisActuel = this.controles.filter(c => c.date >= thisMonth).length;
+        const suspendedMoisActuel = this.suspendedControls.filter(c => new Date(c.suspendedAt) >= thisMonth).length;
+        
+        const repartitionTypes = {};
+        this.controles.forEach(c => {
+            repartitionTypes[c.type] = (repartitionTypes[c.type] || 0) + 1;
+        });
+        
+        // Ajouter les suspendus dans les statistiques
+        this.suspendedControls.forEach(c => {
+            const key = `${c.type} (Suspendus)`;
+            repartitionTypes[key] = (repartitionTypes[key] || 0) + 1;
+        });
+        
+        const typePlusFrequent = Object.entries(repartitionTypes)
+            .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Aucun';
+
+        const anomaliesMajeures = this.controles.reduce((sum, c) => sum + c.anomaliesMajeures, 0);
+        
+        // Alertes pour les contrôles suspendus depuis longtemps
+        const oldSuspended = this.suspendedControls.filter(c => {
+            const daysSuspended = Math.floor((new Date() - new Date(c.suspendedAt)) / (1000 * 60 * 60 * 24));
+            return daysSuspended >= 14;
+        }).length;
+        
+        return {
+            totalControles,
+            totalSuspended,
+            oldSuspended,
+            tauxConformite: totalControles > 0 ? Math.round((conformes / totalControles) * 100) : 0,
+            totalAnomaliesMajeures: anomaliesMajeures,
+            controlesMoisActuel,
+            suspendedMoisActuel,
+            typePlusFrequent,
+            repartitionTypes
+        };
+    }
+
+    // NOUVEAU : Sauvegarder les contrôles suspendus dans localStorage
+    saveSuspendedToStorage() {
+        try {
+            const dataToSave = this.suspendedControls.map(sc => ({
+                ...sc,
+                suspendedAt: sc.suspendedAt.toISOString()
+            }));
+            localStorage.setItem('controles_suspendus', JSON.stringify(dataToSave));
+            Utils.debugLog(`${this.suspendedControls.length} contrôles suspendus sauvegardés`);
+        } catch (error) {
+            Utils.debugLog('Erreur sauvegarde contrôles suspendus: ' + error.message);
+        }
+    }
+
+    // NOUVEAU : Charger les contrôles suspendus depuis localStorage
+    loadSuspendedFromStorage() {
+        try {
+            const saved = localStorage.getItem('controles_suspendus');
+            if (saved) {
+                const data = JSON.parse(saved);
+                this.suspendedControls = data.map(sc => ({
+                    ...sc,
+                    suspendedAt: new Date(sc.suspendedAt)
+                }));
+                Utils.debugLog(`${this.suspendedControls.length} contrôles suspendus chargés`);
+            }
+        } catch (error) {
+            Utils.debugLog('Erreur chargement contrôles suspendus: ' + error.message);
+            this.suspendedControls = [];
+        }
+    }
+
+    // NOUVEAU : Sauvegarder les dossiers contrôlés
+    saveControlledDossiersToStorage() {
+        try {
+            const dataToSave = Array.from(this.controlledDossiers.entries()).map(([key, value]) => ({
+                key,
+                ...value,
+                controlledAt: value.controlledAt.toISOString()
+            }));
+            localStorage.setItem('dossiers_controles', JSON.stringify(dataToSave));
+            Utils.debugLog(`${this.controlledDossiers.size} dossiers contrôlés sauvegardés`);
+        } catch (error) {
+            Utils.debugLog('Erreur sauvegarde dossiers contrôlés: ' + error.message);
+        }
+    }
+
+    // NOUVEAU : Charger les dossiers contrôlés
+    loadControlledDossiersFromStorage() {
+        try {
+            const saved = localStorage.getItem('dossiers_controles');
+            if (saved) {
+                const data = JSON.parse(saved);
+                this.controlledDossiers = new Map();
+                data.forEach(item => {
+                    this.controlledDossiers.set(item.key, {
+                        dossierKey: item.dossierKey,
+                        controlType: item.controlType,
+                        controlledAt: new Date(item.controlledAt),
+                        status: item.status
+                    });
+                });
+                Utils.debugLog(`${this.controlledDossiers.size} dossiers contrôlés chargés`);
+            }
+        } catch (error) {
+            Utils.debugLog('Erreur chargement dossiers contrôlés: ' + error.message);
+            this.controlledDossiers = new Map();
+        }
+    }
+
+    // NOUVEAU : Export des contrôles suspendus
+    exportSuspendedControls(fileName = null) {
+        if (!fileName) {
+            fileName = `Controles_Suspendus_${new Date().toISOString().split('T')[0]}.xlsx`;
+        }
+
+        if (this.suspendedControls.length === 0) {
+            Utils.showNotification('Aucun contrôle suspendu à exporter', 'warning');
             return false;
         }
+
+        try {
+            const exportData = this.suspendedControls.map((suspended, index) => ({
+                'N°': index + 1,
+                'Date suspension': new Date(suspended.suspendedAt).toLocaleDateString('fr-FR'),
+                'Type de contrôle': suspended.type,
+                'Client': suspended.dossier.client,
+                'Code dossier': suspended.dossier.codeDossier || 'N/A',
+                'Conseiller': suspended.dossier.conseiller || 'N/A',
+                'Montant': suspended.dossier.montant || 'N/A',
+                'Domaine': suspended.dossier.domaine || 'N/A',
+                'Questions répondues': Object.keys(suspended.responses || {}).length,
+                'Dernier document': this.getDocumentName(suspended.lastDocument) || 'N/A',
+                'Raison suspension': suspended.suspendReason || 'Non spécifiée',
+                'Jours suspendus': Math.floor((new Date() - new Date(suspended.suspendedAt)) / (1000 * 60 * 60 * 24)),
+                'Statut': 'SUSPENDU'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            
+            // Formatage spécial pour les suspendus
+            this.formatSuspendedSheet(ws, exportData.length);
+            
+            XLSX.utils.book_append_sheet(wb, ws, "Controles_Suspendus");
+            XLSX.writeFile(wb, fileName);
+            
+            Utils.showNotification(`Contrôles suspendus exportés: ${fileName}`, 'success');
+            return true;
+
+        } catch (error) {
+            console.error('Erreur export suspendus:', error);
+            Utils.showNotification('Erreur lors de l\'export des contrôles suspendus', 'error');
+            return false;
+        }
+    }
+
+    // NOUVEAU : Formatage de la feuille des contrôles suspendus
+    formatSuspendedSheet(ws, rowCount) {
+        if (!ws['!ref']) return;
+        
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        // Largeurs de colonnes
+        ws['!cols'] = [
+            { width: 8 },   // N°
+            { width: 12 },  // Date
+            { width: 16 },  // Type
+            { width: 25 },  // Client
+            { width: 15 },  // Code
+            { width: 20 },  // Conseiller
+            { width: 15 },  // Montant
+            { width: 12 },  // Domaine
+            { width: 12 },  // Questions
+            { width: 15 },  // Dernier doc
+            { width: 30 },  // Raison
+            { width: 10 },  // Jours
+            { width: 12 }   // Statut
+        ];
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+                
+                ws[cell_address].s = {
+                    alignment: { vertical: 'center', wrapText: true },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+                
+                // En-têtes
+                if (R === 0) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { fgColor: { rgb: this.companyColors.warning.substr(2) } },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                } else {
+                    // Alternance de couleurs avec fond d'alerte
+                    const isEvenRow = R % 2 === 0;
+                    ws[cell_address].s.fill = { 
+                        fgColor: { rgb: isEvenRow ? 'FFF8DC' : 'FFFACD' } // Tons jaunes pour les suspendus
+                    };
+                    
+                    // Coloration spéciale pour les jours suspendus (avant-dernière colonne)
+                    if (C === range.e.c - 1) {
+                        const days = parseInt(ws[cell_address].v) || 0;
+                        if (days >= 30) {
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        } else if (days >= 14) {
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
+                        }
+                    }
+                    
+                    // Statut suspendu (dernière colonne)
+                    if (C === range.e.c) {
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
+                    }
+                }
+            }
+        }
+        
+        ws['!autofilter'] = { ref: ws['!ref'] };
+    }
+
+    // NOUVEAU : Nettoyage des contrôles suspendus anciens (optionnel)
+    cleanOldSuspendedControls(daysThreshold = 90) {
+        const threshold = new Date();
+        threshold.setDate(threshold.getDate() - daysThreshold);
+        
+        const initialCount = this.suspendedControls.length;
+        this.suspendedControls = this.suspendedControls.filter(sc => 
+            new Date(sc.suspendedAt) > threshold
+        );
+        
+        const cleanedCount = initialCount - this.suspendedControls.length;
+        if (cleanedCount > 0) {
+            this.saveSuspendedToStorage();
+            Utils.debugLog(`${cleanedCount} contrôles suspendus anciens supprimés`);
+        }
+        
+        return cleanedCount;
+    }
+
+    // MODIFICATION 5: Nouvelle méthode pour obtenir un résumé complet
+    getFullSummary() {
+        return {
+            totalTermines: this.controles.length,
+            totalSuspendus: this.suspendedControls.length,
+            totalDossiersMarques: this.controlledDossiers.size,
+            conformes: this.controles.filter(c => c.conformiteGlobale === 'CONFORME').length,
+            nonConformes: this.controles.filter(c => c.conformiteGlobale === 'NON CONFORME').length,
+            suspendusAnciens: this.suspendedControls.filter(sc => {
+                const days = Math.floor((new Date() - new Date(sc.suspendedAt)) / (1000 * 60 * 60 * 24));
+                return days >= 14;
+            }).length,
+            dernierControle: this.controles.length > 0 ? 
+                this.controles[this.controles.length - 1].date : null,
+            derniereSuspension: this.suspendedControls.length > 0 ? 
+                new Date(Math.max(...this.suspendedControls.map(sc => new Date(sc.suspendedAt)))) : null
+        };
+    }
+    
+    // MODIFICATION 6: Export Excel enrichi avec onglet des suspendus
+    exportFullExcel(fileName = null) {
+        if (!fileName) {
+            fileName = `Export_Complet_${new Date().toISOString().split('T')[0]}.xlsx`;
+        }
+
+        if (this.controles.length === 0 && this.suspendedControls.length === 0) {
+            Utils.showNotification('Aucune donnée à exporter', 'warning');
+            return false;
+        }
+
+        try {
+            const wb = XLSX.utils.book_new();
+            
+            // 1. Onglet Vue d'ensemble (comme avant)
+            this.createOverviewSheet(wb);
+            
+            // 2. NOUVEAU : Onglet Contrôles suspendus
+            if (this.suspendedControls.length > 0) {
+                this.createSuspendedOverviewSheet(wb);
+            }
+            
+            // 3. Onglet Détail Questions-Réponses (comme avant)
+            this.createAllQuestionsSheet(wb);
+            
+            // 4. Onglet Anomalies Globales (comme avant)
+            this.createGlobalAnomaliesSheet(wb);
+            
+            // 5. Onglet Statistiques enrichies
+            this.createEnhancedStatsSheet(wb);
+            
+            // 6. Onglet Données Brutes enrichies
+            this.createEnhancedRawDataSheet(wb);
+            
+            XLSX.writeFile(wb, fileName);
+            
+            const summary = this.getFullSummary();
+            Utils.showNotification(
+                `Export complet généré: ${summary.totalTermines} terminés + ${summary.totalSuspendus} suspendus`, 
+                'success'
+            );
+            return true;
+
+        } catch (error) {
+            console.error('Erreur export Excel complet:', error);
+            Utils.showNotification('Erreur lors de l\'export complet: ' + error.message, 'error');
+            return false;
+        }
+    }
+
+    // NOUVELLE MÉTHODE : Créer l'onglet des contrôles suspendus dans l'export complet
+    createSuspendedOverviewSheet(wb) {
+        const suspendedData = [
+            ['CONTRÔLES SUSPENDUS', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', ''],
+            ['Date Suspension', 'Type', 'Client', 'Code Dossier', 'Conseiller', 'Questions', 'Dernier Doc', 'Jours', 'Raison', 'Statut']
+        ];
+
+        // Ajouter tous les contrôles suspendus
+        this.suspendedControls.forEach(suspended => {
+            const daysSuspended = Math.floor((new Date() - new Date(suspended.suspendedAt)) / (1000 * 60 * 60 * 24));
+            
+            suspendedData.push([
+                new Date(suspended.suspendedAt).toLocaleDateString('fr-FR'),
+                suspended.type,
+                suspended.dossier.client,
+                suspended.dossier.codeDossier || 'N/A',
+                suspended.dossier.conseiller || 'N/A',
+                Object.keys(suspended.responses || {}).length,
+                this.getDocumentName(suspended.lastDocument) || 'N/A',
+                daysSuspended,
+                suspended.suspendReason || 'Non spécifiée',
+                'SUSPENDU'
+            ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(suspendedData);
+        this.formatSuspendedOverviewSheet(ws, suspendedData.length);
+        XLSX.utils.book_append_sheet(wb, ws, "Contrôles Suspendus");
+    }
+
+    // NOUVELLE MÉTHODE : Formatage de l'onglet suspendus dans l'export complet
+    formatSuspendedOverviewSheet(ws, rowCount) {
+        if (!ws['!ref']) return;
+        
+        // Largeurs de colonnes optimisées
+        ws['!cols'] = [
+            { width: 12 },  // Date
+            { width: 16 },  // Type
+            { width: 25 },  // Client
+            { width: 15 },  // Code
+            { width: 20 },  // Conseiller
+            { width: 10 },  // Questions
+            { width: 15 },  // Dernier Doc
+            { width: 8 },   // Jours
+            { width: 30 },  // Raison
+            { width: 12 }   // Statut
+        ];
+
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+
+                ws[cell_address].s = {
+                    alignment: { vertical: 'center', wrapText: true },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+
+                // Titre principal
+                if (R === 0) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { fgColor: { rgb: this.companyColors.warning.substr(2) } },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // En-têtes de colonnes
+                else if (R === 2) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // Données
+                else if (R > 2) {
+                    // Fond d'alerte pour les suspendus
+                    ws[cell_address].s.fill = { fgColor: { rgb: 'FFFACD' } }; // Jaune clair
+                    
+                    // Coloration spéciale pour les jours suspendus
+                    if (C === 7) { // Colonne Jours
+                        const days = parseInt(ws[cell_address].v) || 0;
+                        if (days >= 30) {
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        } else if (days >= 14) {
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
+                        }
+                    }
+                    
+                    // Statut suspendu (dernière colonne)
+                    if (C === range.e.c) {
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
+                    }
+                }
+            }
+        }
+
+        // Fusionner le titre
+        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 9, r: 0 } }];
+        
+        // Filtres automatiques
+        ws['!autofilter'] = { ref: `A3:${XLSX.utils.encode_col(range.e.c)}3` };
     }
 
     // NOUVELLE MÉTHODE : Import de sauvegarde JSON
@@ -1324,35 +1968,83 @@ export class PersistenceManager {
                     throw new Error('Format de sauvegarde invalide');
                 }
                 
-                // Confirmation avant import
-                const confirmed = confirm(
-                    `Importer ${backupData.controles.length} contrôle(s) ?\n` +
-                    `Date de sauvegarde: ${new Date(backupData.exportDate).toLocaleDateString('fr-FR')}\n\n` +
-                    `Attention: Cela remplacera complètement l'historique actuel (${this.controles.length} contrôle(s))`
-                );
+                // Détecter la version de la sauvegarde
+                const hasExtendedData = backupData.version >= "1.1" || backupData.suspendedControles;
+                const suspendedCount = backupData.suspendedControles ? backupData.suspendedControles.length : 0;
+                const controlledCount = backupData.controlledDossiers ? backupData.controlledDossiers.length : 0;
+                
+                // Message de confirmation enrichi
+                let confirmMessage = `Importer ${backupData.controles.length} contrôle(s) terminé(s)`;
+                if (hasExtendedData) {
+                    confirmMessage += `\n+ ${suspendedCount} contrôle(s) suspendu(s)`;
+                    confirmMessage += `\n+ ${controlledCount} dossier(s) marqué(s) comme contrôlé(s)`;
+                }
+                confirmMessage += `\n\nDate de sauvegarde: ${new Date(backupData.exportDate).toLocaleDateString('fr-FR')}`;
+                confirmMessage += `\n\nACTUEL:`;
+                confirmMessage += `\n- ${this.controles.length} contrôle(s) terminé(s)`;
+                confirmMessage += `\n- ${this.suspendedControls.length} contrôle(s) suspendu(s)`;
+                confirmMessage += `\n\nAttention: Cela remplacera complètement toutes les données actuelles`;
+                
+                const confirmed = confirm(confirmMessage);
                 
                 if (!confirmed) {
                     Utils.showNotification('Import annulé', 'info');
                     return;
                 }
                 
-                // Restaurer les dates
+                // Restaurer les contrôles terminés (dates)
                 this.controles = backupData.controles.map(c => ({
                     ...c,
                     date: new Date(c.date)
                 }));
                 
-                this.saveToStorage();
+                // NOUVEAU : Restaurer les contrôles suspendus
+                if (backupData.suspendedControles && Array.isArray(backupData.suspendedControles)) {
+                    this.suspendedControls = backupData.suspendedControles.map(sc => ({
+                        ...sc,
+                        suspendedAt: new Date(sc.suspendedAt)
+                    }));
+                } else {
+                    // Si pas de données suspendues dans la sauvegarde, vider la liste
+                    this.suspendedControls = [];
+                }
                 
-                Utils.showNotification(
-                    `Historique importé avec succès: ${this.controles.length} contrôle(s)`, 
-                    'success'
-                );
+                // NOUVEAU : Restaurer les dossiers contrôlés
+                if (backupData.controlledDossiers && Array.isArray(backupData.controlledDossiers)) {
+                    this.controlledDossiers = new Map();
+                    backupData.controlledDossiers.forEach(item => {
+                        this.controlledDossiers.set(item.key, {
+                            dossierKey: item.dossierKey,
+                            controlType: item.controlType,
+                            controlledAt: new Date(item.controlledAt),
+                            status: item.status
+                        });
+                    });
+                } else {
+                    // Si pas de données de dossiers contrôlés, vider la Map
+                    this.controlledDossiers = new Map();
+                }
+                
+                // Sauvegarder tout dans localStorage
+                this.saveToStorage();
+                this.saveSuspendedToStorage();
+                this.saveControlledDossiersToStorage();
+                
+                // Message de succès détaillé
+                let successMessage = `Historique importé avec succès:`;
+                successMessage += `\n• ${this.controles.length} contrôle(s) terminé(s)`;
+                successMessage += `\n• ${this.suspendedControls.length} contrôle(s) suspendu(s)`;
+                successMessage += `\n• ${this.controlledDossiers.size} dossier(s) marqué(s)`;
+                
+                Utils.showNotification(successMessage, 'success');
                 
                 // Rafraîchir l'interface historique si visible
                 if (window.historyInterface && window.historyInterface.isHistorySectionActive()) {
                     window.historyInterface.refresh();
                 }
+                
+                // Log détaillé
+                Utils.debugLog(`Import réussi: ${this.controles.length} terminés, ${this.suspendedControls.length} suspendus, ${this.controlledDossiers.size} dossiers`);
                 
             } catch (error) {
                 console.error('Erreur import JSON:', error);
