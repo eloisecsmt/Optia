@@ -330,8 +330,8 @@ export class DocumentController {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
                         required: true,
-                        help: 'Questionnaire papier ou formulaire électronique RIC',
-                        options: ['RIC (électronique)', 'Papier signé']
+                        help: 'Questionnaire papier ou formulaire électronique',
+                        options: ['Electronique', 'Papier']
                     },
                     {
                         text: 'Est-ce la bonne version ?',
@@ -413,8 +413,8 @@ export class DocumentController {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
                         required: true,
-                        help: 'Questionnaire papier ou formulaire électronique ESG',
-                        options: ['RIC (électronique)', 'Papier signé']
+                        help: 'Questionnaire papier ou formulaire électronique',
+                        options: ['Electronique', 'Papier']
                     },
                     {
                         text: 'Est-ce la bonne version ?',
@@ -620,8 +620,8 @@ export class DocumentController {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
                         required: true,
-                        help: 'Vérifiez si c\'est un document papier signé ou un formulaire électronique RIC pour la FIL',
-                        options: ['RIC (électronique)', 'Papier signé']
+                        help: 'Questionnaire papier ou formulaire électronique',
+                        options: ['Electronique', 'Papier']
                     },
                     {
                         text: 'Est-ce la bonne version ?',
@@ -703,8 +703,8 @@ export class DocumentController {
                         text: 'Quel est le type de document ?',
                         type: 'document_type',
                         required: true,
-                        help: 'Document papier signé ou formulaire électronique pour la lettre de mission',
-                        options: ['RIC (électronique)', 'Papier signé']
+                        help: 'Questionnaire papier ou formulaire électronique',
+                        options: ['Electronique', 'Papier']
                     },
                     {
                         text: 'Est-ce la bonne version ?',
@@ -975,7 +975,7 @@ export class DocumentController {
                         type: 'document_type',
                         required: true,
                         help: 'Convention papier signée ou accord électronique pour RTO',
-                        options: ['RIC (électronique)', 'Papier signé']
+                        options: ['Electronique', 'Papier']
                     },
                     {
                         text: 'Est-ce la bonne version ?',
@@ -1040,15 +1040,29 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'Si c\'est un produit CIF, la signature d\'un CIF est-elle présente ?',
+                        text: 'Est-ce que le conseiller est CIF ?',
                         type: 'boolean',
                         required: true,
-                        help: 'Signature obligatoire d\'un CIF habilité pour les services d\'investissement',
-                        qualityCheck: {
-                            text: 'Le CIF dispose-t-il des habilitations pour la RTO sur les instruments proposés ?',
-                            help: 'Vérification carte CIF, spécialisations (actions, obligations, OPCVM, etc.)',
-                            type: 'signature_cif'
-                        }
+                        help: 'Vérifiez si le conseiller du dossier possède la certification CIF (Conseiller en Investissements Financiers)',
+                        followUp: {
+                            condition: 'Non',
+                            question: {
+                                text: 'La signature d\'un CIF est-elle présente ?',
+                                type: 'boolean',
+                                required: true,
+                                help: 'Si le conseiller n\'est pas CIF, un CIF habilité doit signer la convention',
+                                followUp: {
+                                    condition: 'Oui',
+                                    question: {
+                                        text: 'Qui est le CIF signataire ?',
+                                        type: 'text',
+                                        required: true,
+                                        help: 'Nom et prénom du CIF qui a signé la convention'
+                                    }
+                                },
+                            }
+                        },
+                        
                     }
                 ]
             },
@@ -1750,21 +1764,31 @@ export class DocumentController {
 
     generateResponseOptions(questionData) {
         if (questionData.type === 'document_type') {
-            const options = questionData.options || ['Papier', 'RIC'];
-            return `
-                <div class="response-group">
-                    <label>Type de document :</label>
-                    <div class="radio-group">
-                        ${options.map(option => `
-                            <label class="radio-option">
-                                <input type="radio" name="response" value="${option}">
-                                <span>${option}</span>
-                            </label>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
+        // Déterminer les options selon le document actuel
+        let options;
+        
+        if (this.currentDocument === 1) {
+            // Pour le document FR (ID 1) : options spécifiques RIC
+            options = ['RIC (électronique)', 'Papier signé'];
+        } else {
+            // Pour tous les autres documents : options génériques
+            options = ['Electronique', 'Papier'];
         }
+        
+        return `
+            <div class="response-group">
+                <label>Type de document :</label>
+                <div class="radio-group">
+                    ${options.map(option => `
+                        <label class="radio-option">
+                            <input type="radio" name="response" value="${option}">
+                            <span>${option}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
 
         if (questionData.type === 'text') {
             return `
@@ -2240,6 +2264,19 @@ export class DocumentController {
                 response.qualityDetails.checks = Array.from(qualityChecks).map(cb => cb.value);
                 
                 response.quality = (qualityChecks.length === 3) ? 'Conforme' : 'Non conforme';
+            
+            } else if (questionData.qualityCheck.type === 'signature_cif') {
+                const cifStatus = document.querySelector('input[name="cif-status"]:checked');
+                if (cifStatus) {
+                    response.qualityDetails.cifStatus = cifStatus.value;
+                }
+                
+                const cifChecks = document.querySelectorAll('input[name="cif-checks"]:checked');
+                response.qualityDetails.checks = Array.from(cifChecks).map(cb => cb.value);
+                
+                const allChecked = cifChecks.length === 3;
+                const validStatus = cifStatus && cifStatus.value === 'CIF inscrit ORIAS';
+                response.quality = (allChecked && validStatus) ? 'Conforme' : 'Non conforme';
                 
             } else {
                 // Pour les autres types de qualityCheck
@@ -2273,6 +2310,14 @@ export class DocumentController {
                 return false;
             }
             return true;
+        }
+
+        // Validation spécifique pour les noms de CIF
+        if (questionData.text.includes('CIF signataire')) {
+            if (response.answer.length < 3) {
+                Utils.showNotification('Le nom du CIF doit contenir au moins 3 caractères', 'error');
+                return false;
+            }
         }
 
         if (questionData.type === 'gda_status') {
@@ -2362,13 +2407,63 @@ export class DocumentController {
             return;
         }
 
-        if (response.answer === 'Non' || response.quality === 'Non conforme' || response.quality === 'Partiellement conforme') {
+        // Vérifier si c'est une question qui ne nécessite pas de justification même si "Non"
+        const questionData = this.documentsConfig[this.currentDocument].questions[this.currentQuestionIndex];
+        const isExemptFromJustification = this.isQuestionExemptFromJustification(questionData, response);
+
+        // Afficher la justification seulement si nécessaire
+        if (!isExemptFromJustification && 
+            (response.answer === 'Non' || response.quality === 'Non conforme' || response.quality === 'Partiellement conforme')) {
             this.showJustificationModal(response);
             return;
         }
 
+        // Sinon, sauvegarder directement la réponse
         this.saveResponse(response);
         this.moveToNextQuestion();
+    }
+
+    isQuestionExemptFromJustification(questionData, response) {
+        // Questions spécifiques qui ne nécessitent pas de justification pour "Non"
+        const exemptQuestions = [
+            'Est-ce que le conseiller est CIF ?',
+            'Est-ce que le document est présent ?', // Déjà géré par skipIfNo mais au cas où
+            'Est-ce que les informations sur la cartographie du client sont présentes dans Harvest ?',
+            'Est-ce que toutes les informations générales du client sont bien remplies dans Harvest ?',
+            'Est-ce que le patrimoine est-il connu ?',
+            'Est-ce que les revenus sont-ils connus ?'
+        ];
+
+        // Vérifier si c'est une question exemptée
+        if (exemptQuestions.includes(questionData.text)) {
+            return true;
+        }
+
+        // Questions avec followUp qui ne nécessitent pas de justification
+        if (questionData.followUp && response.answer === 'Non') {
+            return true;
+        }
+
+        // Questions de type "document_type", "patrimoine_tranche", etc. qui ne sont pas des conformités
+        const exemptTypes = [
+            'document_type', 
+            'patrimoine_tranche', 
+            'revenus_tranche', 
+            'vigilance_level',
+            'gda_status',
+            'gda_date',
+            'operation_type',
+            'operation_status',
+            'rachat_motif',
+            'origin_type',
+            'suspicion_declaration'
+        ];
+
+        if (exemptTypes.includes(questionData.type)) {
+            return true;
+        }
+
+        return false;
     }
 
     saveResponse(response) {
