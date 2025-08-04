@@ -23,7 +23,8 @@ export class ControlTypes {
                         'Pièce d\'identité',
                         'Justificatif de domicile',
                         'Questionnaire KYC',
-                        'Déclaration origine des fonds'
+                        'Déclaration origine des fonds',
+                        'Contrôle listes de sanctions'
                     ],
                     montantMinimum: 10000,
                     excludeDomaines: [],
@@ -35,8 +36,10 @@ export class ControlTypes {
                     'Contrôle liste de sanctions',
                     'Analyse risque client',
                     'Validation origine des fonds',
+                    'Cohérence patrimoine/revenus',
+                    'Diligence renforcée si nécessaire',
                     'Déclaration de soupçon si nécessaire'
-                ]
+                    ]
             },
             'FINANCEMENT': {
                 name: 'Financement',
@@ -90,15 +93,21 @@ export class ControlTypes {
             },
             'OPERATION': {
                 name: 'Opération',
-                description: 'Contrôle des opérations et transactions',
+                description: 'Contrôle des opérations et transactions clients',
                 frequency: 'Hebdomadaire',
                 sampleSize: 12,
                 priority: 'high',
                 criteria: {
                     requiredDocuments: [
-                        'Ordre d\'opération',
-                        'Justificatifs',
-                        'Validation'
+                        'Fiche de renseignements',
+                        'Profil de risques',
+                        'Cartographie client (Harvest)',
+                        'Lettre de mission',
+                        'RIB client',
+                        'Convention RTO',
+                        'Cartographie opération',
+                        'Origine/Destination des fonds',
+                        'Archivage Zeendoc'
                     ],
                     montantMinimum: 5000,
                     excludeDomaines: [],
@@ -107,10 +116,15 @@ export class ControlTypes {
                 },
                 checklistItems: [
                     'Conformité de l\'opération',
-                    'Justification des mouvements',
-                    'Respect des procédures',
-                    'Traçabilité complète',
-                    'Validation des montants'
+                    'Vérification des montants et frais',
+                    'Cohérence du type d\'opération',
+                    'Validation des références bancaires',
+                    'Justification des mouvements (origine/destination)',
+                    'Respect des procédures internes',
+                    'Contrôle des délais de traitement',
+                    'Traçabilité complète dans Harvest',
+                    'Validation des motifs de rachat',
+                    'Archivage des pièces justificatives'
                 ]
             },
             'NOUVEAU_CLIENT': {
