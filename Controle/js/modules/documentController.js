@@ -12,6 +12,173 @@ export class DocumentController {
         this.currentQuestionIndex = 0;
         this.documentResponses = {};
         this.setupEventListeners();
+        this.manualControlMode = false;
+        this.manualSelectedDossiers = [];
+        this.currentManualControlType = null;
+        this.currentDossierIndex = 0;
+        this.manualControlResults = [];
+        this.manualControlStartTime = null;
+        this.manualControlDefinition = null;
+    }
+
+    startManualControl(selectedDossiers, controlType) {
+        Utils.debugLog('=== DÉBUT CONTRÔLE MANUEL DOCUMENTAIRE ===');
+        Utils.debugLog(`Type: ${controlType}, Dossiers: ${selectedDossiers.length}`);
+        
+        // Initialiser le contrôle manuel
+        this.manualControlMode = true;
+        this.manualSelectedDossiers = selectedDossiers;
+        this.currentManualControlType = controlType;
+        this.currentDossierIndex = 0;
+        this.manualControlResults = [];
+        this.manualControlStartTime = new Date();
+        
+        // Obtenir la définition du contrôle
+        this.manualControlDefinition = this.getControlDefinition(controlType);
+        
+        if (!this.manualControlDefinition) {
+            Utils.showNotification('Erreur: Type de contrôle non reconnu', 'error');
+            return;
+        }
+        
+        // Afficher l'interface de progression
+        this.showManualProgressInterface();
+        
+        // Commencer par le premier dossier
+        this.startNextDossierControl();
+    }
+
+    getControlDefinition(controlType) {
+        // Obtenir depuis ControlTypes ou utiliser des définitions par défaut
+        if (window.controlTypes) {
+            const definitions = window.controlTypes.getControlDefinitions();
+            return definitions[controlType];
+        }
+        
+        // Définitions de base
+        const defaultDefinitions = {
+            'LCB-FT': {
+                name: 'LCB-FT',
+                description: 'Contrôle Lutte Contre le Blanchiment et Financement du Terrorisme'
+            },
+            'NOUVEAU_CLIENT': {
+                name: 'Nouveau Client',
+                description: 'Contrôle spécifique des nouveaux clients'
+            },
+            'FINANCEMENT': {
+                name: 'Financement',
+                description: 'Contrôle des dossiers de financement et crédits'
+            },
+            'CARTO_CLIENT': {
+                name: 'Carto Client',
+                description: 'Cartographie et classification des clients'
+            }
+        };
+        
+        return defaultDefinitions[controlType];
+    }
+
+    showManualProgressInterface() {
+        Utils.showSection('manual-control-progress-section');
+        this.updateManualProgressInterface();
+    }
+
+    updateManualProgressInterface() {
+        const totalDossiers = this.manualSelectedDossiers.length;
+        const currentNumber = this.currentDossierIndex + 1;
+        const progressPercent = Math.round((this.currentDossierIndex / totalDossiers) * 100);
+        
+        // Mise à jour des éléments de progression
+        const elements = {
+            'current-dossier-number': currentNumber,
+            'total-dossiers-count': totalDossiers,
+            'progress-percent': progressPercent
+        };
+        
+        Object.entries(elements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        });
+        
+        // Mise à jour de la barre de progression
+        const progressFill = document.getElementById('manual-progress-fill');
+        if (progressFill) {
+            progressFill.style.width = `${progressPercent}%`;
+        }
+        
+        // Mise à jour des informations du dossier actuel
+        if (this.currentDossierIndex < this.manualSelectedDossiers.length) {
+            const currentDossier = this.manualSelectedDossiers[this.currentDossierIndex];
+            this.updateCurrentDossierInfo(currentDossier);
+        }
+        
+        // Mise à jour des dossiers terminés
+        this.updateCompletedDossiersList();
+    }
+
+    updateCurrentDossierInfo(dossier) {
+        const info = {
+            'current-dossier-client': dossier.client || 'Non spécifié',
+            'current-dossier-code': dossier.codeDossier || 'N/A',
+            'current-dossier-conseiller': dossier.conseiller || 'N/A',
+            'current-dossier-montant': dossier.montant || 'N/A'
+        };
+        
+        Object.entries(info).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        });
+    }
+
+    updateCompletedDossiersList() {
+        const section = document.getElementById('completed-dossiers-section');
+        const list = document.getElementById('completed-dossiers-list');
+        
+        if (!section || !list) return;
+        
+        if (this.manualControlResults.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+        
+        list.innerHTML = this.manualControlResults.map(result => {
+            const isConforme = (result.obligatoryIssuesCount || 0) === 0;
+            return `
+                <div class="completed-item ${isConforme ? 'conforme' : 'non-conforme'}">
+                    <span class="completed-client">${result.dossier.client}</span>
+                    <span class="completed-status ${isConforme ? 'conforme' : 'non-conforme'}">
+                        ${isConforme ? '✅ Conforme' : '❌ Non conforme'}
+                    </span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    startNextDossierControl() {
+        if (this.currentDossierIndex >= this.manualSelectedDossiers.length) {
+            // Tous les dossiers sont terminés
+            this.completeManualControl();
+            return;
+        }
+        
+        const currentDossier = this.manualSelectedDossiers[this.currentDossierIndex];
+        
+        Utils.debugLog(`Démarrage contrôle dossier ${this.currentDossierIndex + 1}/${this.manualSelectedDossiers.length}: ${currentDossier.client}`);
+        
+        // Créer un contrôle fictif pour ce dossier
+        const manualControl = {
+            type: this.currentManualControlType,
+            definition: this.manualControlDefinition,
+            selectedDossiers: [currentDossier]
+        };
+        
+        // Mettre à jour l'interface de progression
+        this.updateManualProgressInterface();
+        
+        // Démarrer le contrôle documentaire classique
+        this.startDocumentControl(currentDossier, manualControl);
     }
 
     // Méthode modifiée pour enlever FR et Profil Risques du contrôle CARTO_CLIENT
@@ -1758,22 +1925,189 @@ export class DocumentController {
 
     completeControl() {
         const allCompleted = Object.values(this.documentsState).every(doc => doc.status === 'completed');
-        
+    
         if (!allCompleted) {
             Utils.showNotification('Veuillez terminer tous les documents avant de finaliser le contrôle', 'error');
             return;
         }
 
-        const summary = this.generateControlSummary();
-        
-        // Déclencher l'événement
-        window.dispatchEvent(new CustomEvent('controlCompleted', {
-            detail: summary
-        }));
-        
-        // Retour à l'interface principale
-        Utils.showSection('automatic-control-section');
+        if (this.manualControlMode) {
+            // Mode contrôle manuel : traiter le dossier actuel
+            this.completeCurrentManualDossier();
+        } else {
+            // Mode contrôle automatique : logique existante
+            const summary = this.generateControlSummary();
+            
+            window.dispatchEvent(new CustomEvent('controlCompleted', {
+                detail: summary
+            }));
+            
+            Utils.showSection('automatic-control-section');
+        }
     }
+
+    completeCurrentManualDossier() {
+    // Générer le résumé pour le dossier actuel
+    const currentResult = this.generateControlSummary();
+    
+    // Ajouter aux résultats
+    this.manualControlResults.push(currentResult);
+    
+    Utils.debugLog(`Dossier ${this.currentDossierIndex + 1} terminé: ${currentResult.dossier.client}`);
+    
+    // Sauvegarder ce résultat individuellement
+    window.dispatchEvent(new CustomEvent('controlCompleted', {
+        detail: currentResult
+    }));
+    
+    // Passer au dossier suivant
+    this.currentDossierIndex++;
+    this.resetDocumentStateForNext();
+    
+    // Continuer avec le prochain dossier
+    this.startNextDossierControl();
+}
+
+resetDocumentStateForNext() {
+    // Réinitialiser l'état pour le prochain dossier
+    this.documentsState = {};
+    this.currentDocument = null;
+    this.currentQuestionIndex = 0;
+    this.documentResponses = {};
+    this.currentJustificationResponse = null;
+}
+
+completeManualControl() {
+    Utils.debugLog('=== CONTRÔLE MANUEL TERMINÉ ===');
+    Utils.debugLog(`${this.manualControlResults.length} dossiers contrôlés`);
+    
+    const endTime = new Date();
+    const duration = endTime - this.manualControlStartTime;
+    
+    // Générer le rapport consolidé
+    const consolidatedReport = {
+        controlType: this.manualControlDefinition.name,
+        startTime: this.manualControlStartTime,
+        endTime: endTime,
+        duration: duration,
+        totalDossiers: this.manualSelectedDossiers.length,
+        completedDossiers: this.manualControlResults.length,
+        results: this.manualControlResults,
+        summary: this.generateManualControlSummary()
+    };
+    
+    // Afficher le résumé final
+    this.showManualControlSummary(consolidatedReport);
+    
+    // Réinitialiser le mode manuel
+    this.resetManualControlMode();
+}
+
+generateManualControlSummary() {
+    const totalDossiers = this.manualControlResults.length;
+    if (totalDossiers === 0) return {};
+    
+    const totalAnomalies = this.manualControlResults.reduce((sum, result) => 
+        sum + (result.obligatoryIssuesCount || 0), 0);
+    
+    const conformeDossiers = this.manualControlResults.filter(result => 
+        (result.obligatoryIssuesCount || 0) === 0).length;
+    
+    const nonConformeDossiers = totalDossiers - conformeDossiers;
+    const tauxConformite = Math.round((conformeDossiers / totalDossiers) * 100);
+    
+    return {
+        totalDossiers,
+        conformeDossiers,
+        nonConformeDossiers,
+        totalAnomalies,
+        tauxConformite
+    };
+}
+
+showManualControlSummary(consolidatedReport) {
+    Utils.showSection('manual-control-summary-section');
+    this.populateManualSummaryInterface(consolidatedReport);
+}
+
+populateManualSummaryInterface(report) {
+    const summary = report.summary;
+    
+    // Mise à jour des statistiques
+    const stats = {
+        'summary-total-dossiers': summary.totalDossiers || 0,
+        'summary-conformes': summary.conformeDossiers || 0,
+        'summary-non-conformes': summary.nonConformeDossiers || 0,
+        'summary-taux-conformite': `${summary.tauxConformite || 0}%`,
+        'summary-total-anomalies': summary.totalAnomalies || 0
+    };
+    
+    Object.entries(stats).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    });
+    
+    // Mise à jour des informations du contrôle
+    const duration = this.formatDuration(report.duration);
+    const controlInfo = {
+        'summary-control-type': report.controlType,
+        'summary-duration': duration,
+        'summary-start-time': report.startTime.toLocaleString('fr-FR'),
+        'summary-end-time': report.endTime.toLocaleString('fr-FR')
+    };
+    
+    Object.entries(controlInfo).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    });
+    
+    // Générer le tableau détaillé
+    this.generateManualResultsTable(report.results);
+}
+
+formatDuration(milliseconds) {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes % 60}min`;
+    } else if (minutes > 0) {
+        return `${minutes}min ${seconds % 60}s`;
+    } else {
+        return `${seconds}s`;
+    }
+}
+
+generateManualResultsTable(results) {
+    const tbody = document.getElementById('manual-results-tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = results.map((result, index) => {
+        const dossier = result.dossier;
+        const isConforme = (result.obligatoryIssuesCount || 0) === 0;
+        const documentsInfo = result.documents ? 
+            `${Object.values(result.documents).filter(d => d.status === 'completed').length}/${Object.keys(result.documents).length}` : 
+            '0/0';
+        
+        return `
+            <tr class="${isConforme ? 'row-conforme' : 'row-non-conforme'}">
+                <td><strong>${dossier.client}</strong></td>
+                <td>${dossier.codeDossier || 'N/A'}</td>
+                <td>${dossier.conseiller || 'N/A'}</td>
+                <td>${dossier.montant || 'N/A'}</td>
+                <td><span class="badge secondary">${documentsInfo}</span></td>
+                <td><span class="badge ${result.obligatoryIssuesCount > 0 ? 'non' : 'oui'}">${result.obligatoryIssuesCount || 0}</span></td>
+                <td><span class="badge ${isConforme ? 'oui' : 'non'}">${isConforme ? 'CONFORME' : 'NON CONFORME'}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-secondary" onclick="window.documentController?.exportSingleManualResult(${index})">
+                        📊 Export
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
 
     generateControlSummary() {
         const summary = {
@@ -2092,6 +2426,75 @@ export class DocumentController {
         }
         
         return this.getCurrentControl();
+    }
+
+    pauseManualControl() {
+    // Fonctionnalité de pause (optionnelle)
+    Utils.showNotification('Contrôle mis en pause', 'info');
+    // Ici vous pourriez sauvegarder l'état et permettre de reprendre plus tard
+}
+
+    cancelManualControl() {
+        const confirmed = confirm(
+            `Êtes-vous sûr de vouloir annuler le contrôle manuel ?\n\n` +
+            `${this.manualControlResults.length} dossier(s) déjà contrôlé(s) seront conservés.`
+        );
+        
+        if (confirmed) {
+            Utils.showNotification('Contrôle manuel annulé', 'warning');
+            this.resetManualControlMode();
+            Utils.showSection('automatic-control-section');
+        }
+    }
+
+    resetManualControlMode() {
+        this.manualControlMode = false;
+        this.manualSelectedDossiers = [];
+        this.currentManualControlType = null;
+        this.currentDossierIndex = 0;
+        this.manualControlResults = [];
+        this.manualControlStartTime = null;
+        this.manualControlDefinition = null;
+        this.resetDocumentStateForNext();
+    }
+
+    exportSingleManualResult(resultIndex) {
+        if (resultIndex >= this.manualControlResults.length) return;
+        
+        const result = this.manualControlResults[resultIndex];
+        this.exportControlResults(result);
+    }
+
+    exportAllManualResults() {
+        if (this.manualControlResults.length === 0) {
+            Utils.showNotification('Aucun résultat à exporter', 'warning');
+            return;
+        }
+        
+        // Créer un export consolidé
+        const exportData = this.manualControlResults.map((result, index) => ({
+            'N°': index + 1,
+            'Date': result.completedAt ? result.completedAt.toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR'),
+            'Type Contrôle': this.manualControlDefinition?.name || 'Manuel',
+            'Client': result.dossier.client,
+            'Code Dossier': result.dossier.codeDossier,
+            'Conseiller': result.dossier.conseiller,
+            'Montant': result.dossier.montant,
+            'Domaine': result.dossier.domaine,
+            'Documents Contrôlés': result.documents ? 
+                `${Object.values(result.documents).filter(d => d.status === 'completed').length}/${Object.keys(result.documents).length}` : 
+                '0/0',
+            'Anomalies Majeures': result.obligatoryIssuesCount || 0,
+            'Conformité': (result.obligatoryIssuesCount || 0) === 0 ? 'CONFORME' : 'NON CONFORME',
+            'Remarques': `Contrôle manuel effectué le ${new Date().toLocaleDateString('fr-FR')}`
+        }));
+        
+        const fileName = Utils.generateFileName(`Controle_Manuel_${this.currentManualControlType || 'Multiple'}`);
+        
+        if (window.fileHandler) {
+            window.fileHandler.exportToExcel(exportData, fileName);
+            Utils.showNotification(`Export réalisé: ${fileName}`, 'success');
+        }
     }
 
     // Reset pour nouvelle session
