@@ -212,6 +212,44 @@
             </div>
         </div>
 
+        <!-- Section 3ter: Choix du type de contrôle manuel -->
+        <div class="content-section" id="manual-control-type-section">
+            <h2 class="section-title">Étape 3 : Type de contrôle pour la sélection manuelle</h2>
+            
+            <div class="manual-control-info">
+                <div class="info-card">
+                    <h3>📋 Récapitulatif de votre sélection</h3>
+                    <p>Vous avez sélectionné <strong><span id="manual-selected-count">0</span></strong> dossier(s) pour un contrôle manuel.</p>
+                    <p>Choisissez maintenant le type de contrôle à effectuer sur ces dossiers :</p>
+                </div>
+            </div>
+
+            <!-- Aperçu des dossiers sélectionnés -->
+            <div class="selected-dossiers-preview">
+                <h3>🎯 Dossiers qui seront contrôlés :</h3>
+                <div class="dossiers-preview-grid" id="selected-dossiers-list">
+                    <!-- Liste générée dynamiquement -->
+                </div>
+            </div>
+
+            <!-- Types de contrôle disponibles pour le manuel -->
+            <div class="manual-control-types">
+                <h3>🔍 Choisissez le type de contrôle :</h3>
+                <div class="control-types-grid" id="manual-control-types-grid">
+                    <!-- Cartes de types de contrôle générées dynamiquement -->
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="showDossierSelection()">
+                    ← Retour à la sélection
+                </button>
+                <button class="btn btn-info" onclick="showAutomaticControls()">
+                    🤖 Contrôles automatiques
+                </button>
+            </div>
+        </div>
+
         <!-- Section 3ter: Document Control -->
         <div class="content-section" id="document-control-section">
             <h2 class="section-title">Contrôle Documentaire</h2>
@@ -244,6 +282,60 @@
             </div>
         </div>
 
+        <!-- Section 3quint: Progression du contrôle manuel -->
+        <div class="content-section" id="manual-control-progress-section">
+            <h2 class="section-title">Contrôle Manuel en Cours</h2>
+            
+            <!-- Barre de progression -->
+            <div class="manual-progress-container">
+                <div class="manual-progress-header">
+                    <h3>📊 Progression du contrôle</h3>
+                    <div class="progress-info">
+                        Dossier <span id="current-dossier-number">1</span> sur <span id="total-dossiers-count">1</span>
+                        <span class="progress-percentage">(<span id="progress-percent">0</span>%)</span>
+                    </div>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="manual-progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div class="current-dossier-info">
+                    <div class="current-dossier-card">
+                        <h4>📁 Dossier actuel :</h4>
+                        <div class="current-dossier-details">
+                            <div class="detail"><strong>Client :</strong> <span id="current-dossier-client">-</span></div>
+                            <div class="detail"><strong>Code :</strong> <span id="current-dossier-code">-</span></div>
+                            <div class="detail"><strong>Conseiller :</strong> <span id="current-dossier-conseiller">-</span></div>
+                            <div class="detail"><strong>Montant :</strong> <span id="current-dossier-montant">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons de navigation -->
+            <div class="manual-progress-actions">
+                <div class="btn-group">
+                    <button class="btn btn-warning" onclick="window.documentController?.pauseManualControl()" id="pause-btn">
+                        ⏸️ Mettre en pause
+                    </button>
+                    <button class="btn btn-danger" onclick="window.documentController?.cancelManualControl()" id="cancel-btn">
+                        ❌ Annuler tout
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Résultats des dossiers précédents -->
+            <div class="completed-dossiers" id="completed-dossiers-section" style="display: none;">
+                <h3>✅ Dossiers déjà contrôlés :</h3>
+                <div class="completed-list" id="completed-dossiers-list">
+                    <!-- Liste générée dynamiquement -->
+                </div>
+            </div>
+        </div>
+
         <!-- Section 4: Control Interface -->
         <div class="content-section" id="control-section">
             <h2 class="section-title">Étape 4 : Interface de contrôle</h2>
@@ -266,7 +358,109 @@
         </div>
     </div>
 
+    <!-- Section finale: Résumé des contrôles manuels -->
+    <div class="content-section" id="manual-control-summary-section">
+        <h2 class="section-title">🎉 Résumé des Contrôles Manuels</h2>
+        
+        <!-- Statistiques globales -->
+        <div class="manual-summary-stats">
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="card-icon">📊</div>
+                    <div class="card-value" id="summary-total-dossiers">0</div>
+                    <div class="card-label">Dossiers contrôlés</div>
+                </div>
+                <div class="summary-card success">
+                    <div class="card-icon">✅</div>
+                    <div class="card-value" id="summary-conformes">0</div>
+                    <div class="card-label">Conformes</div>
+                </div>
+                <div class="summary-card danger">
+                    <div class="card-icon">❌</div>
+                    <div class="card-value" id="summary-non-conformes">0</div>
+                    <div class="card-label">Non conformes</div>
+                </div>
+                <div class="summary-card info">
+                    <div class="card-icon">📈</div>
+                    <div class="card-value" id="summary-taux-conformite">0%</div>
+                    <div class="card-label">Taux conformité</div>
+                </div>
+                <div class="summary-card warning">
+                    <div class="card-icon">⚠️</div>
+                    <div class="card-value" id="summary-total-anomalies">0</div>
+                    <div class="card-label">Anomalies majeures</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations détaillées -->
+        <div class="manual-control-details">
+            <div class="control-info-summary">
+                <h3>📋 Informations du contrôle</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Type de contrôle :</span>
+                        <span class="info-value" id="summary-control-type">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Durée totale :</span>
+                        <span class="info-value" id="summary-duration">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Démarré le :</span>
+                        <span class="info-value" id="summary-start-time">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Terminé le :</span>
+                        <span class="info-value" id="summary-end-time">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tableau détaillé des résultats -->
+        <div class="manual-results-table-container">
+            <h3>📄 Détail par dossier</h3>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>👤 Client</th>
+                            <th>🔢 Code Dossier</th>
+                            <th>👨‍💼 Conseiller</th>
+                            <th>💰 Montant</th>
+                            <th>📄 Documents</th>
+                            <th>⚠️ Anomalies</th>
+                            <th>✅ Conformité</th>
+                            <th>🔧 Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="manual-results-tbody">
+                        <!-- Résultats générés dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Actions finales -->
+        <div class="manual-summary-actions">
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="window.documentController?.exportAllManualResults()">
+                    📊 Exporter tous les résultats Excel
+                </button>
+                <button class="btn btn-info" onclick="window.historyInterface?.show()">
+                    📋 Voir l'historique complet
+                </button>
+                <button class="btn btn-primary" onclick="showDossierSelection()">
+                    🔄 Nouveau contrôle manuel
+                </button>
+                <button class="btn btn-secondary" onclick="showAutomaticControls()">
+                    ← Retour aux contrôles automatiques
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
-
