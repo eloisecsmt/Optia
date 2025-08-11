@@ -205,7 +205,7 @@ export class DocumentController {
     getRequiredDocuments(controlType) {
         const documentSets = {
             'LCB-FT': [1, 4, 7, 8, 12, 99], // FR, Carto Client, CNI, Justificatif Domicile, Zeendoc
-            'FINANCEMENT': [1, 2, 9, 10, 99], // FR, Profil Risques, Etude, RIB, Zeendoc  
+            'FINANCEMENT': [4, 13, 15, 16, 17, 18, 99], // Harvest, Carto Opé, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
             'CARTO_CLIENT': [4, 99], // Harvest, Zeendoc (FR et Profil Risques supprimés)
             'OPERATION': [1, 2, 4, 6, 10, 11, 13, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
             'NOUVEAU_CLIENT': [1, 2, 3, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
@@ -1399,6 +1399,237 @@ export class DocumentController {
                     }
                 ]
             },
+            15: {
+            id: 15,
+            name: 'Mandat de financ.',
+            fullName: 'Mandat de financement',
+            questions: [
+                {
+                    text: 'Est-ce que le document est présent ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si le Mandat de financement est présent dans le dossier client',
+                    skipIfNo: true
+                },
+                {
+                    text: 'Est-ce la bonne version ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que la version du mandat de financement est à jour selon la réglementation en vigueur',
+                    qualityCheck: {
+                        text: 'La version du mandat est-elle conforme aux obligations légales actuelles ?',
+                        help: 'Version récente intégrant les dernières évolutions réglementaires et mentions obligatoires'
+                    }
+                },
+                {
+                    text: 'Est-ce que le document est entièrement complété ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Toutes les sections du mandat renseignées : objet, modalités, conditions',
+                    qualityCheck: {
+                        text: 'Toutes les clauses et informations obligatoires sont-elles présentes et complètes ?',
+                        help: 'Vérification exhaustive : objet du financement, montant, durée, conditions, garanties'
+                    }
+                },
+                {
+                    text: 'La date est-elle présente sur le document ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Date de signature ou de création du mandat',
+                    qualityCheck: {
+                        text: 'La date indiquée est-elle cohérente avec le dossier ?',
+                        help: 'Date postérieure à l\'étude, dans un délai raisonnable'
+                    }
+                },
+                {
+                    text: 'La signature du conseiller est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signature manuscrite ou électronique du conseiller',
+                    qualityCheck: {
+                        text: 'La signature du conseiller est-elle conforme ?',
+                        help: 'Manuscrite lisible OU DocuSign certifiée, nom correct, bien datée',
+                        type: 'signature_conseiller'
+                    }
+                },
+                {
+                    text: 'La signature de tous les clients est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signatures de tous les titulaires et co-titulaires',
+                    qualityCheck: {
+                        text: 'Toutes les signatures clients sont-elles conformes ?',
+                        help: 'Signatures distinctes, lisibles, correspondant aux identités',
+                        type: 'signature_clients'
+                    }
+                }
+            ]
+        },
+        16: {
+            id: 16,
+            name: 'Synthèse + Adéq.',
+            fullName: 'Synthèse + Adéquation',
+            questions: [
+                {
+                    text: 'Est-ce que le document est présent ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si le document Synthèse + Adéquation est présent dans le dossier client',
+                    skipIfNo: true
+                },
+                {
+                    text: 'Est-ce la bonne version ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que la version du document est à jour selon les standards en vigueur',
+                    qualityCheck: {
+                        text: 'La version respecte-t-elle le format et les exigences actuelles ?',
+                        help: 'Modèle récent, structure conforme, mentions réglementaires présentes'
+                    }
+                },
+                {
+                    text: 'Est-ce que le document est entièrement complété ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Toutes les sections de la synthèse renseignées',
+                    qualityCheck: {
+                        text: 'Toutes les informations nécessaires sont-elles présentes et détaillées ?',
+                        help: 'Synthèse complète, analyse exhaustive, recommandations argumentées'
+                    }
+                },
+                {
+                    text: 'Le modèle a-t-il été respecté ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si le document suit le modèle standardisé de l\'établissement',
+                    qualityCheck: {
+                        text: 'Le document respecte-t-il fidèlement la structure et le contenu du modèle ?',
+                        help: 'Sections dans l\'ordre, rubriques complètes, format conforme'
+                    }
+                },
+                {
+                    text: 'L\'adéquation a-t-elle été rédigée ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence d\'une analyse d\'adéquation entre les besoins client et la solution proposée',
+                    qualityCheck: {
+                        text: 'L\'analyse d\'adéquation est-elle complète et motivée ?',
+                        help: 'Justification détaillée, cohérence besoins/solution, alternatives évaluées'
+                    }
+                }
+            ]
+        },
+        17: {
+            id: 17,
+            name: 'Fiche conseil',
+            fullName: 'Fiche conseil',
+            questions: [
+                {
+                    text: 'Est-ce que le document est présent ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si la Fiche conseil est présente dans le dossier client',
+                    skipIfNo: true
+                },
+                {
+                    text: 'Est-ce la bonne version ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que la version de la fiche conseil est à jour',
+                    qualityCheck: {
+                        text: 'La version de la fiche est-elle conforme aux standards actuels ?',
+                        help: 'Version récente, format standardisé, mentions légales à jour'
+                    }
+                },
+                {
+                    text: 'Est-ce que le document est entièrement complété ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Toutes les sections de la fiche conseil renseignées',
+                    qualityCheck: {
+                        text: 'Toutes les rubriques sont-elles complètement remplies ?',
+                        help: 'Conseils détaillés, recommandations précises, aucune section vide'
+                    }
+                },
+                {
+                    text: 'La date est-elle présente sur le document ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Date de création ou de signature de la fiche conseil',
+                    qualityCheck: {
+                        text: 'La date indiquée est-elle cohérente avec le dossier ?',
+                        help: 'Date logique par rapport au processus de conseil et aux autres documents'
+                    }
+                },
+                {
+                    text: 'La signature du conseiller est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signature du conseiller validant les conseils prodigués',
+                    qualityCheck: {
+                        text: 'La signature du conseiller est-elle conforme ?',
+                        help: 'Manuscrite lisible OU DocuSign certifiée, nom correct, bien datée',
+                        type: 'signature_conseiller'
+                    }
+                },
+                {
+                    text: 'La signature de tous les clients est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signatures attestant de la prise de connaissance des conseils',
+                    qualityCheck: {
+                        text: 'Toutes les signatures clients sont-elles conformes ?',
+                        help: 'Signatures distinctes, lisibles, correspondant aux identités',
+                        type: 'signature_clients'
+                    }
+                }
+            ]
+        },
+        18: {
+            id: 18,
+            name: 'Bon pour accord',
+            fullName: 'Bon pour accord',
+            questions: [
+                {
+                    text: 'Est-ce que le document est présent ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si le Bon pour accord est présent dans le dossier client',
+                    skipIfNo: true
+                },
+                {
+                    text: 'Est-ce qu\'il correspond à la proposition retenue ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la cohérence entre le bon pour accord et la proposition finale acceptée',
+                    qualityCheck: {
+                        text: 'Le contenu correspond-il exactement à la solution retenue ?',
+                        help: 'Montants, durée, conditions, garanties identiques à la proposition validée'
+                    }
+                },
+                {
+                    text: 'La date est-elle présente sur le document ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Date de signature du bon pour accord',
+                    qualityCheck: {
+                        text: 'La date indiquée est-elle cohérente avec le processus ?',
+                        help: 'Date postérieure aux conseils et antérieure à la mise en place du financement'
+                    }
+                },
+                {
+                    text: 'La signature de tous les clients est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signatures de tous les emprunteurs et co-emprunteurs',
+                    qualityCheck: {
+                        text: 'Toutes les signatures clients sont-elles conformes ?',
+                        help: 'Signatures distinctes, lisibles, correspondant aux identités des emprunteurs',
+                        type: 'signature_clients'
+                    }
+                }
+            ]
+        },
             // NOUVEAU : Tuile Zeendoc pour tous les contrôles
             99: {
                 id: 99,
@@ -1565,6 +1796,10 @@ export class DocumentController {
             12: 'Origine des fonds',
             13: 'Carto Opération',
             14: 'Destination des fonds',
+            15: 'Mandat de financ.',
+            16: 'Synthèse + Adéq.',
+            17: 'Fiche conseil',    
+            18: 'Bon pour accord',
             99: 'Zeendoc'
         };
         return documentNames[docId] || `Document ${docId}`;
