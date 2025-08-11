@@ -14,6 +14,7 @@ export class HistoryInterface {
 
     init() {
         this.createHistorySection();
+        this.addTabStyles();
         this.setupEventListeners();
         Utils.debugLog('HistoryInterface enrichi initialisé');
     }
@@ -73,16 +74,28 @@ export class HistoryInterface {
             <input type="file" id="import-backup" style="display:none" accept=".json" 
                    onchange="window.persistenceManager?.importBackupJSON(this.files[0])">
             
-            <!-- NOUVEAU : Onglets pour filtrer les contrôles -->
-            <div class="history-tabs">
-                <button class="tab-btn ${!this.showSuspended ? 'active' : ''}" 
-                        onclick="window.historyInterface?.switchTab(false)">
-                    ✅ Contrôles terminés
-                </button>
-                <button class="tab-btn ${this.showSuspended ? 'active' : ''}" 
-                        onclick="window.historyInterface?.switchTab(true)">
-                    ⏸️ Contrôles suspendus <span class="tab-badge" id="suspended-count-badge">0</span>
-                </button>
+            <!-- NOUVEAU : Header avec onglets et bouton mail -->
+            <div class="history-header">
+                <div class="history-tabs">
+                    <button class="tab-btn ${!this.showSuspended ? 'active' : ''}" 
+                            onclick="window.historyInterface?.switchTab(false)">
+                        ✅ Contrôles terminés
+                    </button>
+                    <button class="tab-btn ${this.showSuspended ? 'active' : ''}" 
+                            onclick="window.historyInterface?.switchTab(true)">
+                        ⏸️ Contrôles suspendus <span class="tab-badge" id="suspended-count-badge">0</span>
+                    </button>
+                </div>
+                
+                <!-- Bouton mail unifié et élégant -->
+                <div class="history-mail-actions">
+                    <button class="btn btn-mail" 
+                            id="history-mail-btn"
+                            onclick="window.historyInterface?.handleMailAction()"
+                            title="Envoyer un email au conseiller">
+                        📧 Email conseiller
+                    </button>
+                </div>
             </div>
             
             <!-- Filtres de recherche avancée -->
@@ -242,11 +255,38 @@ export class HistoryInterface {
         `;
         
         const container = document.querySelector('.container');
-        if (container) {
-            container.appendChild(section);
-            Utils.debugLog('Section historique avec onglets suspendus créée');
+    if (container) {
+        container.appendChild(section);
+        
+        // AJOUTER CES LIGNES pour initialiser le bouton mail :
+        this.updateMailButton();
+        this.updateSuspendedBadge();
+        
         }
     }
+
+    // NOUVEAU : Méthode pour mettre à jour le bouton mail
+    updateMailButton() {
+         const mailButton = document.getElementById('history-mail-btn');
+            if (!mailButton) {
+                console.log('Bouton mail non trouvé');
+                return;
+            }
+            
+            // Juste mettre à jour le titre et l'indicateur visuel
+            mailButton.title = this.showSuspended ? 
+                'Envoyer un email de relance pour les contrôles suspendus' : 
+                'Envoyer un email concernant les dossiers non conformes';
+            
+            // Ajouter/retirer la classe pour l'indicateur discret
+            if (this.showSuspended) {
+                mailButton.classList.add('for-suspended');
+            } else {
+                mailButton.classList.remove('for-suspended');
+            }
+            
+            console.log(`Bouton mail mis à jour pour: ${this.showSuspended ? 'suspendus' : 'terminés'}`);
+        }
 
     // Navigation vers l'historique
     show() {
@@ -1289,22 +1329,68 @@ export class HistoryInterface {
     }
     // NOUVEAU : Changer d'onglet (terminés/suspendus)
     switchTab(showSuspended) {
-        this.showSuspended = showSuspended;
-        
+      this.showSuspended = showSuspended;
+    
         // Mettre à jour les onglets
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         
-        event.target.classList.add('active');
+        // Activer le bon onglet
+        const buttons = document.querySelectorAll('.tab-btn');
+        if (showSuspended && buttons[1]) {
+            buttons[1].classList.add('active');
+        } else if (!showSuspended && buttons[0]) {
+            buttons[0].classList.add('active');
+        }
         
-        // Mettre à jour les filtres selon l'onglet
+        // Mettre à jour le bouton mail (juste l'indicateur)
+        this.updateMailButton();
+        
+        // Mettre à jour les filtres et recharger
         this.updateFiltersForCurrentTab();
-        
-        // Recharger les données
         this.loadHistoryData();
         
         Utils.debugLog(`Onglet changé: ${showSuspended ? 'suspendus' : 'terminés'}`);
+    }
+
+// 4. S'assurer que updateMailButton() est bien appelée :
+updateMailButton() {
+    const mailButton = document.querySelector('.btn-mail');
+        if (!mailButton) {
+            console.log('Bouton mail non trouvé'); // Debug
+            return;
+        }
+        
+        // Mettre à jour la classe CSS
+        mailButton.className = `btn btn-mail ${this.showSuspended ? 'btn-mail-suspended' : 'btn-mail-history'}`;
+        
+        // Mettre à jour l'onclick
+        mailButton.onclick = () => {
+            if (this.showSuspended) {
+                window.mailManager?.showMailFromSuspended();
+            } else {
+                window.mailManager?.showMailFromHistory();
+            }
+        };
+        
+        // Mettre à jour le title
+        mailButton.title = this.showSuspended ? 
+            'Envoyer un email de relance pour les contrôles suspendus' : 
+            'Envoyer un email concernant les dossiers non conformes';
+        
+        // Mettre à jour le texte du bouton
+        mailButton.textContent = '📧 Email conseiller';
+        
+        console.log(`Bouton mail mis à jour: ${mailButton.className}`); // Debug
+    }
+
+    handleMailAction() {
+        if (this.showSuspended) {
+            window.mailManager?.showMailFromSuspended();
+        } else {
+            window.mailManager?.showMailFromHistory();
+        }
     }
 
     // NOUVEAU : Mettre à jour les filtres selon l'onglet actif
@@ -1366,92 +1452,280 @@ export class HistoryInterface {
     // NOUVEAU : CSS supplémentaire pour les onglets
     addTabStyles() {
         if (document.getElementById('history-tabs-styles')) return;
-        
-        const style = document.createElement('style');
-        style.id = 'history-tabs-styles';
-        style.textContent = `
-            .history-tabs {
-                display: flex;
-                margin-bottom: 30px;
-                border-radius: 10px;
-                overflow: hidden;
-                background: #e9ecef;
-                padding: 4px;
-            }
-            
-            .tab-btn {
-                flex: 1;
-                padding: 12px 20px;
-                border: none;
-                background: transparent;
-                color: #6c757d;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                position: relative;
-                font-size: 1rem;
-            }
-            
-            .tab-btn.active {
-                background: white;
-                color: #1a1a2e;
-                border-radius: 6px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            
-            .tab-btn:hover:not(.active) {
-                color: #495057;
-                background: rgba(255,255,255,0.5);
-            }
-            
-            .tab-badge {
-                background: #dc3545;
-                color: white;
-                padding: 2px 6px;
-                border-radius: 10px;
-                font-size: 0.75rem;
-                margin-left: 6px;
-                font-weight: 700;
-            }
-            
-            .tab-btn.active .tab-badge {
-                background: #ffc107;
-                color: #1a1a2e;
-            }
-            
-            .suspended-history-table tbody tr.row-very-old-suspended {
-                background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
-                border-left: 4px solid #dc3545;
-            }
-            
-            .suspended-history-table tbody tr.row-old-suspended {
-                background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
-                border-left: 4px solid #ffc107;
-            }
-            
-            .suspended-history-table tbody tr.row-suspended {
-                background: linear-gradient(135deg, #fffbf0 0%, #fff8e1 100%) !important;
-                border-left: 4px solid #28a745;
-            }
-            
-            .badge.duration.very-old {
-                background: #dc3545;
-                color: white;
-            }
-            
-            .badge.duration.old {
-                background: #ffc107;
-                color: #1a1a2e;
-            }
-            
-            .badge.duration.recent {
-                background: #28a745;
-                color: white;
-            }
-        `;
-        
-        document.head.appendChild(style);
+    
+    const style = document.createElement('style');
+    style.id = 'history-tabs-styles';
+    style.textContent = `
+        /* CORRECTION : Header avec bouton mail à droite */
+        .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        gap: 20px;
+        width: 100%;
     }
+
+    /* Les onglets prennent l'espace disponible à gauche */
+    .history-tabs {
+        display: flex;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #e9ecef;
+        padding: 4px;
+        flex: 0 1 auto;
+        max-width: 400px;
+        min-width: 300px;
+    }
+
+    /* Le bouton mail reste à droite */
+    .history-mail-actions {
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    /* NOUVEAU : Bouton mail unifié et élégant */
+    .btn-mail {
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        position: relative;
+        overflow: hidden;
+        white-space: nowrap;
+        text-decoration: none;
+        
+        /* Gradient bleu professionnel et moderne */
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
+        color: white;
+        
+        /* Effet de brillance subtil */
+        background-size: 200% 200%;
+        animation: subtleShine 3s ease-in-out infinite;
+    }
+
+    /* Animation de brillance subtile */
+    @keyframes subtleShine {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+
+    /* Effet de survol amélioré */
+    .btn-mail:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 50%, #1e3a8a 100%);
+        animation: none; /* Arrête l'animation au survol */
+    }
+
+    /* Effet au clic */
+    .btn-mail:active {
+        transform: translateY(0) scale(0.98);
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        transition: all 0.1s ease;
+    }
+
+    /* Effet de focus pour l'accessibilité */
+    .btn-mail:focus {
+        outline: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 3px rgba(37, 99, 235, 0.3);
+    }
+
+    /* Effet de survol de l'icône */
+    .btn-mail:hover::before {
+        content: '📧';
+        position: absolute;
+        left: 12px;
+        animation: emailBounce 0.6s ease-in-out;
+    }
+
+    @keyframes emailBounce {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        25% { transform: translateY(-3px) rotate(-5deg); }
+        75% { transform: translateY(-1px) rotate(2deg); }
+    }
+
+    /* Indicateur visuel pour différencier les contextes (optionnel et subtil) */
+    .btn-mail::after {
+        content: '';
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.7);
+        transition: all 0.3s ease;
+    }
+
+    /* Indicateur pour les contrôles suspendus (point orange discret) */
+    .btn-mail.for-suspended::after {
+        background: #f59e0b;
+        box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+    }
+
+    /* Styles pour les onglets (inchangés) */
+    .tab-btn {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        font-size: 1rem;
+    }
+
+    .tab-btn.active {
+        background: white;
+        color: #1a1a2e;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .tab-btn:hover:not(.active) {
+        color: #495057;
+        background: rgba(255,255,255,0.5);
+    }
+
+    .tab-badge {
+        background: #dc3545;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        margin-left: 6px;
+        font-weight: 700;
+    }
+
+    .tab-btn.active .tab-badge {
+        background: #ffc107;
+        color: #1a1a2e;
+    }
+
+    /* États désactivé du bouton mail */
+    .btn-mail:disabled {
+        background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        animation: none;
+    }
+
+    .btn-mail:disabled:hover {
+        transform: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Responsive amélioré */
+    @media (max-width: 992px) {
+        .history-header {
+            gap: 15px;
+        }
+        
+        .history-tabs {
+            min-width: 250px;
+            max-width: 300px;
+        }
+        
+        .btn-mail {
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            gap: 8px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .history-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 15px;
+        }
+        
+        .history-tabs {
+            max-width: none;
+            min-width: auto;
+            order: 1;
+        }
+        
+        .history-mail-actions {
+            order: 2;
+            margin-left: 0;
+        }
+        
+        .btn-mail {
+            width: 100%;
+            justify-content: center;
+            padding: 14px 24px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .tab-btn {
+            padding: 10px 12px;
+            font-size: 0.9rem;
+        }
+        
+        .btn-mail {
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            gap: 6px;
+        }
+    }
+
+    /* Animation d'apparition du bouton */
+    .btn-mail {
+        animation: mailButtonAppear 0.5s ease-out;
+    }
+
+    @keyframes mailButtonAppear {
+        0% {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Amélioration du contraste pour l'accessibilité */
+    @media (prefers-contrast: high) {
+        .btn-mail {
+            background: #1e40af;
+            border: 2px solid #1e3a8a;
+        }
+        
+        .btn-mail:hover {
+            background: #1e3a8a;
+            border-color: #1e40af;
+        }
+    }
+
+    /* Support du mode sombre */
+    @media (prefers-color-scheme: dark) {
+        .btn-mail {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-mail:hover {
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+        }
+    }
+    `;
+    
+    document.head.appendChild(style);
+}
 
     // Utilitaires
     isHistorySectionActive() {
