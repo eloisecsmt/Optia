@@ -2095,15 +2095,36 @@ export class DocumentController {
                     </label>
                     <div class="quality-checks">
                         <div class="check-item">
+                            <label>Type de signature :</label>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="signature-type-clients" value="Manuscrite">
+                                    <span>Manuscrite lisible</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="signature-type-clients" value="DocuSign">
+                                    <span>DocuSign certifiée</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="signature-type-clients" value="Autre electronique">
+                                    <span>Autre électronique</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="signature-type-clients" value="Non conforme">
+                                    <span>Non conforme</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="check-item">
                             <label class="checkbox-label">
                                 <input type="checkbox" name="quality-checks" value="signatures-distinctes">
-                                <span>Signatures distinctes et lisibles</span>
+                                <span>Signatures distinctes et lisibles (tous les titulaires)</span>
                             </label>
                         </div>
                         <div class="check-item">
                             <label class="checkbox-label">
                                 <input type="checkbox" name="quality-checks" value="identites-correctes">
-                                <span>Identités correspondant aux titulaires</span>
+                                <span>Identités correspondant aux titulaires du contrat</span>
                             </label>
                         </div>
                         <div class="check-item">
@@ -2246,6 +2267,19 @@ export class DocumentController {
                 const validType = signatureType && ['Manuscrite', 'DocuSign', 'Autre electronique'].includes(signatureType.value);
                 response.quality = (allChecked && validType) ? 'Conforme' : 'Non conforme';
                 
+            } else if (questionData.qualityCheck.type === 'signature_clients') {
+                const signatureType = document.querySelector('input[name="signature-type-clients"]:checked');
+                if (signatureType) {
+                    response.qualityDetails.signatureType = signatureType.value;
+                }
+                 
+                const qualityChecks = document.querySelectorAll('input[name="quality-checks"]:checked');
+                response.qualityDetails.checks = Array.from(qualityChecks).map(cb => cb.value);
+                    
+                const allChecked = qualityChecks.length === 3;
+                const validType = signatureType && ['Manuscrite', 'DocuSign', 'Autre electronique'].includes(signatureType.value);
+                response.quality = (allChecked && validType) ? 'Conforme' : 'Non conforme';
+
             } else if (questionData.qualityCheck.type === 'signature_cif') {
                 const cifStatus = document.querySelector('input[name="cif-status"]:checked');
                 if (cifStatus) {
@@ -2312,6 +2346,7 @@ export class DocumentController {
             return true;
         }
 
+
         // Validation spécifique pour les noms de CIF
         if (questionData.text.includes('CIF signataire')) {
             if (response.answer.length < 3) {
@@ -2377,6 +2412,13 @@ export class DocumentController {
                     Utils.showNotification('Veuillez sélectionner le type de signature', 'error');
                     return false;
                 }
+
+            } else if (questionData.qualityCheck.type === 'signature_clients') {
+                if (!response.qualityDetails.signatureType) {
+                    Utils.showNotification('Veuillez sélectionner le type de signature des clients', 'error');
+                    return false;
+                }
+
             } else if (questionData.qualityCheck.type === 'signature_cif') {
                 if (!response.qualityDetails.cifStatus) {
                     Utils.showNotification('Veuillez sélectionner le statut CIF', 'error');
