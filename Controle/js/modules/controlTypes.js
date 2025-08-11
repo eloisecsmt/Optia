@@ -16,7 +16,7 @@ export class ControlTypes {
                 name: 'LCB-FT',
                 description: 'Contrôle Lutte Contre le Blanchiment et Financement du Terrorisme',
                 frequency: 'Mensuel',
-                sampleSize: 5,
+                sampleSize: 10,
                 priority: 'high',
                 criteria: {
                     requiredDocuments: [
@@ -131,7 +131,7 @@ export class ControlTypes {
                 name: 'Nouveau Client',
                 description: 'Contrôle spécifique des nouveaux clients',
                 frequency: 'Hebdomadaire',
-                sampleSize: 6,
+                sampleSize: 10,
                 priority: 'high',
                 criteria: {
                     requiredDocuments: [
@@ -325,9 +325,9 @@ export class ControlTypes {
     selectRandomSample(eligibleDossiers, control) {
         let sample = [];
         
-        // Stratégie de sélection selon le type de contrôle
+        // NOUVEAU : Stratégie de sélection avec représentativité par conseiller
         if (control.criteria.nouveauxClients) {
-            // Priorité aux nouveaux clients
+            // Pour les nouveaux clients, garder la logique existante mais avec représentativité
             const nouveaux = eligibleDossiers.filter(d => 
                 d.nouveauClient && d.nouveauClient.toLowerCase() === 'oui'
             );
@@ -335,18 +335,104 @@ export class ControlTypes {
                 !d.nouveauClient || d.nouveauClient.toLowerCase() !== 'oui'
             );
             
-            // Prendre d'abord les nouveaux, puis compléter avec les anciens
-            const nouveauxSelected = Utils.getRandomElements(nouveaux, Math.min(nouveaux.length, control.sampleSize));
+            // Sélection avec représentativité par conseiller
+            const nouveauxSelected = this.selectWithConseillerRepresentation(nouveaux, Math.min(nouveaux.length, control.sampleSize));
             const remaining = control.sampleSize - nouveauxSelected.length;
-            const anciensSelected = remaining > 0 ? Utils.getRandomElements(anciens, remaining) : [];
+            const anciensSelected = remaining > 0 ? this.selectWithConseillerRepresentation(anciens, remaining) : [];
             
             sample = [...nouveauxSelected, ...anciensSelected];
         } else {
-            // Sélection aléatoire simple
-            sample = Utils.getRandomElements(eligibleDossiers, control.sampleSize);
+            // Sélection avec représentativité par conseiller pour tous les autres contrôles
+            sample = this.selectWithConseillerRepresentation(eligibleDossiers, control.sampleSize);
+        }
+        
+        Utils.debugLog(`Échantillon sélectionné: ${sample.length} dossiers avec représentativité par conseiller`);
+        this.logConseillerDistribution(sample);
+        
+        return sample;
+    }
+
+    selectWithConseillerRepresentation(dossiers, targetSize) {
+        if (dossiers.length === 0 || targetSize === 0) return [];
+        
+        // Grouper les dossiers par conseiller
+        const dossiersByConseiller = {};
+        dossiers.forEach(dossier => {
+            const conseiller = dossier.conseiller || 'Non assigné';
+            if (!dossiersByConseiller[conseiller]) {
+                dossiersByConseiller[conseiller] = [];
+            }
+            dossiersByConseiller[conseiller].push(dossier);
+        });
+        
+        const conseillers = Object.keys(dossiersByConseiller);
+        const nombreConseillers = conseillers.length;
+        
+        Utils.debugLog(`Sélection avec représentativité: ${nombreConseillers} conseiller(s) trouvé(s)`);
+        
+        let sample = [];
+        
+        // Phase 1: Au moins un dossier par conseiller (si possible)
+        if (targetSize >= nombreConseillers) {
+            // On peut prendre au moins un dossier par conseiller
+            conseillers.forEach(conseiller => {
+                const dossiersDuConseiller = dossiersByConseiller[conseiller];
+                const randomDossier = dossiersDuConseiller[Math.floor(Math.random() * dossiersDuConseiller.length)];
+                sample.push(randomDossier);
+                
+                // Retirer le dossier sélectionné de la liste pour éviter les doublons
+                const index = dossiersDuConseiller.indexOf(randomDossier);
+                dossiersDuConseiller.splice(index, 1);
+            });
+            
+            Utils.debugLog(`Phase 1: ${sample.length} dossiers sélectionnés (1 par conseiller)`);
+            
+            // Phase 2: Compléter l'échantillon de manière équitable
+            const remaining = targetSize - sample.length;
+            if (remaining > 0) {
+                // Créer une liste des dossiers restants
+                const remainingDossiers = [];
+                Object.values(dossiersByConseiller).forEach(dossiers => {
+                    remainingDossiers.push(...dossiers);
+                });
+                
+                // Sélection aléatoire dans les dossiers restants
+                const additionalSample = Utils.getRandomElements(remainingDossiers, remaining);
+                sample.push(...additionalSample);
+                
+                Utils.debugLog(`Phase 2: ${additionalSample.length} dossiers supplémentaires sélectionnés`);
+            }
+        } else {
+            // Cas où targetSize < nombreConseillers
+            // Sélectionner des conseillers aléatoirement et prendre un dossier de chacun
+            const selectedConseillers = Utils.getRandomElements(conseillers, targetSize);
+            
+            selectedConseillers.forEach(conseiller => {
+                const dossiersDuConseiller = dossiersByConseiller[conseiller];
+                const randomDossier = dossiersDuConseiller[Math.floor(Math.random() * dossiersDuConseiller.length)];
+                sample.push(randomDossier);
+            });
+            
+            Utils.debugLog(`Échantillon réduit: ${sample.length} conseillers sélectionnés sur ${nombreConseillers}`);
         }
         
         return sample;
+    }
+
+    logConseillerDistribution(sample) {
+        const distribution = {};
+        sample.forEach(dossier => {
+            const conseiller = dossier.conseiller || 'Non assigné';
+            distribution[conseiller] = (distribution[conseiller] || 0) + 1;
+        });
+        
+        Utils.debugLog('=== RÉPARTITION PAR CONSEILLER DANS L\'ÉCHANTILLON ===');
+        Object.entries(distribution).forEach(([conseiller, count]) => {
+            Utils.debugLog(`${conseiller}: ${count} dossier(s)`);
+        });
+        
+        const conseillersCovered = Object.keys(distribution).length;
+        Utils.debugLog(`Total: ${conseillersCovered} conseiller(s) représenté(s) dans l'échantillon`);
     }
 
     launchControlInterface(controlType, selectedDossiers) {
