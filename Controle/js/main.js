@@ -8,6 +8,7 @@ import { ControlTypes } from './modules/controlTypes.js';
 import { DocumentController } from './modules/documentController.js';
 import { PersistenceManager } from './modules/persistenceManager.js';
 import { HistoryInterface } from './modules/historyInterface.js';
+import { MailManager } from './modules/mailManager.js';
 
 
 class DocumentControlApp {
@@ -28,6 +29,7 @@ class DocumentControlApp {
             this.modules.documentController = new DocumentController();
             this.modules.persistenceManager = new PersistenceManager();
             this.modules.historyInterface = new HistoryInterface();
+            this.modules.mailManager = new MailManager();
             
             // Exposer les modules globalement IMMÉDIATEMENT
             window.fileHandler = this.modules.fileHandler;
@@ -37,6 +39,7 @@ class DocumentControlApp {
             window.documentController = this.modules.documentController;
             window.persistenceManager = this.modules.persistenceManager;
             window.historyInterface = this.modules.historyInterface;
+            window.mailManager = this.modules.mailManager;
             
             Utils.debugLog('Modules exposés globalement');
             
@@ -50,6 +53,7 @@ class DocumentControlApp {
                 Utils.debugLog(`DocumentController global: ${window.documentController ? 'OK' : 'NON'}`);
                 Utils.debugLog(`PersistenceManager global: ${window.persistenceManager ? 'OK' : 'NON'}`);
                 Utils.debugLog(`HistoryInterface global: ${window.historyInterface ? 'OK' : 'NON'}`);
+                Utils.debugLog(`MailManager global: ${window.mailManager ? 'OK' : 'NON'}`);
             }, 100);
             
             Utils.debugLog('Application initialisée avec succès');
