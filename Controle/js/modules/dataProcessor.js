@@ -7,6 +7,9 @@ export class DataProcessor {
         this.columnMapping = {};
         this.allDossiers = [];
         this.filteredDossiers = [];
+
+        this.originalHeaders = [];
+        this.rawData = [];
         
         Utils.debugLog('DataProcessor: Constructor - propriétés initialisées');
         Utils.debugLog(`allDossiers défini: ${!!this.allDossiers}, longueur: ${this.allDossiers.length}`);
@@ -169,7 +172,11 @@ export class DataProcessor {
 
     processExcelData(jsonData, headers, file) {
         Utils.debugLog('=== DÉBUT TRAITEMENT DONNÉES ===');
-        
+
+         // NOUVEAU : Stocker les en-têtes originaux pour la configuration des colonnes
+        this.originalHeaders = [...headers];
+        this.rawData = [...jsonData];
+
         // Créer le mapping dynamique
         this.columnMapping = this.createColumnMapping(headers);
         Utils.debugLog('Mapping final: ' + JSON.stringify(this.columnMapping));
@@ -228,6 +235,55 @@ export class DataProcessor {
         
         // Notifier APRÈS avoir assigné les données
         this.notifyDataProcessed();
+    }
+
+    // NOUVEAU : Exposer les en-têtes originaux
+    getOriginalHeaders() {
+        return this.originalHeaders;
+    }
+
+    // NOUVEAU : Obtenir une valeur brute par index de colonne
+    getRawColumnValue(row, columnIndex) {
+        if (!row || columnIndex >= row.length || columnIndex < 0) {
+            return '';
+        }
+        
+        const value = row[columnIndex];
+        return value ? value.toString().trim() : '';
+    }
+
+    // NOUVEAU : Obtenir les données brutes complètes
+    getRawData() {
+        return this.rawData;
+    }
+
+    // NOUVEAU : Obtenir les informations sur une colonne par index
+    getColumnInfo(columnIndex) {
+        if (columnIndex < 0 || columnIndex >= this.originalHeaders.length) {
+            return null;
+        }
+        
+        return {
+            index: columnIndex,
+            header: this.originalHeaders[columnIndex],
+            isMapped: this.isColumnMapped(columnIndex),
+            mappedKey: this.getMappedKeyByIndex(columnIndex)
+        };
+    }
+
+    // NOUVEAU : Vérifier si une colonne est mappée
+    isColumnMapped(columnIndex) {
+        return Object.values(this.columnMapping).includes(columnIndex);
+    }
+
+    // NOUVEAU : Obtenir la clé mappée pour un index de colonne
+    getMappedKeyByIndex(columnIndex) {
+        for (const [key, index] of Object.entries(this.columnMapping)) {
+            if (index === columnIndex) {
+                return key;
+            }
+        }
+        return null;
     }
 
     processMontant(row, index) {
@@ -312,7 +368,9 @@ export class DataProcessor {
             detail: {
                 allDossiers: this.allDossiers,
                 filteredDossiers: this.filteredDossiers,
-                columnMapping: this.columnMapping
+                columnMapping: this.columnMapping,
+                originalHeaders: this.originalHeaders,
+                rawData: this.rawData
             }
         }));
         
