@@ -92,6 +92,10 @@ export class DocumentController {
             'CARTO_CLIENT': {
                 name: 'Carto Client',
                 description: 'Cartographie et classification des clients'
+            },
+            'MIS_A_JOUR': {
+                name: 'Mis à jour',
+                description: 'Contrôle de mise à jour documentaire pour clients existants'
             }
         };
         
@@ -206,16 +210,16 @@ export class DocumentController {
         const documentSets = {
             'LCB-FT': [1, 4, 7, 8, 12, 99], // FR, Carto Client, CNI, Justificatif Domicile, Zeendoc
             'FINANCEMENT': [4, 13, 15, 16, 17, 18, 99], // Harvest, Carto Opé, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
-            'CARTO_CLIENT': [4, 99], // Harvest, Zeendoc (FR et Profil Risques supprimés)
-            'OPERATION': [1, 2, 4, 6, 10, 11, 13, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
-            'NOUVEAU_CLIENT': [1, 2, 3, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'CARTO_CLIENT': [4,7, 8, 99], // Harvest, Zeendoc (FR et Profil Risques supprimés)
+            'OPERATION': [1, 2, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
+            'NOUVEAU_CLIENT': [1, 2, 3, 4, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
-            'REVUE_PERIODIQUE': [2, 3, 4, 99] // Profil Risques, Profil ESG, Carto Client, Zeendoc
+            'MIS_A_JOUR': [1, 2, 3, 4, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
         };
 
             if (controlType === 'OPERATION') {
-            let documents = [1, 2, 4, 6, 10, 11, 13, 99]; // Base + Carto Opération
+            let documents = [1, 2, 4, 6, 10, 11, 13, 19, 20, 99]; // Base + Carto Opération
             
             // Ajouter conditionnellement selon le type d'opération
             // NOTE: Dans une vraie implémentation, on récupérerait le type d'opération du dossier
@@ -374,17 +378,6 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'La signature du conseiller est-elle présente ?',
-                        type: 'boolean',
-                        required: true,
-                        help: 'Validation du profil par le conseiller',
-                        qualityCheck: {
-                            text: 'La signature atteste-t-elle de la validation du profil ?',
-                            help: 'Signature avec date de validation clairement indiquée',
-                            type: 'signature_conseiller'
-                        }
-                    },
-                    {
                         text: 'La signature de tous les clients est-elle présente ?',
                         type: 'boolean',
                         required: true,
@@ -472,18 +465,39 @@ export class DocumentController {
             },
             4: {
                 id: 4,
-                name: 'Harvest',
-                fullName: 'Système Harvest - Cartographie Client',
+                name: 'Carto Client',
+                fullName: 'Cartographie Client',
                 questions: [
                     {
-                        text: 'Est-ce que les informations sur la cartographie du client sont présentes dans Harvest ?',
+                        text: 'La cartographie client a-t-elle été réalisée ?',
                         type: 'boolean',
                         required: true,
-                        help: 'Vérifiez si les informations de cartographie client sont présentes dans Harvest',
+                        help: 'Vérifiez si la cartographie client a été effectuée, que ce soit sur papier ou dans Harvest',
                         skipIfNo: true
                     },
                     {
-                        text: 'Est-ce que toutes les informations générales du client sont bien remplies dans Harvest ?',
+                        text: 'Comment la cartographie a-t-elle été réalisée ?',
+                        type: 'carto_support',
+                        required: true,
+                        help: 'Indiquez si la cartographie a été faite directement dans Harvest ou sur papier puis saisie',
+                        options: ['Harvest', 'Papier']
+                    },
+                    {
+                        text: 'Les informations de la cartographie papier ont-elles bien été reportées dans Harvest ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez que toutes les informations de la cartographie papier ont été correctement saisies dans Harvest',
+                        showOnlyIf: {
+                            questionIndex: 1, // Question précédente (index 1)
+                            answer: 'Papier'
+                        },
+                        qualityCheck: {
+                            text: 'Le report des informations est-il complet et fidèle ?',
+                            help: 'Vérifiez que toutes les données de la cartographie papier sont présentes dans Harvest sans erreur'
+                        }
+                    },
+                    {
+                        text: 'Est-ce que toutes les autres informations générales du client sont bien remplies dans Harvest ?',
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez que les champs obligatoires du profil client sont complétés dans Harvest',
@@ -491,6 +505,22 @@ export class DocumentController {
                             text: 'Les informations sont-elles complètes et à jour ?',
                             help: 'Vérifiez la cohérence et l\'exhaustivité des données : nom, prénom, adresse, date de naissance, situation familiale, profession, etc.'
                         }
+                    },
+                    {
+                        text: 'La date est-elle présente ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Date de création',
+                        qualityCheck: {
+                            text: 'La date indiquée est-elle cohérente ?',
+                            help: 'Date récente et traçable'
+                        }
+                    },
+                    {
+                        text: 'La cartographie client précédente a-t-elle été archivée?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Présence du fichier archivé',
                     },
                     {
                         text: 'Est-ce que le patrimoine est-il connu ?',
@@ -634,33 +664,13 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'Est-ce que le document est entièrement complété ?',
+                        text: 'La date est-elle présente sur le document ?',
                         type: 'boolean',
                         required: true,
-                        help: 'Toutes les sections de la FIL renseignées : informations légales, tarifs, conditions',
+                        help: 'Date de création du profil ESG',
                         qualityCheck: {
-                            text: 'Toutes les mentions légales obligatoires sont-elles présentes et complètes ?',
-                            help: 'Vérification exhaustive : coordonnées, statuts, autorisations, tarification, conditions générales'
-                        }
-                    },
-                    {
-                        text: 'Les informations légales sont-elles à jour ?',
-                        type: 'boolean',
-                        required: true,
-                        help: 'Coordonnées, statuts juridiques, autorisations et agréments actualisés',
-                        qualityCheck: {
-                            text: 'Les informations correspondent-elles à la situation juridique actuelle de l\'établissement ?',
-                            help: 'Vérification : raison sociale, adresse siège, numéros d\'agrément, superviseurs'
-                        }
-                    },
-                    {
-                        text: 'La tarification est-elle clairement indiquée ?',
-                        type: 'boolean',
-                        required: true,
-                        help: 'Grille tarifaire présente, lisible et exhaustive',
-                        qualityCheck: {
-                            text: 'La tarification est-elle transparente et conforme aux obligations d\'information ?',
-                            help: 'Tarifs explicites, pas de frais cachés, conditions d\'application claires'
+                            text: 'La date indiquée est-elle cohérente ?',
+                            help: 'Date récente et traçable'
                         }
                     },
                     {
@@ -689,8 +699,8 @@ export class DocumentController {
             },
             6: {
                 id: 6,
-                name: 'LM Entrée en Relation',
-                fullName: 'Lettre de Mission d\'Entrée en Relation',
+                name: 'Lettre de Mission',
+                fullName: 'Lettre de Mission',
                 questions: [
                     {
                         text: 'Est-ce que le document est présent ?',
@@ -747,17 +757,6 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'La signature du conseiller est-elle présente ?',
-                        type: 'boolean',
-                        required: true,
-                        help: 'Engagement du conseiller sur la mission proposée',
-                        qualityCheck: {
-                            text: 'La signature formalise-t-elle l\'engagement de prestation de service ?',
-                            help: 'Signature avec identification claire du conseiller et de ses responsabilités',
-                            type: 'signature_conseiller'
-                        }
-                    },
-                    {
                         text: 'La signature de tous les clients est-elle présente ?',
                         type: 'boolean',
                         required: true,
@@ -769,14 +768,47 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'Si c\'est un produit CIF, la signature d\'un CIF est-elle présente ?',
+                        text: 'La signature du conseiller est-elle présente ?',
                         type: 'boolean',
                         required: true,
-                        help: 'Pour les services d\'investissement, signature obligatoire d\'un Conseiller en Investissements Financiers',
+                        help: 'Engagement du conseiller sur les services RTO proposés',
                         qualityCheck: {
-                            text: 'Le CIF est-il habilité pour les services proposés ?',
-                            help: 'Vérification carte professionnelle CIF, spécialisation, habilitations ORIAS',
-                            type: 'signature_cif'
+                            text: 'Le conseiller atteste-t-il de sa capacité à fournir les services RTO ?',
+                            help: 'Signature avec confirmation des habilitations et compétences',
+                            type: 'signature_conseiller'
+                        }
+                    },
+                     {
+                        text: 'L\'opération concerne-t-elle un produit CIF (Conseiller en Investissements Financiers) ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si l\'opération porte sur des instruments financiers nécessitant une habilitation CIF',
+                        followUp: {
+                            condition: 'Oui',
+                            question: {
+                                text: 'Est-ce que le conseiller est CIF ?',
+                                type: 'boolean',
+                                required: true,
+                                help: 'Vérifiez si le conseiller du dossier possède la certification CIF (Conseiller en Investissements Financiers)',
+                                followUp: {
+                                    condition: 'Non',
+                                    question: {
+                                        text: 'La signature d\'un CIF est-elle présente ?',
+                                        type: 'boolean',
+                                        required: true,
+                                        help: 'Si le conseiller n\'est pas CIF, un CIF habilité doit signer la convention',
+                                        followUp: {
+                                            condition: 'Oui',
+                                            question: {
+                                                text: 'Qui est le CIF signataire ?',
+                                                type: 'text',
+                                                required: true,
+                                                help: 'Nom et prénom du CIF qui a signé la convention'
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     },
                     {
@@ -968,7 +1000,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si la Convention de Réception et Transmission d\'Ordres est présente dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -998,23 +1031,14 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'Les conditions tarifaires sont-elles présentes et transparentes ?',
+                        text: 'La signature de tous les clients est-elle présente ?',
                         type: 'boolean',
                         required: true,
-                        help: 'Grille tarifaire complète et transparente pour les services RTO',
+                        help: 'Acceptation des conditions RTO par le client',
                         qualityCheck: {
-                            text: 'La tarification est-elle claire et exhaustive ?',
-                            help: 'Frais de courtage, droits de garde, commissions explicites sans frais cachés'
-                        }
-                    },
-                    {
-                        text: 'Les informations sur les risques sont-elles présentes ?',
-                        type: 'boolean',
-                        required: true,
-                        help: 'Document d\'information sur les risques (DISR) ou équivalent',
-                        qualityCheck: {
-                            text: 'L\'information sur les risques est-elle complète et compréhensible ?',
-                            help: 'Risques détaillés par catégorie d\'instruments avec exemples concrets'
+                            text: 'Le client confirme-t-il avoir compris les modalités et risques RTO ?',
+                            help: 'Signature avec accusé de réception des informations sur les risques',
+                            type: 'signature_clients'
                         }
                     },
                     {
@@ -1026,17 +1050,6 @@ export class DocumentController {
                             text: 'Le conseiller atteste-t-il de sa capacité à fournir les services RTO ?',
                             help: 'Signature avec confirmation des habilitations et compétences',
                             type: 'signature_conseiller'
-                        }
-                    },
-                    {
-                        text: 'La signature de tous les clients est-elle présente ?',
-                        type: 'boolean',
-                        required: true,
-                        help: 'Acceptation des conditions RTO par le client',
-                        qualityCheck: {
-                            text: 'Le client confirme-t-il avoir compris les modalités et risques RTO ?',
-                            help: 'Signature avec accusé de réception des informations sur les risques',
-                            type: 'signature_clients'
                         }
                     },
                     {
@@ -1185,7 +1198,7 @@ export class DocumentController {
                 fullName: 'Cartographie et Suivi des Opérations',
                 questions: [
                     {
-                        text: 'Les informations de l\'opération sont-elles présentes dans Harvest ?',
+                        text: 'La cartographie de l\'opération a-t-elle été réalisée ?',
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si les détails de l\'opération sont correctement saisis dans Harvest',
@@ -1630,6 +1643,253 @@ export class DocumentController {
                 }
             ]
         },
+        19: {
+            id: 19,
+            name: 'Déclaration d\'adéquation',
+            fullName: 'Déclaration d\'adéquation',
+            questions: [
+                {
+                    text: 'Est-ce que le document est présent ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si la Déclaration d\'adéquation est présente dans le dossier client',
+                    skipIfNo: true
+                },
+                {
+                    text: 'La date est-elle cohérente avec le bulletin de souscription ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'La date de la déclaration doit être antérieure ou égale à celle du bulletin de souscription',
+                    qualityCheck: {
+                        text: 'La chronologie des documents est-elle respectée ?',
+                        help: 'Vérifiez que la déclaration d\'adéquation précède bien la souscription'
+                    }
+                },
+                {
+                    text: 'Quel est le niveau de risque accepté par le client ?',
+                    type: 'risque_niveau',
+                    required: true,
+                    help: 'Sélectionnez le niveau de risque que le client a déclaré accepter (échelle de 1 à 7)',
+                    options: ['1', '2', '3', '4', '5', '6', '7']
+                },
+                {
+                    text: 'Quel est le niveau de risque de la proposition ?',
+                    type: 'risque_niveau',
+                    required: true,
+                    help: 'Sélectionnez le niveau de risque de la solution proposée au client (échelle de 1 à 7)',
+                    options: ['1', '2', '3', '4', '5', '6', '7'],
+                    qualityCheck: {
+                        text: 'Le niveau de risque de la proposition est-il cohérent avec celui accepté par le client ?',
+                        help: 'Le risque de la proposition ne doit pas dépasser significativement le niveau accepté par le client',
+                        type: 'risque_coherence'
+                    }
+                },
+                {
+                    text: 'Les montants brut/net et les frais (% et €) sont-ils présents ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence des montants bruts, nets et détail des frais en pourcentage et en euros',
+                    qualityCheck: {
+                        text: 'Tous les éléments financiers sont-ils clairement détaillés ?',
+                        help: 'Montant brut, net, frais en % et en €, impact sur la performance'
+                    }
+                },
+                {
+                    text: 'Le tableau performance et frais des supports est-il présent et complet ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence et l\'exhaustivité du tableau détaillant les performances et frais de chaque support',
+                    qualityCheck: {
+                        text: 'Le tableau contient-il toutes les informations obligatoires ?',
+                        help: 'Performances historiques, frais de gestion, frais d\'entrée/sortie pour chaque support'
+                    }
+                },
+                {
+                    text: 'Le client connaissait-il tous les produits proposés ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si le client avait une connaissance préalable de tous les produits de la proposition',
+                    followUp: {
+                        condition: 'Non',
+                        question: {
+                            text: 'Le document d\'évolution des connaissances produits a-t-il été rempli et signé ?',
+                            type: 'boolean',
+                            required: true,
+                            help: 'Vérifiez que le document de formation/information sur les nouveaux produits est complété (cases cochées) et signé par le client',
+                            qualityCheck: {
+                                text: 'Le document de formation est-il complet et correctement signé ?',
+                                help: 'Toutes les cases de formation cochées, signature client présente avec date'
+                            }
+                        }
+                    }
+                },
+                {
+                    text: 'Le profil ESG a-t-il été respecté ?',
+                    type: 'esg_respect',
+                    required: true,
+                    help: 'Vérifiez si la proposition respecte les préférences ESG du client',
+                    options: ['Oui', 'Non', 'Partiellement']
+                },
+                {
+                    text: 'Tous les DICI (Documents d\'Information Clés pour l\'Investisseur) sont-ils présents ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence de tous les DICI correspondant aux supports proposés',
+                    qualityCheck: {
+                        text: 'Les DICI correspondent-ils exactement aux supports proposés ?',
+                        help: 'Un DICI par support, versions à jour, informations cohérentes'
+                    }
+                },
+                {
+                    text: 'La signature du conseiller est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signature du conseiller validant l\'adéquation de la proposition',
+                    qualityCheck: {
+                        text: 'La signature du conseiller est-elle conforme ?',
+                        help: 'Manuscrite lisible OU DocuSign certifiée, nom correct, bien datée',
+                        type: 'signature_conseiller'
+                    }
+                },
+                {
+                    text: 'La signature de tous les clients est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signatures de tous les clients confirmant avoir pris connaissance de l\'adéquation',
+                    qualityCheck: {
+                        text: 'Toutes les signatures clients sont-elles conformes ?',
+                        help: 'Signatures distinctes, lisibles, correspondant aux identités',
+                        type: 'signature_clients'
+                    }
+                }
+            ]
+        },
+        20: {
+            id: 20,
+            name: 'Bulletin de souscription',
+            fullName: 'Bulletin de souscription',
+            questions: [
+                {
+                    text: 'Est-ce que le document est présent ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si le Bulletin de souscription est présent dans le dossier client',
+                    skipIfNo: true
+                },
+                {
+                    text: 'La date est-elle cohérente avec la déclaration d\'adéquation ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'La date du bulletin de souscription doit être postérieure ou égale à celle de la déclaration d\'adéquation',
+                    qualityCheck: {
+                        text: 'La chronologie des documents est-elle respectée ?',
+                        help: 'Vérifiez que le bulletin de souscription suit bien la déclaration d\'adéquation'
+                    }
+                },
+                {
+                    text: 'Le niveau de risque mentionné correspond-il à celui de la déclaration d\'adéquation ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la cohérence entre le niveau de risque du bulletin et celui validé dans la déclaration d\'adéquation',
+                    qualityCheck: {
+                        text: 'Le niveau de risque est-il identique dans les deux documents ?',
+                        help: 'Aucun écart entre déclaration d\'adéquation et bulletin de souscription'
+                    }
+                },
+                {
+                    text: 'Les montants de souscription correspondent-ils à ceux de la déclaration d\'adéquation ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la cohérence des montants entre les deux documents',
+                    qualityCheck: {
+                        text: 'Les montants sont-ils identiques ou justifiés si différents ?',
+                        help: 'Montants identiques ou écart documenté et justifié'
+                    }
+                },
+                {
+                    text: 'Les supports sélectionnés correspondent-ils exactement à ceux de la déclaration d\'adéquation ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que les supports choisis dans le bulletin correspondent à la proposition validée',
+                    qualityCheck: {
+                        text: 'La répartition des supports est-elle conforme à la déclaration ?',
+                        help: 'Supports identiques, répartition respectée, pas de modification non autorisée'
+                    }
+                },
+                {
+                    text: 'Les frais mentionnés sont-ils détaillés et cohérents ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence et la cohérence des frais (entrée, gestion, arbitrage) avec la déclaration d\'adéquation',
+                    qualityCheck: {
+                        text: 'Tous les frais sont-ils clairement indiqués et cohérents ?',
+                        help: 'Frais d\'entrée, de gestion, d\'arbitrage détaillés en % et en € si applicable'
+                    }
+                },
+                {
+                    text: 'Les modalités de versement sont-elles clairement indiquées ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence des modalités : montant, périodicité, mode de prélèvement',
+                    qualityCheck: {
+                        text: 'Les modalités de versement sont-elles complètes et précises ?',
+                        help: 'Montant initial, versements programmés, coordonnées bancaires, dates'
+                    }
+                },
+                {
+                    text: 'Les bénéficiaires sont-ils correctement désignés ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la désignation des bénéficiaires en cas de décès (contrats d\'assurance vie)',
+                    qualityCheck: {
+                        text: 'La clause bénéficiaire est-elle claire et conforme aux souhaits du client ?',
+                        help: 'Bénéficiaires nommément désignés ou clause type, hiérarchie respectée'
+                    }
+                },
+                {
+                    text: 'Le délai de rétractation est-il mentionné ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence de l\'information sur le délai de rétractation légal',
+                    qualityCheck: {
+                        text: 'L\'information sur la rétractation est-elle complète et conforme ?',
+                        help: 'Délai de 14 jours calendaires, modalités d\'exercice, conséquences'
+                    }
+                },
+                {
+                    text: 'Toutes les mentions légales obligatoires sont-elles présentes ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence de toutes les mentions réglementaires obligatoires',
+                    qualityCheck: {
+                        text: 'Les mentions légales sont-elles complètes et à jour ?',
+                        help: 'Mentions CNIL, médiateur, autorités de contrôle, garanties, fiscalité'
+                    }
+                },
+                {
+                    text: 'La signature du conseiller est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signature du conseiller attestant de la conformité du bulletin',
+                    qualityCheck: {
+                        text: 'La signature du conseiller est-elle conforme ?',
+                        help: 'Manuscrite lisible OU DocuSign certifiée, nom correct, bien datée',
+                        type: 'signature_conseiller'
+                    }
+                },
+                {
+                    text: 'La signature de tous les clients est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Signatures de tous les souscripteurs confirmant leur engagement',
+                    qualityCheck: {
+                        text: 'Toutes les signatures clients sont-elles conformes ?',
+                        help: 'Signatures distinctes, lisibles, correspondant aux identités des souscripteurs',
+                        type: 'signature_clients'
+                    }
+                }
+            ]
+        },
             // NOUVEAU : Tuile Zeendoc pour tous les contrôles
             99: {
                 id: 99,
@@ -1644,7 +1904,8 @@ export class DocumentController {
                         qualityCheck: {
                             text: 'Tous les documents obligatoires sont-ils archivés dans Zeendoc ?',
                             help: 'Vérification exhaustive : FR, profils, CNI, justificatifs, contrats, etc.'
-                        }
+                        },
+                        skipIfNo: true
                     },
                     {
                         text: 'Les documents sont-ils affectés au bon client dans Zeendoc ?',
@@ -1744,12 +2005,19 @@ export class DocumentController {
         const currentQuestion = questions[this.currentQuestionIndex];
         
         // Vérifier si on doit passer toutes les questions suivantes (document absent)
-        if (currentQuestion.skipIfNo) {
+        if (currentQuestion.skipIfNo || currentQuestion.skipIfNC) {
             const lastResponse = this.documentResponses[this.currentDocument][this.currentQuestionIndex];
-            if (lastResponse && lastResponse.answer === 'Non') {
-                // Document absent, marquer le contrôle comme terminé directement
-                this.completeDocument();
-                return;
+            if (lastResponse) {
+                // Document absent (skipIfNo)
+                if (currentQuestion.skipIfNo && lastResponse.answer === 'Non') {
+                    this.completeDocument();
+                    return;
+                }
+                // Document non concerné (skipIfNC) - NOUVEAU
+                if (currentQuestion.skipIfNC && lastResponse.answer === 'NC') {
+                    this.completeDocument();
+                    return;
+                }
             }
         }
         
@@ -1770,13 +2038,37 @@ export class DocumentController {
                 this.documentsState[this.currentDocument].totalQuestions = questions.length;
             }
         }
-        
-        if (this.currentQuestionIndex < questions.length - 1) {
+
+            if (this.currentQuestionIndex < questions.length - 1) {
             this.currentQuestionIndex++;
+            
+            // NOUVEAU : Vérifier si la question suivante doit être affichée conditionnellement
+            const nextQuestion = questions[this.currentQuestionIndex];
+            if (nextQuestion.showOnlyIf) {
+                const shouldShow = this.shouldShowConditionalQuestion(nextQuestion.showOnlyIf);
+                if (!shouldShow) {
+                    // Passer à la question suivante récursivement
+                    this.moveToNextQuestion();
+                    return;
+                }
+            }
+            
             this.updateQuestionInterface();
         } else {
             this.completeDocument();
         }
+    }
+
+    // NOUVELLE méthode pour vérifier si une question conditionnelle doit être affichée
+    shouldShowConditionalQuestion(condition) {
+        const { questionIndex, answer } = condition;
+        const targetResponse = this.documentResponses[this.currentDocument][questionIndex];
+        
+        if (!targetResponse) {
+            return false; // Si pas de réponse à la question de référence, ne pas afficher
+        }
+        
+        return targetResponse.answer === answer;
     }
 
     // Méthode utilitaire pour récupérer les informations des documents (mise à jour avec Harvest)
@@ -1785,9 +2077,9 @@ export class DocumentController {
             1: 'FR',
             2: 'Profil Risques',
             3: 'Profil ESG',
-            4: 'Harvest', // MODIFIÉ : était 'Carto Client'
+            4: 'Carto Client',
             5: 'FIL',
-            6: 'LM Entrée en Relation',
+            6: 'Lettre de Mission',
             7: 'CNI',
             8: 'Justificatif Domicile',
             9: 'Etude',
@@ -1800,6 +2092,8 @@ export class DocumentController {
             16: 'Synthèse + Adéq.',
             17: 'Fiche conseil',    
             18: 'Bon pour accord',
+            19: 'Déclaration d\'adéquation',
+            20: 'Bulletin de souscription',
             99: 'Zeendoc'
         };
         return documentNames[docId] || `Document ${docId}`;
@@ -2024,6 +2318,55 @@ export class DocumentController {
             </div>
         `;
     }
+
+    if (questionData.type === 'risque_niveau') {
+        return `
+            <div class="response-group risque-niveau-group">
+                <label>Niveau de risque (1 = très prudent, 7 = très dynamique) :</label>
+                <div class="radio-group">
+                    ${questionData.options.map(option => `
+                        <label class="radio-option risque-level-${option}">
+                            <input type="radio" name="response" value="${option}">
+                            <span>Niveau ${option}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    if (questionData.type === 'esg_respect') {
+        return `
+            <div class="response-group esg-respect-group">
+                <label>Respect du profil ESG :</label>
+                <div class="radio-group">
+                    ${questionData.options.map(option => `
+                        <label class="radio-option esg-${option.toLowerCase()}">
+                            <input type="radio" name="response" value="${option}">
+                            <span>${option}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // NOUVEAU : Gestion du type carto_support
+        if (questionData.type === 'carto_support') {
+            return `
+                <div class="response-group carto-support-group">
+                    <label>Support de réalisation :</label>
+                    <div class="radio-group">
+                        ${questionData.options.map(option => `
+                            <label class="radio-option">
+                                <input type="radio" name="response" value="${option}">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
         if (questionData.type === 'text') {
             return `
@@ -2269,6 +2612,36 @@ export class DocumentController {
                     </div>
                 </div>
             `;
+        } else if (qualityCheck.type === 'risque_coherence') {
+            return `
+                <div class="response-group quality-group" style="display: none;">
+                     <label>
+                         ${qualityCheck.text}
+                        <span class="help-icon" onclick="window.documentController?.toggleHelp('quality-help')" title="Aide">💡</span>
+                        <div id="quality-help" class="help-bubble" style="display: none;">
+                            ${qualityCheck.help}
+                        </div>
+                    </label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="quality" value="Cohérent">
+                            <span>Cohérent (écart ≤ 1 niveau)</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="quality" value="Acceptable avec justification">
+                            <span>Acceptable avec justification (écart de 2 niveaux)</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="quality" value="Non cohérent">
+                            <span>Non cohérent (écart > 2 niveaux)</span>
+                        </label>
+                    </div>
+                    <div class="justification-field" style="display: none; margin-top: 10px;">
+                        <label>Justification de l'écart de risque :</label>
+                        <textarea name="risk-justification" rows="3" placeholder="Expliquer pourquoi l'écart de risque est acceptable..."></textarea>
+                    </div>
+                </div>
+            `;
         } else if (qualityCheck.type === 'signature_cif') {
             return `
                 <div class="response-group quality-group" style="display: none;">
@@ -2454,6 +2827,14 @@ export class DocumentController {
             return response;
         }
 
+        if (questionData.type === 'carto_support') {
+            const cartoSupportRadio = document.querySelector('input[name="response"]:checked');
+            if (cartoSupportRadio) {
+                response.answer = cartoSupportRadio.value;
+            }
+            return response;
+        }
+
         if (questionData.type === 'text') {
             const textInput = document.getElementById('text-response');
             if (textInput) {
@@ -2581,6 +2962,13 @@ export class DocumentController {
             return true;
         }
 
+        if (questionData.type === 'carto_support') {
+            if (!response.answer) {
+                Utils.showNotification('Veuillez sélectionner le support de réalisation', 'error');
+                return false;
+            }
+            return true;
+        }
 
         // Validation spécifique pour les noms de CIF
         if (questionData.text.includes('CIF signataire')) {
@@ -2705,14 +3093,26 @@ export class DocumentController {
         const exemptQuestions = [
             'Est-ce que le conseiller est CIF ?',
             'Est-ce que le document est présent ?', // Déjà géré par skipIfNo mais au cas où
-            'Est-ce que les informations sur la cartographie du client sont présentes dans Harvest ?',
-            'Est-ce que toutes les informations générales du client sont bien remplies dans Harvest ?',
+            'La cartographie client a-t-elle été réalisée ?',
+            'La cartographie de l\'opération a-t-elle été réalisée ?',
+            'Tous les documents sont-ils bien ajoutés dans Zeendoc ?',
             'Est-ce que le patrimoine est-il connu ?',
-            'Est-ce que les revenus sont-ils connus ?'
+            'Est-ce que les revenus sont-ils connus ?',
+            'Le client connaissait-il tous les produits proposés ?'
         ];
 
         // Vérifier si c'est une question exemptée
         if (exemptQuestions.includes(questionData.text)) {
+            return true;
+        }
+
+        // NOUVEAU : Cas spécial pour ESG "Partiellement" 
+        if (questionData.type === 'esg_respect' && response.answer === 'Partiellement') {
+            return true;
+        }
+
+        // Questions avec skipIfNC qui ne nécessitent pas de justification pour "N/C"
+        if (questionData.skipIfNC && response.answer === 'NC') {
             return true;
         }
 
@@ -2724,7 +3124,8 @@ export class DocumentController {
         // Questions de type "document_type", "patrimoine_tranche", etc. qui ne sont pas des conformités
         const exemptTypes = [
             'document_type', 
-            'patrimoine_tranche', 
+            'patrimoine_tranche',
+            'carto_support', 
             'revenus_tranche', 
             'vigilance_level',
             'gda_status',
@@ -2733,7 +3134,9 @@ export class DocumentController {
             'operation_status',
             'rachat_motif',
             'origin_type',
-            'suspicion_declaration'
+            'suspicion_declaration',
+            'risque_niveau',
+            'esg_respect'
         ];
 
         if (exemptTypes.includes(questionData.type)) {
@@ -3607,7 +4010,7 @@ generateManualResultsTable(results) {
     }
 
     determineOperationDocuments(dossier) {
-    const baseDocuments = [1, 2, 4, 6, 10, 11, 13, 99]; // Documents de base pour toute opération
+    const baseDocuments = [1, 2, 4, 6, 10, 11, 13, 19, 20, 99]; // Documents de base pour toute opération
     
     // Analyser le type d'opération depuis les données du dossier
     const typeOperation = this.extractOperationType(dossier);
