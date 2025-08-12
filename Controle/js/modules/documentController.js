@@ -212,7 +212,7 @@ export class DocumentController {
             'FINANCEMENT': [4, 13, 15, 16, 17, 18, 99], // Harvest, Carto Opé, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
             'CARTO_CLIENT': [4,7, 8, 99], // Harvest, Zeendoc (FR et Profil Risques supprimés)
             'OPERATION': [1, 2, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
-            'NOUVEAU_CLIENT': [1, 2, 3, 4, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'NOUVEAU_CLIENT': [1, 2, 3, 4, 5, 6, 7, 8, 10, 21, 99], // FR, Profil Risques, Profil ESG, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
             'MIS_A_JOUR': [1, 2, 3, 4, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
@@ -1890,6 +1890,90 @@ export class DocumentController {
                 }
             ]
         },
+        21: {
+            id: 21,
+            name: 'Harvest',
+            fullName: 'Saisie des informations client dans Harvest',
+            questions: [
+                {
+                    text: 'Les informations client sont-elles correctement saisies dans Harvest ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que toutes les informations obligatoires du client sont présentes et à jour dans Harvest',
+                    skipIfNo: true
+                },
+                {
+                    text: 'Y a-t-il au moins un objectif renseigné ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez qu\'au moins un objectif de placement est défini pour le client dans Harvest',
+                    qualityCheck: {
+                        text: 'L\'objectif défini est-il cohérent avec le profil client ?',
+                        help: 'L\'objectif doit correspondre à l\'âge, la situation et les besoins exprimés du client'
+                    }
+                },
+                {
+                    text: 'La classification MIF est-elle renseignée ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que la classification MiFID (client de détail, professionnel, contrepartie éligible) est correctement attribuée',
+                    qualityCheck: {
+                        text: 'La classification MIF correspond-elle au profil du client ?',
+                        help: 'Vérifiez la cohérence entre la classification et les caractéristiques du client (patrimoine, expérience, activité)'
+                    }
+                },
+                {
+                    text: 'La date d\'entrée en relation est-elle renseignée ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que la date de première entrée en relation avec le client est correctement saisie',
+                    qualityCheck: {
+                        text: 'La date d\'entrée en relation est-elle cohérente ?',
+                        help: 'La date doit correspondre à la première signature ou au premier contact commercial'
+                    }
+                },
+                {
+                    text: 'La capacité juridique est-elle renseignée ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que la capacité juridique du client (majeur, mineur émancipé, tutelle, etc.) est correctement indiquée',
+                    qualityCheck: {
+                        text: 'La capacité juridique est-elle correctement qualifiée ?',
+                        help: 'Vérification de la cohérence avec l\'âge et la situation juridique du client'
+                    }
+                },
+                {
+                    text: 'La profession est-elle renseignée ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que l\'activité professionnelle actuelle du client est correctement saisie',
+                    qualityCheck: {
+                        text: 'La profession renseignée est-elle cohérente avec les revenus déclarés ?',
+                        help: 'Cohérence entre l\'activité professionnelle et le niveau de revenus/patrimoine'
+                    }
+                },
+                {
+                    text: 'L\'horizon de placement est-il renseigné ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que l\'horizon de placement du client (court, moyen, long terme) est défini',
+                    qualityCheck: {
+                        text: 'L\'horizon de placement est-il cohérent avec l\'âge et les objectifs ?',
+                        help: 'L\'horizon doit être adapté à l\'âge du client et aux objectifs de placement exprimés'
+                    }
+                },
+                {
+                    text: 'Toutes les informations obligatoires sont-elles complètes ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérification globale que tous les champs obligatoires dans Harvest sont remplis',
+                    qualityCheck: {
+                        text: 'L\'ensemble des informations forment-elles un profil client cohérent ?',
+                        help: 'Cohérence globale entre tous les éléments saisis (âge, situation, objectifs, capacité financière)'
+                    }
+                }
+            ]
+        },
             // NOUVEAU : Tuile Zeendoc pour tous les contrôles
             99: {
                 id: 99,
@@ -1917,16 +2001,6 @@ export class DocumentController {
                             help: 'Nom, prénom, numéro de dossier correspondent au client contrôlé'
                         }
                     },
-                    {
-                        text: 'Les documents sont-ils correctement indexés et classés ?',
-                        type: 'boolean',
-                        required: true,
-                        help: 'Vérifiez que les documents sont bien indexés avec les bonnes métadonnées dans Zeendoc',
-                        qualityCheck: {
-                            text: 'L\'indexation permet-elle une recherche et un classement efficaces ?',
-                            help: 'Types de documents, dates, catégories correctement renseignés'
-                        }
-                    }
                 ]
             }
         };
@@ -2094,6 +2168,7 @@ export class DocumentController {
             18: 'Bon pour accord',
             19: 'Déclaration d\'adéquation',
             20: 'Bulletin de souscription',
+            21: 'Harvest',
             99: 'Zeendoc'
         };
         return documentNames[docId] || `Document ${docId}`;
