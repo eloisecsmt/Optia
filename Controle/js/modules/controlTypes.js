@@ -151,6 +151,46 @@ export class ControlTypes {
                     'Première opération conforme',
                     'Classification risque initiale'
                 ]
+            },
+            'MIS_A_JOUR': {
+                name: 'Mis à jour',
+                description: 'Contrôle de mise à jour documentaire pour clients existants',
+                frequency: 'Mensuel',
+                sampleSize: 15,
+                priority: 'medium',
+                criteria: {
+                    requiredDocuments: [
+                        'Fiche de Renseignements (FR) mise à jour',
+                        'Profil de Risques Client actualisé',
+                        'Profil ESG Client révisé',
+                        'Cartographie Client (Harvest) à jour',
+                        'Fiche d\'Information Légale (FIL) récente',
+                        'Lettre de Mission révisée si nécessaire',
+                        'Carte Nationale d\'Identité valide',
+                        'Justificatif de Domicile récent',
+                        'Relevé d\'Identité Bancaire (RIB) actuel',
+                        'Archivage Zeendoc complet'
+                    ],
+                    montantMinimum: 0,
+                    excludeDomaines: [],
+                    includePPE: false,
+                    nouveauxClients: false, // IMPORTANT : Exclut les nouveaux clients
+                    clientsExistants: true // NOUVEAU : Critère spécifique pour les clients existants
+                },
+                checklistItems: [
+                    'Vérification de la validité des documents existants',
+                    'Mise à jour des informations client si nécessaire',
+                    'Renouvellement des documents expirés',
+                    'Actualisation du profil de risque (< 24 mois)',
+                    'Révision du profil ESG selon évolution réglementaire',
+                    'Cohérence des informations avec la situation actuelle',
+                    'Validation des nouvelles pièces d\'identité si fournies',
+                    'Contrôle de la validité des justificatifs de domicile',
+                    'Vérification de l\'archivage Zeendoc des mises à jour',
+                    'Traçabilité des modifications apportées',
+                    'Conformité avec les obligations de révision périodique',
+                    'Documentation des raisons de mise à jour'
+                ]
             }
         };
     }
@@ -262,6 +302,14 @@ export class ControlTypes {
                 if (montantValue < control.criteria.montantMinimum) return false;
             }
 
+            if (control.criteria.clientsExistants) {
+                const nouveauClient = (dossier.nouveauClient || '').toLowerCase();
+                // Exclure les nouveaux clients pour le contrôle "Mis à jour"
+                if (['nouveau', 'oui', 'true', '1', 'yes'].includes(nouveauClient)) {
+                    return false;
+                }
+            }
+
             // Critère domaines exclus
             if (control.criteria.excludeDomaines.length > 0) {
                 if (control.criteria.excludeDomaines.includes(dossier.domaine)) return false;
@@ -323,33 +371,65 @@ export class ControlTypes {
     }
 
     selectRandomSample(eligibleDossiers, control) {
-        let sample = [];
-        
-        // NOUVEAU : Stratégie de sélection avec représentativité par conseiller
+         let sample = [];
+    
         if (control.criteria.nouveauxClients) {
-            // Pour les nouveaux clients, garder la logique existante mais avec représentativité
-            const nouveaux = eligibleDossiers.filter(d => 
-                d.nouveauClient && d.nouveauClient.toLowerCase() === 'oui'
-            );
-            const anciens = eligibleDossiers.filter(d => 
-                !d.nouveauClient || d.nouveauClient.toLowerCase() !== 'oui'
-            );
+            // Pour les nouveaux clients, garder la logique existante
+            const nouveaux = eligibleDossiers.filter(d => {
+                const nouveauClient = (d.nouveauClient || '').toLowerCase();
+                return ['nouveau', 'oui', 'true', '1', 'yes'].includes(nouveauClient);
+            });
             
-            // Sélection avec représentativité par conseiller
-            const nouveauxSelected = this.selectWithConseillerRepresentation(nouveaux, Math.min(nouveaux.length, control.sampleSize));
-            const remaining = control.sampleSize - nouveauxSelected.length;
-            const anciensSelected = remaining > 0 ? this.selectWithConseillerRepresentation(anciens, remaining) : [];
+            sample = this.selectWithConseillerRepresentation(nouveaux, Math.min(nouveaux.length, control.sampleSize));
             
-            sample = [...nouveauxSelected, ...anciensSelected];
+            Utils.debugLog(`Échantillon "Nouveaux clients": ${sample.length} dossiers sélectionnés`);
+            
+        } else if (control.criteria.clientsExistants) {
+            // NOUVEAU : Pour les clients existants (contrôle MIS_A_JOUR)
+            const existants = eligibleDossiers.filter(d => {
+                const nouveauClient = (d.nouveauClient || '').toLowerCase();
+                return !['nouveau', 'oui', 'true', '1', 'yes'].includes(nouveauClient);
+            });
+            
+            sample = this.selectWithConseillerRepresentation(existants, Math.min(existants.length, control.sampleSize));
+            
+            Utils.debugLog(`Échantillon "Clients existants": ${sample.length} dossiers sélectionnés`);
+            
         } else {
-            // Sélection avec représentativité par conseiller pour tous les autres contrôles
+            // Sélection standard avec représentativité par conseiller
             sample = this.selectWithConseillerRepresentation(eligibleDossiers, control.sampleSize);
+            
+            Utils.debugLog(`Échantillon standard: ${sample.length} dossiers sélectionnés`);
         }
         
-        Utils.debugLog(`Échantillon sélectionné: ${sample.length} dossiers avec représentativité par conseiller`);
         this.logConseillerDistribution(sample);
+        this.logClientTypeDistribution(sample); // NOUVEAU : Log de la répartition par type de client
         
         return sample;
+    }
+
+    logClientTypeDistribution(sample) {
+        const distribution = {
+            nouveaux: 0,
+            existants: 0,
+            nonRenseigne: 0
+        };
+        
+        sample.forEach(dossier => {
+            const nouveauClient = (dossier.nouveauClient || '').toLowerCase();
+            if (['nouveau', 'oui', 'true', '1', 'yes'].includes(nouveauClient)) {
+                distribution.nouveaux++;
+            } else if (nouveauClient === '' || nouveauClient === 'non' || nouveauClient === 'false') {
+                distribution.existants++;
+            } else {
+                distribution.nonRenseigne++;
+            }
+        });
+        
+        Utils.debugLog('=== RÉPARTITION PAR TYPE DE CLIENT DANS L\'ÉCHANTILLON ===');
+        Utils.debugLog(`Nouveaux clients: ${distribution.nouveaux}`);
+        Utils.debugLog(`Clients existants: ${distribution.existants}`);
+        Utils.debugLog(`Non renseigné: ${distribution.nonRenseigne}`);
     }
 
     selectWithConseillerRepresentation(dossiers, targetSize) {
