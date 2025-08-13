@@ -53,7 +53,7 @@ export class DataProcessor {
             'etatBO': ['état bo', 'etat bo', 'statut bo', 'état', 'etat', 'statut'],
             'codeDossier': ['code dossier', 'n° dossier', 'numero dossier', 'id dossier', 'dossier'],
             'ppe': ['ppe', 'personne politiquement exposée', 'politiquement exposé'],
-            'dateEnvoi': ['date envoi', 'envoi', 'date transmission', 'expédition'],
+            'dateEnvoi': ['date d\'envoi', 'envoi', 'date transmission', 'expédition'],
             'dateValidation': ['date validation', 'validation', 'validé', 'approuvé']
         };
 
