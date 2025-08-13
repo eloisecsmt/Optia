@@ -104,29 +104,114 @@ export class Utils {
         return value.toString();
     }
 
+    // Dans utils.js - améliorer la méthode formatDate
     static formatDate(value) {
         if (!value) return '';
         
-        // Si c'est un nombre Excel (date)
-        if (typeof value === 'number') {
-            try {
-                const date = XLSX.SSF.parse_date_code(value);
-                return `${date.d.toString().padStart(2, '0')}/${date.m.toString().padStart(2, '0')}/${date.y}`;
-            } catch (e) {
-                return value.toString();
+        // Nettoyer la valeur
+        const cleanValue = typeof value === 'string' ? value.trim() : value;
+        if (!cleanValue) return '';
+        
+        Utils.debugLog(`formatDate input: "${cleanValue}" (type: ${typeof cleanValue})`);
+        
+        try {
+            let date = null;
+            
+            // 1. Si c'est un nombre Excel (25000-50000)
+            if (typeof cleanValue === 'number' && cleanValue > 25000 && cleanValue < 50000) {
+                date = new Date((cleanValue - 25569) * 86400 * 1000);
+                Utils.debugLog(`Date depuis nombre Excel: ${date}`);
             }
+            
+            // 2. Si c'est une chaîne, essayer différents formats
+            else if (typeof cleanValue === 'string') {
+                // Format MM/DD/YYYY vs DD/MM/YYYY - traitement spécifique Excel
+                if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(cleanValue)) {
+                    const parts = cleanValue.split('/');
+                    let year = parseInt(parts[2]);
+                    
+                    // Gestion des années sur 2 chiffres
+                    if (year < 100) {
+                        year += year < 50 ? 2000 : 1900;
+                    }
+                    
+                    const num1 = parseInt(parts[0]);
+                    const num2 = parseInt(parts[1]);
+                    
+                    // Excel nous donne toujours du MM/DD/YYYY (format US)
+                    // num1 = mois, num2 = jour
+                    date = new Date(year, num1 - 1, num2);
+                    Utils.debugLog(`Format Excel MM/DD/YYYY: "${cleanValue}" -> mois=${num1}, jour=${num2}, année=${year} = ${date.toLocaleDateString('fr-FR')}`);
+                }
+                
+                // Format DD-MM-YYYY
+                else if (/^\d{1,2}-\d{1,2}-\d{2,4}$/.test(cleanValue)) {
+                    const parts = cleanValue.split('-');
+                    let year = parseInt(parts[2]);
+                    
+                    if (year < 100) {
+                        year += year < 50 ? 2000 : 1900;
+                    }
+                    
+                    date = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    Utils.debugLog(`Date depuis DD-MM-YYYY: ${date}`);
+                }
+                
+                // Format YYYY-MM-DD (ISO)
+                else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleanValue)) {
+                    date = new Date(cleanValue);
+                    Utils.debugLog(`Date depuis YYYY-MM-DD: ${date}`);
+                }
+                
+                // Format DD.MM.YYYY
+                else if (/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(cleanValue)) {
+                    const parts = cleanValue.split('.');
+                    let year = parseInt(parts[2]);
+                    
+                    if (year < 100) {
+                        year += year < 50 ? 2000 : 1900;
+                    }
+                    
+                    date = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    Utils.debugLog(`Date depuis DD.MM.YYYY: ${date}`);
+                }
+                
+                // Format texte Excel (ex: "14/08/2024", "14 août 2024")
+                else {
+                    // Essayer le parsing natif JavaScript
+                    date = new Date(cleanValue);
+                    Utils.debugLog(`Date depuis parsing natif: ${date}`);
+                    
+                    // Si ça échoue, essayer avec Date.parse
+                    if (isNaN(date.getTime())) {
+                        const timestamp = Date.parse(cleanValue);
+                        if (!isNaN(timestamp)) {
+                            date = new Date(timestamp);
+                            Utils.debugLog(`Date depuis Date.parse: ${date}`);
+                        }
+                    }
+                }
+            }
+            
+            // 3. Si on a une date valide, la formater
+            if (date && !isNaN(date.getTime())) {
+                // Vérifier que la date est raisonnable (entre 1900 et 2100)
+                const year = date.getFullYear();
+                if (year >= 1900 && year <= 2100) {
+                    const formatted = date.toLocaleDateString('fr-FR');
+                    Utils.debugLog(`Date formatée: ${formatted}`);
+                    return formatted;
+                }
+            }
+            
+            Utils.debugLog(`Échec du parsing de date pour: ${cleanValue}`);
+            
+        } catch (error) {
+            Utils.debugLog(`Erreur formatDate: ${error.message}`);
         }
         
-        // Si c'est déjà une chaîne de date
-        if (typeof value === 'string') {
-            // Essayer de parser et reformater
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-                return date.toLocaleDateString('fr-FR');
-            }
-        }
-        
-        return value.toString();
+        // Si tout échoue, retourner la valeur originale
+        return String(cleanValue);
     }
 
     static showSection(sectionId) {
