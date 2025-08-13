@@ -2200,41 +2200,336 @@ export class DocumentController {
         const infoContainer = document.getElementById('dossier-info');
         if (!infoContainer) return;
 
+        // Récupérer les statuts de contrôle pour ce dossier
+        const dossierStatuses = this.getDossierStatuses(this.currentDossier);
+        const statusBadges = this.generateStatusBadges(dossierStatuses);
+        
+        // Extraire le contexte d'opération si applicable
+        const operationContext = this.getOperationContext();
+
         infoContainer.innerHTML = `
             <div class="dossier-info-card">
                 <div class="dossier-info-header">
-                    <h3>Informations du dossier en contrôle</h3>
+                    <h3>📋 Informations du dossier en contrôle</h3>
+                    ${statusBadges ? `<div class="status-badges">${statusBadges}</div>` : ''}
                 </div>
+                
                 <div class="dossier-info-body">
-                    <div class="dossier-details">
-                        <div class="detail-item client">
-                            <span class="label">Client</span>
-                            <span class="value">${this.currentDossier.client}</span>
-                        </div>
-                        <div class="detail-item code">
-                            <span class="label">Code</span>
-                            <span class="value">${this.currentDossier.codeDossier || 'Non renseigné'}</span>
-                        </div>
-                        <div class="detail-item conseiller">
-                            <span class="label">Conseiller</span>
-                            <span class="value">${this.currentDossier.conseiller || 'Non renseigné'}</span>
-                        </div>
-                        <div class="detail-item montant">
-                            <span class="label">Montant</span>
-                            <span class="value">${this.currentDossier.montant || 'Non renseigné'}</span>
-                        </div>
-                        <div class="detail-item domaine">
-                            <span class="label">Domaine</span>
-                            <span class="value">${this.currentDossier.domaine || 'Non renseigné'}</span>
-                        </div>
-                        <div class="detail-item nouveau">
-                            <span class="label">Nouveau</span>
-                            <span class="value">${this.currentDossier.nouveauClient || 'Non renseigné'}</span>
+                    <!-- Section Client Principal -->
+                    <div class="info-section client-section">
+                        <h4>👤 Informations Client</h4>
+                        <div class="dossier-details">
+                            <div class="detail-item client">
+                                <span class="label">Nom client</span>
+                                <span class="value primary">${this.currentDossier.client || 'Non spécifié'}</span>
+                            </div>
+                            
+                            <div class="detail-item reference">
+                                <span class="label">Référence</span>
+                                <span class="value">${this.currentDossier.reference || 'Non renseigné'}</span>
+                            </div>
+                            
+                            <div class="detail-item nouveau-client">
+                                <span class="label">Nouveau client</span>
+                                <span class="value ${this.getBadgeClass(this.currentDossier.nouveauClient)}">
+                                    ${this.currentDossier.nouveauClient || 'Non renseigné'}
+                                    ${this.currentDossier.nouveauClient?.toLowerCase() === 'oui' ? ' ⭐' : ''}
+                                </span>
+                            </div>
+                            
+                            <div class="detail-item ppe">
+                                <span class="label">PPE</span>
+                                <span class="value ${this.getPPEClass(this.currentDossier.ppe)}">
+                                    ${this.currentDossier.ppe || 'Non renseigné'}
+                                    ${this.currentDossier.ppe?.toLowerCase() === 'oui' ? ' 🔒' : ''}
+                                </span>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Section Dossier -->
+                    <div class="info-section dossier-section">
+                        <h4>📁 Informations Dossier</h4>
+                        <div class="dossier-details">
+                            <div class="detail-item code">
+                                <span class="label">Code dossier</span>
+                                <span class="value code">${this.currentDossier.codeDossier || 'Non renseigné'}</span>
+                            </div>
+                            
+                            <div class="detail-item domaine">
+                                <span class="label">Domaine</span>
+                                <span class="value badge ${this.getBadgeClass(this.currentDossier.domaine)}">
+                                    ${this.currentDossier.domaine || 'Non renseigné'}
+                                </span>
+                            </div>
+                            
+                            <div class="detail-item contrat">
+                                <span class="label">Contrat</span>
+                                <span class="value">${this.currentDossier.contrat || 'Non renseigné'}</span>
+                            </div>
+                            
+                            <div class="detail-item fournisseur">
+                                <span class="label">Fournisseur</span>
+                                <span class="value">${this.currentDossier.fournisseur || 'Non renseigné'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section Opération -->
+                    <div class="info-section operation-section">
+                        <h4>💰 Informations Opération</h4>
+                        <div class="dossier-details">
+                            <div class="detail-item montant">
+                                <span class="label">Montant</span>
+                                <span class="value montant">${this.formatMontant(this.currentDossier.montant)}</span>
+                            </div>
+                            
+                            <div class="detail-item type-acte">
+                                <span class="label">Type d'acte</span>
+                                <span class="value">${this.currentDossier.typeActe || 'Non renseigné'}</span>
+                            </div>
+                            
+                            <div class="detail-item etat-bo">
+                                <span class="label">État BO</span>
+                                <span class="value badge ${this.getEtatBOClass(this.currentDossier.etatBO)}">
+                                    ${this.currentDossier.etatBO || 'Non renseigné'}
+                                </span>
+                            </div>
+                            
+                            ${operationContext ? `
+                            <div class="detail-item operation-type">
+                                <span class="label">Type d'opération détecté</span>
+                                <span class="value badge ${operationContext.type}">
+                                    ${operationContext.type.replace('_', ' ').toUpperCase()}
+                                    ${operationContext.isVersement ? '📥' : operationContext.isRachat ? '📤' : '⚙️'}
+                                </span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Section Équipe -->
+                    <div class="info-section team-section">
+                        <h4>👥 Équipe</h4>
+                        <div class="dossier-details">
+                            <div class="detail-item conseiller">
+                                <span class="label">Conseiller</span>
+                                <span class="value">${this.currentDossier.conseiller || 'Non assigné'}</span>
+                            </div>
+                            
+                            <div class="detail-item assistant-bo">
+                                <span class="label">Assistant BO</span>
+                                <span class="value">${this.currentDossier.assistantBO || 'Non assigné'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section Historique si données brutes disponibles -->
+                    ${this.currentDossier.rawData ? `
+                    <div class="info-section technical-section">
+                        <h4>🔧 Informations techniques</h4>
+                        <div class="dossier-details">
+                            <div class="detail-item raw-data">
+                                <span class="label">Données source</span>
+                                <span class="value">${this.currentDossier.rawData.length} colonnes Excel</span>
+                            </div>
+                            
+                            <div class="detail-item original-index">
+                                <span class="label">Index original</span>
+                                <span class="value">${this.currentDossier.originalIndex + 1}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             </div>
         `;
+    }
+
+    // Méthodes utilitaires pour le formatage et les classes CSS
+    formatMontant(montant) {
+        if (!montant) return 'Non renseigné';
+        
+        // Si c'est déjà formaté, on le retourne tel quel
+        if (typeof montant === 'string' && montant.includes('€')) {
+            return `<strong>${montant}</strong>`;
+        }
+        
+        // Essayer d'extraire un nombre
+        const numericValue = this.extractNumericAmount(montant);
+        if (numericValue > 0) {
+            return `<strong>${numericValue.toLocaleString('fr-FR')} €</strong>`;
+        }
+        
+        return `<strong>${montant}</strong>`;
+    }
+
+    getBadgeClass(value) {
+        if (!value) return 'neutral';
+        
+        const lowerValue = value.toLowerCase();
+        if (lowerValue === 'oui' || lowerValue === 'yes') return 'oui';
+        if (lowerValue === 'non' || lowerValue === 'no') return 'non';
+        if (lowerValue === 'nouveau') return 'nouveau';
+        if (lowerValue.includes('private') || lowerValue.includes('privé')) return 'private';
+        if (lowerValue.includes('corporate') || lowerValue.includes('entreprise')) return 'corporate';
+        
+        return 'neutral';
+    }
+
+    getPPEClass(ppe) {
+        if (!ppe) return 'neutral';
+        return ppe.toLowerCase() === 'oui' ? 'ppe-yes' : 'ppe-no';
+    }
+
+    getEtatBOClass(etat) {
+        if (!etat) return 'neutral';
+        
+        const lowerEtat = etat.toLowerCase();
+        if (lowerEtat.includes('validé') || lowerEtat.includes('ok') || lowerEtat.includes('terminé')) return 'success';
+        if (lowerEtat.includes('attente') || lowerEtat.includes('pending')) return 'warning';
+        if (lowerEtat.includes('erreur') || lowerEtat.includes('rejeté')) return 'error';
+        
+        return 'neutral';
+    }
+
+    extractNumericAmount(montantString) {
+        if (!montantString) return 0;
+        
+        const cleaned = montantString.toString()
+            .replace(/[^\d,.-]/g, '')
+            .replace(/,/g, '.');
+        
+        const number = parseFloat(cleaned);
+        return isNaN(number) ? 0 : number;
+    }
+
+    // Méthodes pour récupérer les statuts et badges (si elles n'existent pas déjà)
+    getDossierStatuses(dossier) {
+        if (!window.documentController) return {};
+        
+        const dossierKey = window.documentController.generateDossierKey(dossier);
+        const controlTypes = ['LCB-FT', 'FINANCEMENT', 'CARTO_CLIENT', 'OPERATION', 'NOUVEAU_CLIENT'];
+        const statuses = {};
+        
+        controlTypes.forEach(type => {
+            if (window.persistenceManager) {
+                statuses[type] = window.persistenceManager.getDossierStatus(dossierKey, type);
+            } else {
+                statuses[type] = { status: 'not_controlled' };
+            }
+        });
+        
+        return statuses;
+    }
+
+    generateStatusBadges(statuses) {
+        const badges = [];
+        
+        Object.entries(statuses).forEach(([type, status]) => {
+            if (status.status === 'controlled') {
+                badges.push(`<span class="badge controlled" title="Contrôlé le ${new Date(status.controlledAt).toLocaleDateString('fr-FR')}">${this.getShortControlType(type)} ✓</span>`);
+            } else if (status.status === 'suspended') {
+                const daysSuspended = Math.floor((new Date() - new Date(status.suspendedAt)) / (1000 * 60 * 60 * 24));
+                badges.push(`<span class="badge suspended" title="Suspendu depuis ${daysSuspended} jour(s)${status.suspendReason ? ': ' + status.suspendReason : ''}">${this.getShortControlType(type)} ⏸️</span>`);
+            }
+        });
+        
+        return badges.join(' ');
+    }
+
+    getShortControlType(type) {
+        const shortNames = {
+            'LCB-FT': 'LCB',
+            'FINANCEMENT': 'FIN',
+            'CARTO_CLIENT': 'CARTO',
+            'OPERATION': 'OP',
+            'NOUVEAU_CLIENT': 'NC'
+        };
+        return shortNames[type] || type.substring(0, 3);
+    }
+
+    getOperationContext() {
+        if (!this.currentDossier || !this.currentControl) return null;
+        
+        if (this.currentControl.type !== 'OPERATION') return null;
+        
+        const typeOperation = this.extractOperationType(this.currentDossier);
+        const montant = this.currentDossier.montant || '';
+        
+        return {
+            type: typeOperation,
+            isVersement: ['versement', 'versement_initial', 'versement_complementaire', 'transfert_entrant'].includes(typeOperation),
+            isRachat: ['rachat', 'rachat_partiel', 'rachat_total', 'transfert_sortant', 'avance'].includes(typeOperation),
+            isArbitrage: typeOperation === 'arbitrage',
+            montant: montant,
+            needsOriginFunds: ['versement', 'versement_initial', 'versement_complementaire', 'transfert_entrant'].includes(typeOperation),
+            needsDestinationFunds: ['rachat', 'rachat_partiel', 'rachat_total', 'transfert_sortant', 'avance'].includes(typeOperation)
+        };
+    }
+
+    extractOperationType(dossier) {
+        // Chercher dans différents champs possibles
+        const typeActe = (dossier.typeActe || '').toLowerCase();
+        const contrat = (dossier.contrat || '').toLowerCase();
+        const etatBO = (dossier.etatBO || '').toLowerCase();
+        
+        // Mots-clés pour versements
+        const versementKeywords = ['versement', 'apport', 'entrée', 'souscription', 'dépôt'];
+        // Mots-clés pour rachats
+        const rachatKeywords = ['rachat', 'retrait', 'sortie', 'liquidation'];
+        // Mots-clés pour arbitrages
+        const arbitrageKeywords = ['arbitrage', 'switch', 'réallocation'];
+        // Mots-clés pour transferts
+        const transfertKeywords = ['transfert', 'portabilité'];
+        // Mots-clés pour avances
+        const avanceKeywords = ['avance', 'prêt'];
+        
+        // Analyser le type d'acte en priorité
+        if (versementKeywords.some(keyword => typeActe.includes(keyword))) {
+            if (typeActe.includes('initial') || typeActe.includes('ouverture')) {
+                return 'versement_initial';
+            }
+            return 'versement';
+        }
+        
+        if (rachatKeywords.some(keyword => typeActe.includes(keyword))) {
+            if (typeActe.includes('partiel')) {
+                return 'rachat_partiel';
+            } else if (typeActe.includes('total')) {
+                return 'rachat_total';
+            }
+            return 'rachat';
+        }
+        
+        if (arbitrageKeywords.some(keyword => typeActe.includes(keyword))) {
+            return 'arbitrage';
+        }
+        
+        if (transfertKeywords.some(keyword => typeActe.includes(keyword))) {
+            if (typeActe.includes('entrant') || typeActe.includes('arrivée')) {
+                return 'transfert_entrant';
+            } else if (typeActe.includes('sortant') || typeActe.includes('départ')) {
+                return 'transfert_sortant';
+            }
+            return 'transfert_entrant'; // Par défaut
+        }
+        
+        if (avanceKeywords.some(keyword => typeActe.includes(keyword))) {
+            return 'avance';
+        }
+        
+        // Si pas trouvé dans typeActe, chercher dans d'autres champs
+        if (versementKeywords.some(keyword => contrat.includes(keyword) || etatBO.includes(keyword))) {
+            return 'versement';
+        }
+        
+        if (rachatKeywords.some(keyword => contrat.includes(keyword) || etatBO.includes(keyword))) {
+            return 'rachat';
+        }
+        
+        // Par défaut, si on ne peut pas déterminer
+        return 'unknown';
     }
 
     updateDocumentsGrid() {
@@ -3252,6 +3547,25 @@ export class DocumentController {
         const buttonsContainer = document.getElementById('control-buttons');
         if (!buttonsContainer) return;
 
+        // Vérifier si nous sommes actuellement dans l'interface de contrôle documentaire
+        const documentControlSection = document.getElementById('document-control-section');
+        const isInDocumentControl = documentControlSection && 
+                                documentControlSection.style.display !== 'none' && 
+                                !documentControlSection.classList.contains('hidden');
+
+        // Si nous ne sommes pas dans l'interface de contrôle, ne pas afficher les informations de progression
+        if (!isInDocumentControl) {
+            buttonsContainer.innerHTML = `
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="window.documentController?.returnToSample()">
+                        Retour aux contrôles
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        // Code pour l'interface de contrôle documentaire uniquement
         const allCompleted = Object.values(this.documentsState).every(doc => doc.status === 'completed');
         const completedCount = Object.values(this.documentsState).filter(doc => doc.status === 'completed').length;
         const totalCount = Object.values(this.documentsState).length;
@@ -3268,6 +3582,9 @@ export class DocumentController {
                         onclick="window.documentController?.completeControl()"
                         ${allCompleted ? '' : 'disabled'}>
                     Contrôle terminé
+                </button>
+                <button class="btn btn-danger" onclick="window.documentController?.suspendControl()">
+                    ⏸️ Suspendre
                 </button>
             </div>
         `;
