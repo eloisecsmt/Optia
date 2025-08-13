@@ -580,7 +580,7 @@ export class PersistenceManager {
                     question: response.question,
                     reponse: response.answer,
                     qualite: response.quality || '',
-                    conforme: response.answer === 'Oui' && response.quality !== 'Non conforme',
+                    conforme: response.conforme, // ✅ Utiliser la valeur déjà calculée
                     obligatoire: response.obligation === 'Obligatoire',
                     justification: response.justification || ''
                 });
