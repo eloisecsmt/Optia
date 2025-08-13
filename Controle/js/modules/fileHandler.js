@@ -136,7 +136,8 @@ export class FileHandler {
         const allData = XLSX.utils.sheet_to_json(worksheet, { 
             header: 1,
             defval: '',
-            raw: false // Garder les chaînes formatées pour les dates/nombres
+            raw: false,
+            dateNF: 'dd/mm/yyyy' // Format de date français
         });
         
         Utils.debugLog('Nombre total de lignes: ' + allData.length);
