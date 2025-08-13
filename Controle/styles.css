@@ -12,7 +12,7 @@
     margin-bottom: 20px;
     font-size: 1.2rem;
     font-weight: 600;
-    border-bottom: 2px solid #d4af37;
+    border-bottom: 2px solid #d4af38;
     padding-bottom: 10px;
 }
 
@@ -846,78 +846,486 @@ body {
 
 /* Document Control Section - Informations dossier améliorées */
 .dossier-info-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border: 1px solid #e9ecef;
-    border-radius: 15px;
-    padding: 0;
-    margin-bottom: 30px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+    transition: box-shadow 0.3s ease;
 }
 
+.dossier-info-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* En-tête de la carte avec badges de statut */
 .dossier-info-header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: linear-gradient(135deg, #4662df 0%, #1c1583 100%);
     color: white;
-    padding: 20px 25px;
-    margin-bottom: 0;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .dossier-info-header h3 {
-    color: white;
     margin: 0;
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
-.dossier-info-header h3::before {
-    content: "📋";
-    font-size: 1.4rem;
+/* Badges de statut dans l'en-tête */
+.status-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
 }
 
+/* Corps de la carte avec sections */
 .dossier-info-body {
-    padding: 25px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0;
+}
+/* Sections d'informations */
+.info-section {
+    padding: 20px 24px;
+    border-right: 1px solid #f3f4f6;
+    border-bottom: 1px solid #f3f4f6;
+    position: relative;
 }
 
+.info-section:last-child,
+.info-section:nth-last-child(2):nth-child(odd) {
+    border-right: none;
+}
+
+/* En-têtes des sections avec icônes et couleurs */
+.info-section h4 {
+    margin: 0 0 16px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid transparent;
+    position: relative;
+}
+
+/* Couleurs spécifiques par section */
+.client-section h4 {
+    color: #051396;
+    border-bottom-color: #130596;
+}
+
+.dossier-section h4 {
+    color: #051396;
+    border-bottom-color: #130596;
+}
+
+.operation-section h4 {
+    color: #051396;
+    border-bottom-color: #130596;
+}
+
+.team-section h4 {
+    color: #3e76aa;
+    border-bottom-color: #3e76aa;
+}
+
+.technical-section h4 {
+    color: #6b7280;
+    border-bottom-color: #6b7280;
+}
+
+/* Grille des détails */
 .dossier-details {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
+    gap: 12px;
 }
 
+/* Éléments de détail */
 .detail-item {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    background: white;
-    border: 1px solid #e9ecef;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    transition: all 0.3s ease;
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 12px;
+    align-items: start;
+    padding: 8px 0;
+    border-bottom: 1px solid #f9fafb;
 }
 
-.detail-item:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
+.detail-item:last-child {
+    border-bottom: none;
 }
 
+/* Labels */
 .detail-item .label {
-    font-weight: 600;
-    color: #1a1a2e;
-    margin-right: 15px;
-    min-width: 110px;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    line-height: 1.4;
 }
 
+/* Valeurs */
 .detail-item .value {
-    color: #495057;
-    flex: 1;
+    font-size: 0.9rem;
+    color: #1f2937;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+/* Valeurs spéciales avec emphase */
+.value.primary {
+    font-weight: 700;
+    color: #1e40af;
     font-size: 1rem;
-    font-weight: 500;
+}
+
+.value.montant {
+    font-weight: 700;
+    color: #059669;
+    font-size: 1rem;
+}
+
+.value.code {
+    font-family: 'Courier New', monospace;
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* ===== SYSTÈME DE BADGES ===== */
+
+/* Badge de base */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+/* Badges de statut principal */
+.badge.oui {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #065f46;
+    border-color: #10b981;
+}
+
+.badge.non {
+    background: linear-gradient(135deg, #fecaca, #fca5a5);
+    color: #7f1d1d;
+    border-color: #ef4444;
+}
+
+.badge.neutral {
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    color: #374151;
+    border-color: #9ca3af;
+}
+
+/* Badges spécialisés */
+.badge.nouveau {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    border-color: #f59e0b;
+    position: relative;
+}
+
+.badge.nouveau::after {
+    content: "⭐";
+    margin-left: 4px;
+}
+
+.badge.ppe-yes {
+    background: linear-gradient(135deg, #fed7d7, #feb2b2);
+    color: #742a2a;
+    border-color: #e53e3e;
+    position: relative;
+}
+
+.badge.ppe-yes::after {
+    content: "🔒";
+    margin-left: 4px;
+}
+
+.badge.ppe-no {
+    background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+    color: #22543d;
+    border-color: #38a169;
+}
+
+/* Badges de domaine */
+.badge.private {
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    color: #3730a3;
+    border-color: #6366f1;
+}
+
+.badge.corporate {
+    background: linear-gradient(135deg, #fdf4ff, #f3e8ff);
+    color: #581c87;
+    border-color: #8b5cf6;
+}
+
+/* Badges d'état BO */
+.badge.success {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #065f46;
+    border-color: #10b981;
+}
+
+.badge.success::before {
+    content: "✅";
+    margin-right: 4px;
+}
+
+.badge.warning {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    border-color: #f59e0b;
+}
+
+.badge.warning::before {
+    content: "⚠️";
+    margin-right: 4px;
+}
+
+.badge.error {
+    background: linear-gradient(135deg, #fecaca, #fca5a5);
+    color: #7f1d1d;
+    border-color: #ef4444;
+}
+
+.badge.error::before {
+    content: "❌";
+    margin-right: 4px;
+}
+
+/* Badges de contrôle */
+.badge.controlled {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #065f46;
+    border-color: #10b981;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+}
+
+.badge.suspended {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    border-color: #f59e0b;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    animation: pulse-warning 2s infinite;
+}
+
+/* Badges de type d'opération */
+.badge.versement,
+.badge.versement_initial,
+.badge.versement_complementaire,
+.badge.transfert_entrant {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1e40af;
+    border-color: #3b82f6;
+}
+
+.badge.versement::before,
+.badge.versement_initial::before,
+.badge.versement_complementaire::before,
+.badge.transfert_entrant::before {
+    content: "📥";
+    margin-right: 4px;
+}
+
+.badge.rachat,
+.badge.rachat_partiel,
+.badge.rachat_total,
+.badge.transfert_sortant,
+.badge.avance {
+    background: linear-gradient(135deg, #fed7d7, #feb2b2);
+    color: #742a2a;
+    border-color: #e53e3e;
+}
+
+.badge.rachat::before,
+.badge.rachat_partiel::before,
+.badge.rachat_total::before,
+.badge.transfert_sortant::before,
+.badge.avance::before {
+    content: "📤";
+    margin-right: 4px;
+}
+
+.badge.arbitrage {
+    background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
+    color: #581c87;
+    border-color: #8b5cf6;
+}
+
+.badge.arbitrage::before {
+    content: "⚙️";
+    margin-right: 4px;
+}
+
+.badge.unknown {
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    color: #475569;
+    border-color: #64748b;
+}
+
+/* ===== ANIMATIONS ===== */
+
+@keyframes pulse-warning {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Animation d'apparition pour les badges */
+.badge {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+@media (max-width: 768px) {
+    .dossier-info-body {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-section {
+        border-right: none;
+    }
+    
+    .dossier-info-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .status-badges {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .detail-item {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+    
+    .detail-item .label {
+        font-weight: 600;
+        color: #4b5563;
+    }
+}
+
+@media (max-width: 480px) {
+    .dossier-info-card {
+        border-radius: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .dossier-info-header {
+        padding: 16px 20px;
+    }
+    
+    .info-section {
+        padding: 16px 20px;
+    }
+    
+    .dossier-info-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+    }
+}
+
+/* ===== ÉTATS INTERACTIFS ===== */
+
+.badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.info-section:hover {
+    background: #fafbfc;
+    transition: background-color 0.2s ease;
+}
+
+/* ===== ACCESSIBILITÉ ===== */
+
+.badge:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Réduction de mouvement pour les utilisateurs qui le préfèrent */
+@media (prefers-reduced-motion: reduce) {
+    .badge,
+    .dossier-info-card {
+        transition: none;
+        animation: none;
+    }
+    
+    .badge:hover {
+        transform: none;
+    }
+}
+
+/* ===== IMPRESSION ===== */
+
+@media print {
+    .dossier-info-card {
+        box-shadow: none;
+        border: 2px solid #000;
+        break-inside: avoid;
+    }
+    
+    .dossier-info-header {
+        background: #f3f4f6 !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+    }
+    
+    .badge {
+        border: 1px solid #000 !important;
+        background: transparent !important;
+        color: #000 !important;
+    }
 }
 
 /* Couleurs spécifiques pour certaines informations */
