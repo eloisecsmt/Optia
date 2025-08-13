@@ -883,7 +883,7 @@ export class HistoryInterface {
                                                             ${detail.question}
                                                         </td>
                                                         <td style="padding: 12px; text-align: center; vertical-align: top;">
-                                                            <span class="badge ${detail.reponse === 'Oui' ? 'oui' : 'non'}" style="padding: 6px 12px;">
+                                                            <span class="badge ${detail.conforme ? 'oui' : 'non'}" style="padding: 6px 12px;">
                                                                 ${detail.reponse}
                                                             </span>
                                                         </td>
@@ -976,7 +976,7 @@ export class HistoryInterface {
                 ">
                     <h5 style="color: #155724; margin: 0 0 10px 0;">✅ Contrôle parfaitement conforme</h5>
                     <p style="margin: 0; color: #155724; font-size: 1.1rem;">Aucune anomalie détectée dans ce contrôle.</p>
-                    <p style="margin: 10px 0 0 0; color: #155724; font-weight: 600;">🏆 Excellent travail !</p>
+                    <p style="margin: 10px 0 0 0; color: #155724; font-weight: 600;"></p>
                 </div>
             `;
         }
