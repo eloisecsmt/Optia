@@ -210,12 +210,12 @@ export class DocumentController {
         const documentSets = {
             'LCB-FT': [1, 4, 7, 8, 12, 99], // FR, Carto Client, CNI, Justificatif Domicile, Zeendoc
             'FINANCEMENT': [4, 13, 15, 16, 17, 18, 99], // Harvest, Carto Opé, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
-            'CARTO_CLIENT': [4,7, 8, 99], // Harvest, Zeendoc (FR et Profil Risques supprimés)
+            'CARTO_CLIENT': [4,7, 8, 99], // Harvest, Zeendoc
             'OPERATION': [1, 2, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
-            'NOUVEAU_CLIENT': [1, 2, 3, 4, 5, 6, 7, 8, 10, 21, 99], // FR, Profil Risques, Profil ESG, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'NOUVEAU_CLIENT': [1, 2, 4, 5, 6, 7, 8, 10, 21, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
-            'MIS_A_JOUR': [1, 2, 3, 4, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Profil ESG, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'MIS_A_JOUR': [1, 2, 4, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
         };
 
             if (controlType === 'OPERATION') {
@@ -358,6 +358,16 @@ export class DocumentController {
                         }
                     },
                     {
+                        text: 'Les préférences ESG du client sont-elles renseignées dans le document ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez si la section ESG (Environnementale, Sociale et de Gouvernance) du profil de risques est complétée avec les préférences du client',
+                        qualityCheck: {
+                            text: 'Les préférences ESG sont-elles clairement exprimées et cohérentes avec le profil client ?',
+                            help: 'Vérifiez que les critères ESG sont précisément documentés et correspondent aux valeurs/objectifs exprimés par le client'
+                        }
+                    },
+                    {
                         text: 'La date est-elle présente sur le document ?',
                         type: 'boolean',
                         required: true,
@@ -497,7 +507,7 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'Est-ce que toutes les autres informations générales du client sont bien remplies dans Harvest ?',
+                        text: 'Les informations nécessaire à la réalisation de la cartographie sont-elles présente dans Harvest  ?',
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez que les champs obligatoires du profil client sont complétés dans Harvest',
@@ -582,7 +592,7 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'Quel est le niveau de vigilance client ?',
+                        text: 'Quel est le niveau de vigilance client retenu par le conseiller ?',
                         type: 'vigilance_level',
                         required: true,
                         help: 'Information à récupérer depuis le fichier source ou Harvest',
@@ -592,7 +602,7 @@ export class DocumentController {
                             'Renforcée'
                         ]
                     },
-                    {
+                        {
                         text: 'Êtes-vous d\'accord avec la vigilance retenue ?',
                         type: 'boolean',
                         required: true,
@@ -600,6 +610,20 @@ export class DocumentController {
                         qualityCheck: {
                             text: 'Le niveau de vigilance est-il justifié au regard du profil client ?',
                             help: 'Vérifiez la cohérence entre le profil de risque du client et le niveau de vigilance appliqué'
+                        },
+                        followUp: {
+                            condition: 'Non',
+                            question: {
+                                text: 'Quel niveau de vigilance devrait être appliqué ?',
+                                type: 'vigilance_level',
+                                required: true,
+                                help: 'Sélectionnez le niveau de vigilance que vous estimez approprié pour ce client',
+                                options: [
+                                    'Standard',
+                                    'Complémentaire', 
+                                    'Renforcée'
+                                ]
+                            }
                         }
                     },
                     {
@@ -847,7 +871,7 @@ export class DocumentController {
                         required: true,
                         help: 'Date d\'expiration et état du document',
                         qualityCheck: {
-                            text: 'La date d\'expiration est-elle supérieure à 6 mois et le document en bon état ?',
+                            text: 'La date d\'expiration est-elle inférieur à 5 ans  et le document en bon état ?',
                             help: 'Document non expiré, lisible et non détérioré'
                         }
                     }
@@ -875,7 +899,7 @@ export class DocumentController {
                         text: 'Date de moins de 3 mois ?',
                         type: 'boolean',
                         required: true,
-                        help: 'Justificatif récent (moins de 3 mois)',
+                        help: 'Justificatif récent (moins de 3 mois) sauf pour IRPP',
                         qualityCheck: {
                             text: 'La date du justificatif est-elle effectivement inférieure à 3 mois à la réception ?',
                             help: 'Calcul exact depuis la date du document'
@@ -979,7 +1003,7 @@ export class DocumentController {
                         skipIfNo: true
                     },
                     {
-                        text: 'Le RIB est-il présent et lisible ?',
+                        text: 'Le RIB correspond t-il bien au client?',
                         type: 'boolean',
                         required: true,
                         help: 'Vérification de la présence et lisibilité du RIB client',
@@ -1896,11 +1920,52 @@ export class DocumentController {
             fullName: 'Saisie des informations client dans Harvest',
             questions: [
                 {
-                    text: 'Les informations client sont-elles correctement saisies dans Harvest ?',
+                    text: 'Quels éléments sont manquants ou incomplets dans Harvest ?',
+                    type: 'checklist',
+                    required: true,
+                    help: 'Cochez tous les éléments qui sont manquants, incomplets ou non renseignés dans le profil client Harvest',
+                    options: [
+                        'Date de MAJ',
+                        'Date d\'entrée en relation',
+                        'Classification MIF',
+                        'Date classification MIF',
+                        'PPE',
+                        'Capacité juridique',
+                        'Profession',
+                        'Nationalité',
+                        'Revenus',
+                        'Charges',
+                        'Patrimoine',
+                        'Qualification du contact',
+                        'Coordonnées tél',
+                        'Coordonnées mail'
+                    ]
+                },
+                {
+                    text: 'Malgré les éléments manquants identifiés, considérez-vous que les informations dans Harvest sont suffisantes pour le contrôle ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez que toutes les informations obligatoires du client sont présentes et à jour dans Harvest',
-                    skipIfNo: true
+                    help: 'Évaluez si le niveau d\'information présent permet de mener le contrôle de manière satisfaisante',
+                },
+                {
+                    text: 'Est-ce que l\'onglet conformité est rempli ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que l\'onglet conformité dans Harvest contient toutes les informations requises',
+                    qualityCheck: {
+                        text: 'L\'onglet conformité est-il complet et à jour ?',
+                        help: 'Vérifiez que toutes les sections de conformité sont renseignées avec des informations récentes'
+                    }
+                },
+                {
+                    text: 'Est-ce que le profil investisseur est rempli et daté ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence et la datation du profil investisseur du client',
+                    qualityCheck: {
+                        text: 'Le profil investisseur est-il cohérent et daté de moins de 24 mois ?',
+                        help: 'Vérifiez la cohérence du profil avec la situation client et la validité temporelle'
+                    }
                 },
                 {
                     text: 'Y a-t-il au moins un objectif renseigné ?',
@@ -1913,63 +1978,23 @@ export class DocumentController {
                     }
                 },
                 {
-                    text: 'La classification MIF est-elle renseignée ?',
+                    text: 'Est-ce que la partie "Projet" est remplie et datée ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez que la classification MiFID (client de détail, professionnel, contrepartie éligible) est correctement attribuée',
+                    help: 'Vérifiez que la section projet client est complétée avec une date de mise à jour',
                     qualityCheck: {
-                        text: 'La classification MIF correspond-elle au profil du client ?',
-                        help: 'Vérifiez la cohérence entre la classification et les caractéristiques du client (patrimoine, expérience, activité)'
+                        text: 'Le projet client est-il détaillé et récent ?',
+                        help: 'Vérifiez que le projet est suffisamment détaillé et mis à jour récemment'
                     }
                 },
                 {
-                    text: 'La date d\'entrée en relation est-elle renseignée ?',
+                    text: 'Est-ce que la vigilance a été faite ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez que la date de première entrée en relation avec le client est correctement saisie',
+                    help: 'Vérifiez que les contrôles de vigilance LCB-FT ont été effectués dans Harvest',
                     qualityCheck: {
-                        text: 'La date d\'entrée en relation est-elle cohérente ?',
-                        help: 'La date doit correspondre à la première signature ou au premier contact commercial'
-                    }
-                },
-                {
-                    text: 'La capacité juridique est-elle renseignée ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Vérifiez que la capacité juridique du client (majeur, mineur émancipé, tutelle, etc.) est correctement indiquée',
-                    qualityCheck: {
-                        text: 'La capacité juridique est-elle correctement qualifiée ?',
-                        help: 'Vérification de la cohérence avec l\'âge et la situation juridique du client'
-                    }
-                },
-                {
-                    text: 'La profession est-elle renseignée ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Vérifiez que l\'activité professionnelle actuelle du client est correctement saisie',
-                    qualityCheck: {
-                        text: 'La profession renseignée est-elle cohérente avec les revenus déclarés ?',
-                        help: 'Cohérence entre l\'activité professionnelle et le niveau de revenus/patrimoine'
-                    }
-                },
-                {
-                    text: 'L\'horizon de placement est-il renseigné ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Vérifiez que l\'horizon de placement du client (court, moyen, long terme) est défini',
-                    qualityCheck: {
-                        text: 'L\'horizon de placement est-il cohérent avec l\'âge et les objectifs ?',
-                        help: 'L\'horizon doit être adapté à l\'âge du client et aux objectifs de placement exprimés'
-                    }
-                },
-                {
-                    text: 'Toutes les informations obligatoires sont-elles complètes ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Vérification globale que tous les champs obligatoires dans Harvest sont remplis',
-                    qualityCheck: {
-                        text: 'L\'ensemble des informations forment-elles un profil client cohérent ?',
-                        help: 'Cohérence globale entre tous les éléments saisis (âge, situation, objectifs, capacité financière)'
+                        text: 'La vigilance est-elle complète et documentée ?',
+                        help: 'Vérifiez que tous les contrôles de vigilance requis sont effectués et tracés'
                     }
                 }
             ]
@@ -1984,23 +2009,60 @@ export class DocumentController {
                         text: 'Tous les documents sont-ils bien ajoutés dans Zeendoc ?',
                         type: 'boolean',
                         required: true,
-                        help: 'Vérifiez que tous les documents du dossier client sont présents dans Zeendoc',
+                        help: 'Vérifiez si tous les documents nécessaires au contrôle sont présents et correctement archivés dans Zeendoc',
                         qualityCheck: {
-                            text: 'Tous les documents obligatoires sont-ils archivés dans Zeendoc ?',
-                            help: 'Vérification exhaustive : FR, profils, CNI, justificatifs, contrats, etc.'
-                        },
-                        skipIfNo: true
+                            text: 'L\'archivage est-il complet et organisé ?',
+                            help: 'Vérifiez que tous les documents sont classés, lisibles et correctement nommés'
+                        }
                     },
                     {
-                        text: 'Les documents sont-ils affectés au bon client dans Zeendoc ?',
+                        text: 'Quels documents sont manquants dans Zeendoc ?',
+                        type: 'checklist',
+                        required: true,
+                        help: 'Cochez tous les documents qui sont absents ou manquants dans l\'archivage Zeendoc. Si TOUS les documents sont présents, ne cochez rien (checklist vide = aucun document manquant).',
+                        showOnlyIf: {
+                            questionIndex: 0, // Question précédente (index 0)
+                            answer: 'Non'
+                        },
+                        options: [
+                            'FR - Fiche de Renseignements',
+                            'Profil Risques (incluant ESG)',
+                            'Cartographie Client',
+                            'FIL - Fiche d\'Information Légale',
+                            'Lettre de Mission d\'entrée en relation',
+                            'Lettre de mission d\'opération',
+                            'CNI - Carte Nationale d\'Identité',
+                            'Justificatif de domicile',
+                            'Etude - Etude Financière Client',
+                            'RIB - Relevé d\'Identité Bancaire',
+                            'Convention RTO - Convention de Réception et Transmission d\'Ordres',
+                            'Origine des fonds - Déclaration et Justification de l\'Origine des Fonds',
+                            'Cartographie et Suivi des Opérations',
+                            'Destination des fonds (Rachats)',
+                            'Mandat de financement',
+                            'Synthèse + Adéquation',
+                            'Fiche conseil',
+                            'Bon pour accord',
+                            'Déclaration d\'adéquation',
+                            'Bulletin de souscription'
+                        ]
+                    },
+                    {
+                        text: 'Les documents disponibles dans Zeendoc sont-ils suffisants pour ce type de contrôle ?',
                         type: 'boolean',
                         required: true,
-                        help: 'Vérifiez que les documents sont correctement rattachés au dossier client dans Zeendoc',
+                        help: 'Évaluez si les documents présents dans Zeendoc (qu\'il y en ait beaucoup ou peu) permettent de mener le contrôle de manière satisfaisante pour ce type spécifique de contrôle'
+                    },
+                    {
+                        text: 'Les documents présents sont-ils affectés au bon client dans Zeendoc ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Vérifiez que les documents présents dans Zeendoc sont correctement rattachés au dossier client',
                         qualityCheck: {
                             text: 'L\'affectation client est-elle correcte et cohérente ?',
                             help: 'Nom, prénom, numéro de dossier correspondent au client contrôlé'
                         }
-                    },
+                    }
                 ]
             }
         };
@@ -2150,7 +2212,6 @@ export class DocumentController {
         const documentNames = {
             1: 'FR',
             2: 'Profil Risques',
-            3: 'Profil ESG',
             4: 'Carto Client',
             5: 'FIL',
             6: 'Lettre de Mission',
@@ -2653,6 +2714,11 @@ export class DocumentController {
             </div>
         `;
 
+        const questionData = this.documentsConfig[this.currentDocument].questions[this.currentQuestionIndex];
+        if (questionData.type === 'checklist') {
+            this.addChecklistStyles();
+        }
+
         // Pré-remplir les réponses existantes si on reprend un contrôle
         if (this.isResumingControl) {
             this.prefillExistingResponses();
@@ -2684,6 +2750,28 @@ export class DocumentController {
                             <span>${option}</span>
                         </label>
                     `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // NOUVEAU : Gestion du type checklist
+    if (questionData.type === 'checklist') {
+        return `
+            <div class="response-group checklist-group">
+                <label>Éléments manquants ou incomplets (cochez ceux qui posent problème) :</label>
+                <div class="checklist-container">
+                    ${questionData.options.map((option, index) => `
+                        <div class="checklist-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="checklist-item" value="${option}" id="checklist-${index}">
+                                <span class="checkbox-text">${option}</span>
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="checklist-summary">
+                    <span id="checklist-count">0</span> élément(s) manquant(s) identifié(s)
                 </div>
             </div>
         `;
@@ -3159,6 +3247,41 @@ export class DocumentController {
                 }
             });
         });
+
+        // 2. Event listeners pour les checkboxes de checklist (nouveau)
+        const checklistItems = document.querySelectorAll('input[name="checklist-item"]');
+        if (checklistItems.length > 0) {
+            checklistItems.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    this.updateChecklistCounter();
+                });
+            });
+        }
+    }
+    
+
+    // 5. NOUVELLE méthode pour mettre à jour le compteur de la checklist
+    updateChecklistCounter() {
+        const checkedItems = document.querySelectorAll('input[name="checklist-item"]:checked');
+        const countElement = document.getElementById('checklist-count');
+        
+        if (countElement) {
+            const count = checkedItems.length;
+            countElement.textContent = count;
+            
+            // Changer la couleur selon le nombre d'éléments manquants
+            const summaryElement = countElement.parentElement;
+            if (summaryElement) {
+                summaryElement.className = 'checklist-summary';
+                if (count === 0) {
+                    summaryElement.classList.add('no-missing');
+                } else if (count <= 3) {
+                    summaryElement.classList.add('few-missing');
+                } else {
+                    summaryElement.classList.add('many-missing');
+                }
+            }
+        }
     }
 
     resetQualityInputs(qualityGroup) {
@@ -3188,6 +3311,18 @@ export class DocumentController {
             qualityDetails: {},
             justification: ''
         };
+
+        // NOUVEAU : Gestion du type checklist
+        if (questionData.type === 'checklist') {
+            const checkedItems = document.querySelectorAll('input[name="checklist-item"]:checked');
+            const missingElements = Array.from(checkedItems).map(cb => cb.value);
+            
+            response.answer = missingElements.length === 0 ? 'Aucun élément manquant' : missingElements.join(', ');
+            response.missingElements = missingElements;
+            response.missingCount = missingElements.length;
+            
+            return response;
+        }
 
         if (questionData.type === 'document_type') {
             const docTypeRadio = document.querySelector('input[name="response"]:checked');
@@ -3322,6 +3457,11 @@ export class DocumentController {
                 return false;
             }
             return true;
+        }
+
+        // NOUVEAU : Validation pour checklist (toujours valide, même si rien n'est coché)
+        if (questionData.type === 'checklist') {
+            return true; // Une checklist vide est valide (signifie "rien ne manque")
         }
 
         if (questionData.type === 'text') {
@@ -3471,6 +3611,11 @@ export class DocumentController {
             'Le client connaissait-il tous les produits proposés ?'
         ];
 
+        // Les checklists ne nécessitent jamais de justification
+        if (questionData.type === 'checklist') {
+            return true;
+        }
+
         // Vérifier si c'est une question exemptée
         if (exemptQuestions.includes(questionData.text)) {
             return true;
@@ -3521,9 +3666,43 @@ export class DocumentController {
             this.documentResponses[response.documentId] = {};
         }
         
+        // AJOUTER : Calculer la conformité ici
+        response.conforme = this.isResponseConforme(response);
+        
         this.documentResponses[response.documentId][response.questionIndex] = response;
         
-        Utils.debugLog(`Réponse sauvegardée: Doc ${response.documentId}, Q ${response.questionIndex}, Réponse: ${response.answer}`);
+        Utils.debugLog(`Réponse sauvegardée: Doc ${response.documentId}, Q ${response.questionIndex}, Réponse: ${response.answer}, Conforme: ${response.conforme}`);
+    }
+
+    isResponseConforme(response) {
+        const questionData = this.documentsConfig[response.documentId].questions[response.questionIndex];
+        if (questionData.type === 'checklist') {
+            return false; // Toujours rouge/non conforme pour les checklists
+        }
+
+        // Si c'est explicitement marqué comme non conforme par la qualité
+        if (response.quality === 'Non conforme') {
+            return false;
+        }
+        
+        // NOUVELLE LOGIQUE : Toute réponse "Non" est une anomalie, sauf cas très spécifiques
+        if (response.answer === 'Non') {
+            // Seules quelques questions très spécifiques où "Non" est acceptable
+            const questionText = response.question.toLowerCase();
+            
+            // Questions où "Non" est normal/attendu
+            if (questionText.includes('est-ce que le conseiller est cif') ||
+                questionText.includes('le client connaissait-il tous les produits') ||
+                questionText.includes('des rachats répétés ont-ils été effectués')) {
+                return true; // "Non" est acceptable pour ces questions
+            }
+            
+            // Pour toutes les autres questions, "Non" = anomalie
+            return false;
+        }
+        
+        // Toutes les autres réponses sont conformes (Oui, NC, tranches, etc.)
+        return true;
     }
 
     completeDocument() {
@@ -4569,6 +4748,132 @@ generateManualResultsTable(results) {
         // Insérer le contexte après les infos du dossier
         infoContainer.insertAdjacentHTML('beforeend', contextHtml);
     }
+
+    addChecklistStyles() {
+    if (document.getElementById('checklist-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'checklist-styles';
+    style.textContent = `
+        .checklist-group {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 15px 0;
+    }
+
+    .checklist-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+        margin: 15px 0;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 15px;
+        background: white;
+    }
+
+    .checklist-item {
+        display: flex;
+        align-items: flex-start; /* Alignement en haut pour éviter les conflits */
+        padding: 10px;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+        min-height: 44px; /* Hauteur minimum pour éviter les chevauchements */
+    }
+
+    .checklist-item:hover {
+        background-color: #f1f3f4;
+    }
+
+    /* Style spécifique pour les checkboxes de la checklist */
+    .checklist-item .checkbox-label {
+        display: flex;
+        align-items: flex-start;
+        cursor: pointer;
+        font-weight: normal !important;
+        width: 100%;
+        margin: 0;
+        gap: 12px;
+        line-height: 1.4;
+    }
+
+    .checklist-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin: 2px 0 0 0; /* Léger décalage vers le bas pour aligner avec la première ligne de texte */
+        accent-color: #d4af37;
+        flex-shrink: 0; /* Empêche la checkbox de se rétrécir */
+        position: relative;
+        z-index: 10; /* S'assurer que la checkbox est au-dessus */
+    }
+
+    .checklist-item .checkbox-text {
+        flex: 1;
+        font-size: 0.95rem;
+        margin-top: 0;
+        padding-top: 0;
+        line-height: 1.4;
+    }
+
+    /* S'assurer que les radio buttons normaux ne sont pas affectés */
+    .radio-group .radio-option {
+        display: flex;
+        align-items: center; /* Centré pour les radio buttons */
+        cursor: pointer;
+        padding: 8px 12px;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        background: white;
+        gap: 8px;
+    }
+
+    .radio-group input[type="radio"] {
+        margin: 0;
+        transform: scale(1.1);
+        flex-shrink: 0;
+    }
+
+    .checklist-summary {
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 6px;
+        font-weight: 500;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .checklist-summary.no-missing {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .checklist-summary.few-missing {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+
+    .checklist-summary.many-missing {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .checklist-group > label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 10px;
+        display: block;
+    }
+    `;
+    
+    document.head.appendChild(style);
+}
 
     // NOUVEAU : Initialiser les vérifications périodiques
     initializePeriodicChecks() {
