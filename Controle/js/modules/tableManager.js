@@ -401,6 +401,7 @@ export class TableManager {
             'etatBO': '📊 État BO',
             'nouveauClient': '⭐ Nouveau',
             'ppe': '🔒 PPE'
+            'dateEnvoi': '📅 Date d\'envoi', 
         };
 
         // Si c'est une colonne mappée
@@ -2259,5 +2260,6 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
 
 
