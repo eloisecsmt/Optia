@@ -204,7 +204,7 @@ export class Utils {
             Utils.debugLog(`Erreur formatDate: ${error.message}`);
         }
 
-        Utils.debugLog(`formatDate SORTIE: "${result}"`);
+        Utils.debugLog(`formatDate SORTIE: "${String(cleanValue)}"`);
         
         // Si tout échoue, retourner la valeur originale
         return String(cleanValue);
@@ -393,4 +393,5 @@ export class Utils {
         return JSON.parse(JSON.stringify(obj));
     }
 }
+
 
