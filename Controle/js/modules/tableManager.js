@@ -1195,6 +1195,10 @@ export class TableManager {
                 return dossier.ppe && dossier.ppe.toLowerCase() === 'oui' ? 
                     '<span class="badge oui">PPE</span>' : 
                     Utils.displayValue('', 'Non');
+            case 'dateEnvoi':
+                return Utils.displayValue(dossier.dateEnvoi, 'Non définie');
+            case 'dateValidation':
+                return Utils.displayValue(dossier.dateValidation, 'Non définie');
             default:
                 return Utils.displayValue('', 'N/A');
         }
@@ -2255,4 +2259,5 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
 
