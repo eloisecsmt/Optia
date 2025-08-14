@@ -26,7 +26,8 @@ export class TableManager {
             'montant',
             'etatBO',
             'nouveauClient',
-            'ppe'
+            'ppe',
+            'dateEnvoi'
         ];
     }
 
@@ -156,15 +157,15 @@ export class TableManager {
                     <!-- Informations et statistiques -->
                     <div class="config-info-bar">
                         <div class="info-item">
-                            <span class="info-label">Total des colonnes</span>
+                            <span class="info-">Total des colonnes</span>
                             <span class="info-value">${this.availableColumns.length}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Colonnes sélectionnées</span>
+                            <span class="info-">Colonnes sélectionnées</span>
                             <span class="info-value" id="selected-columns-count">${this.visibleColumns.length}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Colonnes mappées</span>
+                            <span class="info-">Colonnes mappées</span>
                             <span class="info-value">${this.availableColumns.filter(col => col.isMapped).length}</span>
                         </div>
                     </div>
@@ -221,7 +222,7 @@ export class TableManager {
             const mappedText = column.isMapped ? 'Mappée' : 'Brute';
             
             return `
-                <label class="column-card ${typeClass} ${isVisible ? 'selected' : ''}" 
+                < class="column-card ${typeClass} ${isVisible ? 'selected' : ''}" 
                     data-column="${column.key}">
                     <div class="column-card-content">
                         <div class="column-header">
@@ -236,7 +237,7 @@ export class TableManager {
                             <span class="column-index">Col. ${String.fromCharCode(65 + column.index)}</span>
                         </div>
                         ${column.isMapped && column.mappedKey ? 
-                            `<div class="column-mapping">→ ${this.getMappedKeyLabel(column.mappedKey)}</div>` : 
+                            `<div class="column-mapping">→ ${this.getMappedKey(column.mappedKey)}</div>` : 
                             ''}
                     </div>
                     <div class="selection-indicator">
@@ -400,8 +401,8 @@ export class TableManager {
             'montant': '💰 Montant',
             'etatBO': '📊 État BO',
             'nouveauClient': '⭐ Nouveau',
-            'ppe': '🔒 PPE'
-            'dateEnvoi': '📅 Date d\'envoi', 
+            'ppe': '🔒 PPE',
+            'dateEnvoi': '📅 Date d\'envoi'
         };
 
         // Si c'est une colonne mappée
@@ -2260,6 +2261,7 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
 
 
 
