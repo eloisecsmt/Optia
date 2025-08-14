@@ -111,8 +111,6 @@ export class Utils {
         const cleanValue = typeof value === 'string' ? value.trim() : value;
         if (!cleanValue) return '';
         
-        Utils.debugLog(`formatDate input: "${cleanValue}" (type: ${typeof cleanValue})`);
-        
         try {
             let date = null;
             
@@ -131,33 +129,26 @@ export class Utils {
                     const num1 = parseInt(parts[0]);
                     const num2 = parseInt(parts[1]);
                     
-                    Utils.debugLog(`Parsing: ${num1}/${num2}/${year} (mois/jour/année)`);
                     
                     // Excel nous donne toujours du MM/DD/YYYY (format US)
                     date = new Date(year, num1 - 1, num2);
-                    Utils.debugLog(`Date créée: ${date.toString()}`);
                 }
             }
             
             // 3. Si on a une date valide, la formater
             if (date && !isNaN(date.getTime())) {
                 const year = date.getFullYear();
-                Utils.debugLog(`Année: ${year}, Test limites: ${year >= 1900 && year <= 2100}`);
                 if (year >= 1900 && year <= 2100) {
                     const formatted = date.toLocaleDateString('fr-FR');
-                    Utils.debugLog(`formatDate SUCCESS: "${formatted}"`);
                     return formatted;
                 }
             }
             
-            Utils.debugLog(`Échec du parsing de date pour: ${cleanValue}`);
             
         } catch (error) {
-            Utils.debugLog(`Erreur formatDate: ${error.message}`);
         }
         
         // Si tout échoue, retourner la valeur originale
-        Utils.debugLog(`formatDate FALLBACK: "${String(cleanValue)}"`);
         return String(cleanValue);
     }
 
@@ -344,6 +335,7 @@ export class Utils {
         return JSON.parse(JSON.stringify(obj));
     }
 }
+
 
 
 
