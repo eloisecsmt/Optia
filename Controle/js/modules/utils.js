@@ -107,6 +107,8 @@ export class Utils {
     // Dans utils.js - améliorer la méthode formatDate
     static formatDate(value) {
         if (!value) return '';
+
+         Utils.debugLog(`formatDate ENTRÉE: "${value}" (${typeof value})`);
         
         // Nettoyer la valeur
         const cleanValue = typeof value === 'string' ? value.trim() : value;
@@ -201,6 +203,8 @@ export class Utils {
         } catch (error) {
             Utils.debugLog(`Erreur formatDate: ${error.message}`);
         }
+
+        Utils.debugLog(`formatDate SORTIE: "${result}"`);
         
         // Si tout échoue, retourner la valeur originale
         return String(cleanValue);
@@ -389,3 +393,4 @@ export class Utils {
         return JSON.parse(JSON.stringify(obj));
     }
 }
+
