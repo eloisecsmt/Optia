@@ -53,7 +53,6 @@ export class DataProcessor {
             'etatBO': ['état bo', 'etat bo', 'statut bo', 'état', 'etat', 'statut'],
             'codeDossier': ['code dossier', 'n° dossier', 'numero dossier', 'id dossier', 'dossier'],
             'ppe': ['ppe', 'personne politiquement exposée', 'politiquement exposé'],
-            'dateEnvoi': ['date d\'envoi', 'envoi', 'date transmission', 'expédition'],
             'dateValidation': ['date validation', 'validation', 'validé', 'approuvé']
         };
 
@@ -210,7 +209,6 @@ export class DataProcessor {
                     etatBO: this.getColumnValue(row, 'etatBO') || '',
                     codeDossier: this.getColumnValue(row, 'codeDossier') || '',
                     ppe: this.getColumnValue(row, 'ppe') || '',
-                    dateEnvoi: Utils.formatDate(this.getColumnValue(row, 'dateEnvoi')) || '',
                     dateValidation: Utils.formatDate(this.getColumnValue(row, 'dateValidation')) || '',
                     
                     rawData: row
@@ -449,3 +447,4 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
