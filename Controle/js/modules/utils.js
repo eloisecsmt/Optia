@@ -107,10 +107,7 @@ export class Utils {
     // Dans utils.js - améliorer la méthode formatDate
     static formatDate(value) {
         if (!value) return '';
-
-         Utils.debugLog(`formatDate ENTRÉE: "${value}" (${typeof value})`);
         
-        // Nettoyer la valeur
         const cleanValue = typeof value === 'string' ? value.trim() : value;
         if (!cleanValue) return '';
         
@@ -119,13 +116,8 @@ export class Utils {
         try {
             let date = null;
             
-            // 1. Si c'est un nombre Excel (25000-50000)
-            if (typeof cleanValue === 'number' && cleanValue > 25000 && cleanValue < 50000) {
-                date = new Date((cleanValue - 25569) * 86400 * 1000);
-            }
-            
             // 2. Si c'est une chaîne, essayer différents formats
-            else if (typeof cleanValue === 'string') {
+            if (typeof cleanValue === 'string') {
                 // Format MM/DD/YYYY vs DD/MM/YYYY - traitement spécifique Excel
                 if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(cleanValue)) {
                     const parts = cleanValue.split('/');
@@ -139,61 +131,21 @@ export class Utils {
                     const num1 = parseInt(parts[0]);
                     const num2 = parseInt(parts[1]);
                     
+                    Utils.debugLog(`Parsing: ${num1}/${num2}/${year} (mois/jour/année)`);
+                    
                     // Excel nous donne toujours du MM/DD/YYYY (format US)
-                    // num1 = mois, num2 = jour
                     date = new Date(year, num1 - 1, num2);
-                }
-                
-                // Format DD-MM-YYYY
-                else if (/^\d{1,2}-\d{1,2}-\d{2,4}$/.test(cleanValue)) {
-                    const parts = cleanValue.split('-');
-                    let year = parseInt(parts[2]);
-                    
-                    if (year < 100) {
-                        year += year < 50 ? 2000 : 1900;
-                    }
-                    
-                    date = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
-                }
-                
-                // Format YYYY-MM-DD (ISO)
-                else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleanValue)) {
-                    date = new Date(cleanValue);
-                }
-                
-                // Format DD.MM.YYYY
-                else if (/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(cleanValue)) {
-                    const parts = cleanValue.split('.');
-                    let year = parseInt(parts[2]);
-                    
-                    if (year < 100) {
-                        year += year < 50 ? 2000 : 1900;
-                    }
-                    
-                    date = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
-                }
-                
-                // Format texte Excel (ex: "14/08/2024", "14 août 2024")
-                else {
-                    // Essayer le parsing natif JavaScript
-                    date = new Date(cleanValue);
-                    
-                    // Si ça échoue, essayer avec Date.parse
-                    if (isNaN(date.getTime())) {
-                        const timestamp = Date.parse(cleanValue);
-                        if (!isNaN(timestamp)) {
-                            date = new Date(timestamp);
-                        }
-                    }
+                    Utils.debugLog(`Date créée: ${date.toString()}`);
                 }
             }
             
             // 3. Si on a une date valide, la formater
             if (date && !isNaN(date.getTime())) {
-                // Vérifier que la date est raisonnable (entre 1900 et 2100)
                 const year = date.getFullYear();
+                Utils.debugLog(`Année: ${year}, Test limites: ${year >= 1900 && year <= 2100}`);
                 if (year >= 1900 && year <= 2100) {
                     const formatted = date.toLocaleDateString('fr-FR');
+                    Utils.debugLog(`formatDate SUCCESS: "${formatted}"`);
                     return formatted;
                 }
             }
@@ -203,10 +155,9 @@ export class Utils {
         } catch (error) {
             Utils.debugLog(`Erreur formatDate: ${error.message}`);
         }
-
-        Utils.debugLog(`formatDate SORTIE: "${String(cleanValue)}"`);
         
         // Si tout échoue, retourner la valeur originale
+        Utils.debugLog(`formatDate FALLBACK: "${String(cleanValue)}"`);
         return String(cleanValue);
     }
 
@@ -393,5 +344,6 @@ export class Utils {
         return JSON.parse(JSON.stringify(obj));
     }
 }
+
 
 
