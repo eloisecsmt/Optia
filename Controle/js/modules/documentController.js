@@ -1920,35 +1920,73 @@ export class DocumentController {
             fullName: 'Saisie des informations client dans Harvest',
             questions: [
                 {
-                    text: 'Quels éléments sont manquants ou incomplets dans Harvest ?',
-                    type: 'checklist',
-                    required: true,
-                    help: 'Cochez tous les éléments qui sont manquants, incomplets ou non renseignés dans le profil client Harvest',
-                    options: [
-                        'Date de MAJ',
-                        'Date d\'entrée en relation',
-                        'Classification MIF',
-                        'Date classification MIF',
-                        'PPE',
-                        'Capacité juridique',
-                        'Profession',
-                        'Nationalité',
-                        'Revenus',
-                        'Charges',
-                        'Patrimoine',
-                        'Qualification du contact',
-                        'Coordonnées tél',
-                        'Coordonnées mail'
-                    ]
-                },
-                {
-                    text: 'Malgré les éléments manquants identifiés, considérez-vous que les informations dans Harvest sont suffisantes pour le contrôle ?',
+                    text: 'Le dossier client a-t-il été créé sous Harvest ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Évaluez si le niveau d\'information présent permet de mener le contrôle de manière satisfaisante',
+                    help: 'Vérifiez si le dossier client existe et est accessible dans Harvest',
+                    skipIfNo: true
                 },
                 {
-                    text: 'Est-ce que l\'onglet conformité est rempli ?',
+                    text: 'Le dossier a-t-il été complété (ou mis à jour) ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si les informations du dossier client sont complètes et à jour dans Harvest',
+                    qualityCheck: {
+                        text: 'Le niveau de complétude est-il suffisant pour ce type de contrôle ?',
+                        help: 'Évaluez si les informations présentes permettent de mener le contrôle de manière satisfaisante'
+                    }
+                },
+                {
+                    text: 'Des éléments sont-ils manquants ou incomplets dans Harvest ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez s\'il manque des informations essentielles ou si certaines sont incomplètes',
+                    followUp: {
+                        condition: 'Oui',
+                        question: {
+                            text: 'Quels éléments de la page 1 d\'Harvest sont manquants ou incomplets ?',
+                            type: 'checklist',
+                            required: true,
+                            help: 'Cochez tous les éléments manquants ou incomplets de la page principale d\'Harvest',
+                            options: [
+                                'N° Client',
+                                'US Person',
+                                'Résidence Fiscale',
+                                'Profession',
+                                'Mots Clefs',
+                                'Age du départ en retraite',
+                                'Tranche de revenus',
+                                'Tranche de Patrimoine',
+                                'Origine du patrimoine'
+                            ]
+                        }
+                    }
+                },
+                {
+                    text: 'D\'autres informations détaillées sont-elles manquantes ou incomplètes ?',
+                    type: 'checklist',
+                    required: true,
+                    help: 'Sélectionnez les catégories d\'informations qui nécessitent des précisions complémentaires',
+                    options: [
+                        'Revenus (détails manquants)',
+                        'Patrimoine (détails manquants)', 
+                        'Charges (détails manquants)',
+                        'Immobilier (détails manquants)'
+                    ],
+                    // Note: followUp conditionnel basé sur checklist sera géré dans la logique du contrôleur
+                },
+                {
+                    text: 'Précisez les informations manquantes pour les catégories sélectionnées ci-dessus',
+                    type: 'text',
+                    required: false,
+                    help: 'Détaillez les informations spécifiques manquantes pour chaque catégorie cochée (ex: montant des revenus locatifs, détail du patrimoine immobilier, etc.)',
+                    showOnlyIf: {
+                        questionIndex: 3, // Question précédente (checklist détaillée)
+                        answer: 'has_selection' // Condition spéciale pour checklist non vide
+                    }
+                },
+                {
+                    text: 'L\'onglet Conformité est-il complété ?',
                     type: 'boolean',
                     required: true,
                     help: 'Vérifiez que l\'onglet conformité dans Harvest contient toutes les informations requises',
@@ -1958,17 +1996,43 @@ export class DocumentController {
                     }
                 },
                 {
-                    text: 'Est-ce que le profil investisseur est rempli et daté ?',
+                    text: 'Un profil investisseur est-il renseigné ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez la présence et la datation du profil investisseur du client',
-                    qualityCheck: {
-                        text: 'Le profil investisseur est-il cohérent et daté de moins de 24 mois ?',
-                        help: 'Vérifiez la cohérence du profil avec la situation client et la validité temporelle'
+                    help: 'Vérifiez la présence d\'un profil investisseur dans Harvest',
+                    followUp: {
+                        condition: 'Oui',
+                        question: {
+                            text: 'Le profil investisseur est-il conforme (version) et daté de moins de 24 mois ?',
+                            type: 'boolean',
+                            required: true,
+                            help: 'Vérifiez que le profil investisseur utilise la bonne version et est daté de moins de 24 mois',
+                            qualityCheck: {
+                                text: 'Le profil investisseur respecte-t-il les exigences de conformité temporelle ?',
+                                help: 'Vérifiez la cohérence temporelle et la validité de la version utilisée'
+                            }
+                        }
                     }
                 },
                 {
-                    text: 'Y a-t-il au moins un objectif renseigné ?',
+                    text: 'Le profil complété correspond-il au questionnaire signé par le client ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la cohérence entre le profil dans Harvest et le questionnaire signé par le client'
+                },
+                {
+                    text: 'Quelle est l\'origine du profil investisseur ?',
+                    type: 'profile_origin',
+                    required: true,
+                    help: 'Indiquez si le profil provient d\'un questionnaire papier ou électronique',
+                    options: ['Papier', 'Electronique'],
+                    showOnlyIf: {
+                        questionIndex: 7, // Question précédente (Le profil complété correspond-il...)
+                        answer: 'Oui'
+                    }
+                },
+                {
+                    text: 'Au moins 1 objectif est-il renseigné ?',
                     type: 'boolean',
                     required: true,
                     help: 'Vérifiez qu\'au moins un objectif de placement est défini pour le client dans Harvest',
@@ -1978,23 +2042,43 @@ export class DocumentController {
                     }
                 },
                 {
-                    text: 'Est-ce que la partie "Projet" est remplie et datée ?',
+                    text: 'L\'objectif défini est-il identique à celui(ceux) indiqué(s) dans la FR ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez que la section projet client est complétée avec une date de mise à jour',
+                    help: 'Vérifiez la cohérence entre l\'objectif dans Harvest et celui mentionné dans la Fiche de Renseignements',
                     qualityCheck: {
-                        text: 'Le projet client est-il détaillé et récent ?',
-                        help: 'Vérifiez que le projet est suffisamment détaillé et mis à jour récemment'
+                        text: 'Y a-t-il une parfaite correspondance entre les objectifs FR et Harvest ?',
+                        help: 'Les objectifs doivent être strictement identiques entre les deux documents'
                     }
                 },
                 {
-                    text: 'Est-ce que la vigilance a été faite ?',
+                    text: 'L\'objectif défini est-il cohérent avec le profil du client ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez que les contrôles de vigilance LCB-FT ont été effectués dans Harvest',
+                    help: 'Évaluez si l\'objectif de placement correspond bien au profil de risque et à la situation du client',
                     qualityCheck: {
-                        text: 'La vigilance est-elle complète et documentée ?',
-                        help: 'Vérifiez que tous les contrôles de vigilance requis sont effectués et tracés'
+                        text: 'L\'adéquation objectif/profil client est-elle appropriée ?',
+                        help: 'Vérifiez que l\'objectif est réaliste par rapport à l\'âge, l\'horizon d\'investissement et la capacité de risque'
+                    }
+                },
+                {
+                    text: 'Le niveau de Vigilance client a-t-il été déterminé ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que le niveau de vigilance LCB-FT a été évalué et documenté dans Harvest',
+                    qualityCheck: {
+                        text: 'Le niveau de vigilance attribué est-il approprié au profil client ?',
+                        help: 'Vérifiez que le niveau de vigilance correspond aux facteurs de risque identifiés'
+                    }
+                },
+                {
+                    text: 'La date de la Vigilance Client est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez la présence de la date de réalisation de la vigilance client',
+                    qualityCheck: {
+                        text: 'Cette date est-elle conforme (correspond-elle au RDV client ou a-t-elle été réalisée après) ?',
+                        help: 'La vigilance doit être réalisée lors du rendez-vous client ou dans un délai raisonnable après'
                     }
                 }
             ]
@@ -2202,6 +2286,13 @@ export class DocumentController {
         
         if (!targetResponse) {
             return false; // Si pas de réponse à la question de référence, ne pas afficher
+        }
+
+        if (answer === 'has_selection') {
+            if (targetResponse.missingElements && targetResponse.missingElements.length > 0) {
+                return true;
+            }
+            return false;
         }
         
         return targetResponse.answer === answer;
@@ -2738,6 +2829,22 @@ export class DocumentController {
         } else {
             // Pour tous les autres documents : options génériques
             options = ['Electronique', 'Papier'];
+        }
+
+         if (questionData.type === 'profile_origin') {
+            return `
+                <div class="response-group profile-origin-group">
+                    <label>Origine du profil investisseur :</label>
+                    <div class="radio-group">
+                        ${questionData.options.map(option => `
+                            <label class="radio-option">
+                                <input type="radio" name="response" value="${option}">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
         }
         
         return `
@@ -3312,7 +3419,16 @@ export class DocumentController {
             justification: ''
         };
 
-        // NOUVEAU : Gestion du type checklist
+        // NOUVEAU : Gestion du type profile_origin
+        if (questionData.type === 'profile_origin') {
+            const profileOriginRadio = document.querySelector('input[name="response"]:checked');
+            if (profileOriginRadio) {
+                response.answer = profileOriginRadio.value;
+            }
+            return response;
+        }
+
+        // Gestion du type checklist (modifiée pour améliorer la détection)
         if (questionData.type === 'checklist') {
             const checkedItems = document.querySelectorAll('input[name="checklist-item"]:checked');
             const missingElements = Array.from(checkedItems).map(cb => cb.value);
@@ -3454,6 +3570,14 @@ export class DocumentController {
         if (questionData.type === 'document_type') {
             if (!response.answer) {
                 Utils.showNotification('Veuillez sélectionner le type de document', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        if (questionData.type === 'profile_origin') {
+            if (!response.answer) {
+                Utils.showNotification('Veuillez sélectionner l\'origine du profil', 'error');
                 return false;
             }
             return true;
@@ -3613,6 +3737,11 @@ export class DocumentController {
 
         // Les checklists ne nécessitent jamais de justification
         if (questionData.type === 'checklist') {
+            return true;
+        }
+
+        // Les questions de type profile_origin ne nécessitent pas de justification
+        if (questionData.type === 'profile_origin') {
             return true;
         }
 
