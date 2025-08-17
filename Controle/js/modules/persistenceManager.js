@@ -9,13 +9,13 @@ export class PersistenceManager {
         this.controlledDossiers = new Map();
         this.lastSaveTime = 0;
         this.companyColors = {
-            primary: 'FF1A1A2E',      // Bleu foncé
-            secondary: 'FFD4AF37',    // Or
-            success: 'FF28A745',      // Vert
-            warning: 'FFFFC107',      // Jaune
-            danger: 'FFDC3545',       // Rouge
-            light: 'FFF8F9FA',        // Gris clair
-            info: 'FF17A2B8'          // Bleu info
+            primary: '1A1A2E',      // Bleu foncé
+            secondary: 'D4AF37',    // Or
+            success: '28A745',      // Vert
+            warning: 'FFC107',      // Jaune
+            danger: 'DC3545',       // Rouge
+            light: 'F8F9FA',        // Gris clair
+            info: '17A2B8'          // Bleu info
         };
         this.init();
     }
@@ -31,61 +31,136 @@ export class PersistenceManager {
     saveControl(controlData) {
         try {
             const now = Date.now();
+            
+            // Protection contre les doublons
             if (now - this.lastSaveTime < 1000) {
                 Utils.debugLog('Doublon détecté - sauvegarde ignorée');
                 return null;
             }
             this.lastSaveTime = now;
             
+            // Validation des données essentielles
             if (!controlData || !controlData.dossier) {
-                Utils.debugLog('Données de contrôle invalides');
+                Utils.debugLog('Données de contrôle invalides - dossier manquant');
                 return null;
             }
 
+            if (!controlData.control || !controlData.control.definition) {
+                Utils.debugLog('Données de contrôle invalides - définition de contrôle manquante');
+                return null;
+            }
+
+            // Calcul des statistiques de documents
+            const documentsStats = this.calculateDocumentsStatistics(controlData);
+            
+            // Calcul des détails de vérification
+            const verificationDetails = this.extractVerificationDetails(controlData);
+            
+            // Calcul de la conformité globale
+            const conformityAncalculateDocumentsStatisticsalysis = this.analyzeGlobalConformity(controlData, verificationDetails);
+            
+            // Construction de l'objet contrôle enrichi
             const controle = {
-                id: Date.now(),
+                // Identifiants et métadonnées
+                id: now, // Utiliser timestamp comme ID unique
                 date: new Date(),
-                type: controlData.control?.definition?.name || 'Type inconnu',
+                dateTimestamp: now,
+                
+                // Informations du contrôle
+                type: controlData.control.definition.name || 'Type inconnu',
+                typeId: controlData.control.definition.id || null,
+                
+                // Informations du dossier
                 client: controlData.dossier.client || 'Client inconnu',
                 codeDossier: controlData.dossier.codeDossier || '',
+                reference: controlData.dossier.reference || '',
                 conseiller: controlData.dossier.conseiller || '',
                 montant: controlData.dossier.montant || '',
                 domaine: controlData.dossier.domaine || '',
                 nouveauClient: controlData.dossier.nouveauClient || '',
+                
+                // Statut et résultats
                 statut: 'Terminé',
-                anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
-                documentsControles: controlData.documents ? 
-                    `${Object.values(controlData.documents).filter(d => d.status === 'completed').length}/${Object.keys(controlData.documents).length}` : 
-                    '0/0',
-                conformiteGlobale: (controlData.obligatoryIssuesCount || 0) === 0 ? 'CONFORME' : 'NON CONFORME',
-                details: controlData.responses ? this.extractDetails(controlData) : [],
-                // NOUVEAU : Sauvegarder les données brutes pour export détaillé
+                
+                // Statistiques des documents
+                totalDocuments: documentsStats.totalDocuments,
+                documentsVerifies: documentsStats.documentsVerifies,
+                documentsPresents: documentsStats.documentsPresents,
+                documentsConformes: documentsStats.documentsConformes,
+                documentsControles: `${documentsStats.documentsVerifies}/${documentsStats.totalDocuments}`,
+                
+                // Statistiques des questions
+                totalQuestions: documentsStats.totalQuestions,
+                questionsRepondues: documentsStats.questionsRepondues,
+                questionsConformes: documentsStats.questionsConformes,
+                questionsNonConformes: documentsStats.questionsNonConformes,
+                
+                // Anomalies et conformité
+                anomaliesMajeures: conformityAnalysis.obligatoryIssuesCount,
+                anomaliesMineurs: conformityAnalysis.optionalIssuesCount,
+                totalAnomalies: conformityAnalysis.totalIssuesCount,
+                conformiteGlobale: conformityAnalysis.globalConformity,
+                tauxConformite: conformityAnalysis.conformityRate,
+                
+                // Détails structurés
+                details: verificationDetails,
+                documentsStatus: documentsStats.documentsDetails,
+                
+                // Données brutes complètes pour exports avancés
                 rawControlData: {
-                    dossier: controlData.dossier,
-                    control: controlData.control,
-                    documents: controlData.documents,
-                    responses: controlData.responses,
-                    obligatoryIssuesCount: controlData.obligatoryIssuesCount,
-                    completedAt: controlData.completedAt
+                    dossier: { ...controlData.dossier },
+                    control: {
+                        definition: { ...controlData.control.definition },
+                        metadata: controlData.control.metadata || {}
+                    },
+                    documents: controlData.documents ? { ...controlData.documents } : {},
+                    responses: controlData.responses ? this.deepCloneResponses(controlData.responses) : {},
+                    obligatoryIssuesCount: controlData.obligatoryIssuesCount || 0,
+                    completedAt: controlData.completedAt || new Date().toISOString(),
+                    
+                    // Métadonnées enrichies
+                    statistics: {
+                        ...documentsStats,
+                        ...conformityAnalysis
+                    },
+                    
+                    // Informations de contexte
+                    controlContext: {
+                        userAgent: navigator.userAgent,
+                        timestamp: now,
+                        version: '2.0' // Version de sauvegarde
+                    }
                 }
             };
 
+            // Sauvegarde du contrôle
             this.controles.push(controle);
             this.saveToStorage();
             
-            // NOUVEAU : Marquer le dossier comme contrôlé
+            // Gestion du statut du dossier
             const dossierKey = this.generateDossierKey(controlData.dossier);
             this.markDossierAsControlled(dossierKey, controle.type);
             
-            // NOUVEAU : Supprimer le contrôle suspendu s'il existait
+            // Suppression du contrôle suspendu correspondant s'il existe
             this.removeSuspendedControl(dossierKey, controle.type);
             
-            Utils.debugLog(`Contrôle sauvegardé et dossier marqué: ${controle.client}`);
+            // Logging détaillé
+            Utils.debugLog([
+                `Contrôle sauvegardé avec succès:`,
+                `- Client: ${controle.client}`,
+                `- Type: ${controle.type}`,
+                `- Documents: ${controle.documentsControles}`,
+                `- Questions: ${controle.questionsRepondues}/${controle.totalQuestions}`,
+                `- Conformité: ${controle.conformiteGlobale} (${controle.tauxConformite}%)`,
+                `- Anomalies: ${controle.totalAnomalies} (${controle.anomaliesMajeures} majeures)`
+            ].join('\n'));
+            
             return controle;
 
         } catch (error) {
-            Utils.debugLog('Erreur sauvegarde contrôle: ' + error.message);
-            console.error('Erreur sauvegarde:', error);
+            Utils.debugLog('Erreur lors de la sauvegarde du contrôle: ' + error.message);
+            console.error('Erreur sauvegarde détaillée:', error);
+            console.error('Données reçues:', controlData);
             return null;
         }
     }
@@ -273,34 +348,252 @@ export class PersistenceManager {
         XLSX.utils.book_append_sheet(wb, ws, "Documents");
     }
 
-    // Calculer les statistiques par document
-    calculateDocumentStats(details) {
-        const stats = {};
-        
-        details.forEach(detail => {
-            if (!stats[detail.document]) {
-                stats[detail.document] = {
-                    totalCount: 0,
-                    conformeCount: 0,
-                    anomaliesCount: 0,
-                    status: 'CONFORME'
-                };
+   // NOUVELLE MÉTHODE : Calculer les statistiques complètes des documents
+    calculateDocumentsStatistics(controlData) {
+        const stats = {
+            totalDocuments: 0,
+            documentsVerifies: 0,
+            documentsPresents: 0,
+            documentsConformes: 0,
+            totalQuestions: 0,
+            questionsRepondues: 0,
+            questionsConformes: 0,
+            questionsNonConformes: 0,
+            documentsDetails: {}
+        };
+
+        // Vérifier que nous avons des documents définis
+        if (!controlData.control?.definition?.documents) {
+            Utils.debugLog('Aucun document défini dans le contrôle');
+            return stats;
+        }
+
+        // Parcourir tous les documents définis dans le contrôle
+        controlData.control.definition.documents.forEach(docDefinition => {
+            const docId = docDefinition.id;
+            const docName = this.getDocumentName(docId);
+            
+            stats.totalDocuments++;
+            
+            // Récupérer les réponses pour ce document
+            const documentResponses = controlData.responses?.[docId] || {};
+            const responsesList = Object.values(documentResponses);
+            
+            // Calculer les statistiques pour ce document
+            const docStats = this.analyzeDocumentResponses(docName, responsesList, docDefinition);
+            
+            // Mettre à jour les statistiques globales
+            if (responsesList.length > 0) {
+                stats.documentsVerifies++;
             }
             
-            stats[detail.document].totalCount++;
+            if (docStats.isPresent) {
+                stats.documentsPresents++;
+            }
+            
+            if (docStats.globalStatus === 'CONFORME') {
+                stats.documentsConformes++;
+            }
+            
+            stats.totalQuestions += docStats.totalQuestions;
+            stats.questionsRepondues += docStats.questionsRepondues;
+            stats.questionsConformes += docStats.questionsConformes;
+            stats.questionsNonConformes += docStats.questionsNonConformes;
+            
+            // Stocker les détails du document
+            stats.documentsDetails[docId] = docStats;
+        });
+
+        return stats;
+    }
+
+    // NOUVELLE MÉTHODE : Analyser les réponses d'un document spécifique
+    analyzeDocumentResponses(documentName, responsesList, documentDefinition) {
+        const docStats = {
+            id: documentDefinition.id,
+            name: documentName,
+            fullName: documentDefinition.name || documentName,
+            required: documentDefinition.required || false,
+            
+            // Statistiques des questions
+            totalQuestions: responsesList.length,
+            questionsRepondues: responsesList.filter(r => r.answer !== undefined && r.answer !== '').length,
+            questionsConformes: responsesList.filter(r => r.conforme === true).length,
+            questionsNonConformes: responsesList.filter(r => r.conforme === false).length,
+            
+            // Répartition des réponses
+            reponseOui: responsesList.filter(r => r.answer === 'Oui').length,
+            reponseNon: responsesList.filter(r => r.answer === 'Non').length,
+            reponsePartiel: responsesList.filter(r => r.answer === 'Partiel').length,
+            
+            // Anomalies
+            anomaliesObligatoires: responsesList.filter(r => 
+                r.conforme === false && r.obligation === 'Obligatoire'
+            ).length,
+            anomaliesOptionnelles: responsesList.filter(r => 
+                r.conforme === false && r.obligation !== 'Obligatoire'
+            ).length,
+            
+            // Présence et statut
+            isPresent: false,
+            globalStatus: 'NON VÉRIFIÉ',
+            conformityRate: 0,
+            
+            // Détails des réponses
+            responses: responsesList.map(response => ({
+                question: response.question || '',
+                answer: response.answer || '',
+                quality: response.quality || '',
+                conforme: response.conforme || false,
+                obligation: response.obligation || '',
+                justification: response.justification || ''
+            }))
+        };
+        
+        // Calculer la présence du document
+        if (docStats.totalQuestions > 0) {
+            // Un document est présent s'il y a au moins une réponse "Oui" 
+            // ET aucune réponse "Non" obligatoire
+            const hasPositiveResponse = docStats.reponseOui > 0;
+            const hasObligatoryNo = responsesList.some(r => 
+                r.answer === 'Non' && r.obligation === 'Obligatoire'
+            );
+            
+            docStats.isPresent = hasPositiveResponse && !hasObligatoryNo;
+        }
+        
+        // Calculer le statut global
+        if (docStats.totalQuestions === 0) {
+            docStats.globalStatus = 'NON VÉRIFIÉ';
+        } else if (docStats.anomaliesObligatoires > 0) {
+            docStats.globalStatus = 'NON CONFORME';
+        } else if (docStats.anomaliesOptionnelles > 0) {
+            docStats.globalStatus = 'AVEC RÉSERVES';
+        } else if (docStats.questionsConformes === docStats.totalQuestions) {
+            docStats.globalStatus = 'CONFORME';
+        } else {
+            docStats.globalStatus = 'PARTIEL';
+        }
+        
+        // Calculer le taux de conformité
+        if (docStats.totalQuestions > 0) {
+            docStats.conformityRate = Math.round((docStats.questionsConformes / docStats.totalQuestions) * 100);
+        }
+        
+        return docStats;
+    }
+
+    // NOUVELLE MÉTHODE : Extraire les détails de vérification pour l'affichage
+    extractVerificationDetails(controlData) {
+        const details = [];
+        
+        if (!controlData.responses) {
+            Utils.debugLog('Aucune réponse trouvée dans les données de contrôle');
+            return details;
+        }
+
+        // Parcourir tous les documents avec des réponses
+        Object.entries(controlData.responses).forEach(([docId, documentResponses]) => {
+            const docName = this.getDocumentName(docId);
+            
+            // Parcourir toutes les réponses de ce document
+            Object.values(documentResponses).forEach(response => {
+                details.push({
+                    document: docName,
+                    documentId: docId,
+                    question: response.question || 'Question non définie',
+                    reponse: response.answer || 'Non répondu',
+                    qualite: response.quality || '',
+                    conforme: Boolean(response.conforme),
+                    obligatoire: response.obligation === 'Obligatoire',
+                    obligation: response.obligation || '',
+                    justification: response.justification || '',
+                    
+                    // Métadonnées supplémentaires
+                    questionId: response.questionId || null,
+                    responseTimestamp: response.timestamp || null
+                });
+            });
+        });
+        
+        // Trier les détails par document puis par question
+        details.sort((a, b) => {
+            if (a.document !== b.document) {
+                return a.document.localeCompare(b.document);
+            }
+            return a.question.localeCompare(b.question);
+        });
+        
+        Utils.debugLog(`${details.length} détails de vérification extraits`);
+        return details;
+    }
+
+    // NOUVELLE MÉTHODE : Analyser la conformité globale
+    analyzeGlobalConformity(controlData, verificationDetails) {
+        const analysis = {
+            obligatoryIssuesCount: 0,
+            optionalIssuesCount: 0,
+            totalIssuesCount: 0,
+            totalVerifications: verificationDetails.length,
+            conformeVerifications: 0,
+            globalConformity: 'CONFORME',
+            conformityRate: 0
+        };
+        
+        // Analyser chaque détail
+        verificationDetails.forEach(detail => {
             if (detail.conforme) {
-                stats[detail.document].conformeCount++;
+                analysis.conformeVerifications++;
             } else {
-                stats[detail.document].anomaliesCount++;
+                analysis.totalIssuesCount++;
                 if (detail.obligatoire) {
-                    stats[detail.document].status = 'NON CONFORME';
-                } else if (stats[detail.document].status === 'CONFORME') {
-                    stats[detail.document].status = 'AVEC RÉSERVES';
+                    analysis.obligatoryIssuesCount++;
+                } else {
+                    analysis.optionalIssuesCount++;
                 }
             }
         });
         
-        return stats;
+        // Déterminer la conformité globale
+        if (analysis.obligatoryIssuesCount > 0) {
+            analysis.globalConformity = 'NON CONFORME';
+        } else if (analysis.optionalIssuesCount > 0) {
+            analysis.globalConformity = 'AVEC RÉSERVES';
+        } else {
+            analysis.globalConformity = 'CONFORME';
+        }
+        
+        // Calculer le taux de conformité
+        if (analysis.totalVerifications > 0) {
+            analysis.conformityRate = Math.round((analysis.conformeVerifications / analysis.totalVerifications) * 100);
+        }
+        
+        // Utiliser aussi les données du contrôle si disponibles
+        if (controlData.obligatoryIssuesCount !== undefined) {
+            analysis.obligatoryIssuesCount = Math.max(analysis.obligatoryIssuesCount, controlData.obligatoryIssuesCount);
+        }
+        
+        Utils.debugLog([
+            `Analyse de conformité:`,
+            `- Vérifications: ${analysis.totalVerifications}`,
+            `- Conformes: ${analysis.conformeVerifications}`,
+            `- Anomalies obligatoires: ${analysis.obligatoryIssuesCount}`,
+            `- Anomalies optionnelles: ${analysis.optionalIssuesCount}`,
+            `- Conformité globale: ${analysis.globalConformity}`,
+            `- Taux: ${analysis.conformityRate}%`
+        ].join('\n'));
+        
+        return analysis;
+    }
+
+    // NOUVELLE MÉTHODE : Clonage profond des réponses pour éviter les références
+    deepCloneResponses(responses) {
+        try {
+            return JSON.parse(JSON.stringify(responses));
+        } catch (error) {
+            Utils.debugLog('Erreur lors du clonage des réponses: ' + error.message);
+            return {};
+        }
     }
 
     // FORMATAGE DES FEUILLES
@@ -320,55 +613,62 @@ export class PersistenceManager {
 
         for (let R = range.s.r; R <= range.e.r; ++R) {
             for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
-                if (!ws[cell_address]) continue;
-
-                // Style de base
-                ws[cell_address].s = {
-                    alignment: { vertical: 'center', wrapText: true },
-                    font: { name: 'Calibri', sz: 10 },
-                    border: {
-                        top: { style: 'thin', color: { rgb: '000000' } },
-                        bottom: { style: 'thin', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
-                    }
+                const cellAddress = XLSX.utils.encode_cell({ c: C, r: R });
+                
+                // Valeur de la cellule pour la logique conditionnelle
+                const cellValue = ws[cellAddress]?.v;
+                
+                // Style par défaut
+                let styleOptions = {
+                    fontSize: 10,
+                    alignment: { vertical: 'center', wrapText: true }
                 };
 
-                // Titre principal
+                // Titre principal (ligne 0)
                 if (R === 0) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                    styleOptions = {
+                        fillColor: this.companyColors.primary,
+                        fontColor: 'FFFFFF',
+                        bold: true,
+                        fontSize: 16,
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
                 // Titres de sections
-                else if (ws[cell_address].v && typeof ws[cell_address].v === 'string' && 
-                        (ws[cell_address].v.includes('INFORMATIONS') || 
-                         ws[cell_address].v.includes('RÉSULTATS') || 
-                         ws[cell_address].v.includes('STATISTIQUES'))) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } }
+                else if (cellValue && typeof cellValue === 'string' && 
+                        (cellValue.includes('INFORMATIONS') || 
+                         cellValue.includes('RÉSULTATS') || 
+                         cellValue.includes('STATISTIQUES'))) {
+                    styleOptions = {
+                        fillColor: this.companyColors.secondary,
+                        fontColor: 'FFFFFF',
+                        bold: true,
+                        fontSize: 12
                     };
                 }
                 // Conformité globale
-                else if (ws[cell_address].v === 'CONFORME') {
-                    ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
-                    ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                else if (cellValue === 'CONFORME') {
+                    styleOptions = {
+                        fillColor: this.companyColors.success,
+                        fontColor: 'FFFFFF',
+                        bold: true
+                    };
                 }
-                else if (ws[cell_address].v === 'NON CONFORME') {
-                    ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
-                    ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                else if (cellValue === 'NON CONFORME') {
+                    styleOptions = {
+                        fillColor: this.companyColors.danger,
+                        fontColor: 'FFFFFF',
+                        bold: true
+                    };
                 }
+                
+                this.applyCellStyle(ws, cellAddress, styleOptions);
             }
         }
 
         // Fusionner les cellules du titre
-        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 3, r: 0 } }];
+        if (!ws['!merges']) ws['!merges'] = [];
+        ws['!merges'].push({ s: { c: 0, r: 0 }, e: { c: 3, r: 0 } });
     }
 
     formatQuestionsSheet(ws, rowCount) {
@@ -388,61 +688,67 @@ export class PersistenceManager {
         
         for (let R = range.s.r; R <= range.e.r; ++R) {
             for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
-                if (!ws[cell_address]) continue;
-
-                ws[cell_address].s = {
-                    alignment: { vertical: 'top', wrapText: true },
-                    font: { name: 'Calibri', sz: 10 },
-                    border: {
-                        top: { style: 'thin', color: { rgb: '000000' } },
-                        bottom: { style: 'thin', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
-                    }
+                const cellAddress = XLSX.utils.encode_cell({ c: C, r: R });
+                const cellValue = ws[cellAddress]?.v;
+                
+                let styleOptions = {
+                    fontSize: 10,
+                    alignment: { vertical: 'top', wrapText: true }
                 };
 
                 // Titre principal
                 if (R === 0) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                    styleOptions = {
+                        fillColor: this.companyColors.primary,
+                        fontColor: 'FFFFFF',
+                        bold: true,
+                        fontSize: 16,
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
                 // En-têtes de colonnes
                 else if (R === 2) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                    styleOptions = {
+                        fillColor: this.companyColors.secondary,
+                        fontColor: 'FFFFFF',
+                        bold: true,
+                        fontSize: 11,
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
-                // Coloration des conformités
-                else if (C === 4) { // Colonne Conformité
-                    if (ws[cell_address].v === 'CONFORME') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
-                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
-                    } else if (ws[cell_address].v === 'NON CONFORME') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
-                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                // Données
+                else if (R > 2) {
+                    // Colonne Conformité
+                    if (C === 4) {
+                        if (cellValue === 'CONFORME') {
+                            styleOptions.fillColor = this.companyColors.success;
+                            styleOptions.fontColor = 'FFFFFF';
+                            styleOptions.bold = true;
+                        } else if (cellValue === 'NON CONFORME') {
+                            styleOptions.fillColor = this.companyColors.danger;
+                            styleOptions.fontColor = 'FFFFFF';
+                            styleOptions.bold = true;
+                        }
+                    }
+                    // Colonne Réponse
+                    else if (C === 2) {
+                        if (cellValue === 'Oui') {
+                            styleOptions.fontColor = this.companyColors.success;
+                            styleOptions.bold = true;
+                        } else if (cellValue === 'Non') {
+                            styleOptions.fontColor = this.companyColors.danger;
+                            styleOptions.bold = true;
+                        }
                     }
                 }
-                // Coloration des réponses
-                else if (C === 2) { // Colonne Réponse
-                    if (ws[cell_address].v === 'Oui') {
-                        ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.success.substr(2) }, bold: true };
-                    } else if (ws[cell_address].v === 'Non') {
-                        ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.danger.substr(2) }, bold: true };
-                    }
-                }
+                
+                this.applyCellStyle(ws, cellAddress, styleOptions);
             }
         }
 
         // Fusionner le titre
-        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 5, r: 0 } }];
+        if (!ws['!merges']) ws['!merges'] = [];
+        ws['!merges'].push({ s: { c: 0, r: 0 }, e: { c: 5, r: 0 } });
     }
 
     formatAnomaliesSheet(ws, rowCount) {
@@ -460,49 +766,49 @@ export class PersistenceManager {
         
         for (let R = range.s.r; R <= range.e.r; ++R) {
             for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
-                if (!ws[cell_address]) continue;
-
-                ws[cell_address].s = {
-                    alignment: { vertical: 'top', wrapText: true },
-                    font: { name: 'Calibri', sz: 10 },
-                    border: {
-                        top: { style: 'thin', color: { rgb: '000000' } },
-                        bottom: { style: 'thin', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
-                    }
+                const cellAddress = XLSX.utils.encode_cell({ c: C, r: R });
+                const cellValue = ws[cellAddress]?.v;
+                
+                let styleOptions = {
+                    fontSize: 10,
+                    alignment: { vertical: 'top', wrapText: true }
                 };
 
                 // Titre
                 if (R === 0) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.danger.substr(2) } },
+                    styleOptions = {
+                        fillColor: this.companyColors.danger,
+                        fontColor: 'FFFFFF',
+                        bold: true,
+                        fontSize: 16,
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
                 // En-têtes
                 else if (R === 2) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.warning.substr(2) } },
+                    styleOptions = {
+                        fillColor: this.companyColors.warning,
+                        fontColor: 'FFFFFF',
+                        bold: true,
+                        fontSize: 11,
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
                 // Colonne obligatoire
-                else if (C === 3) {
-                    if (ws[cell_address].v === 'OUI') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
-                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                else if (R > 2 && C === 3) {
+                    if (cellValue === 'OUI') {
+                        styleOptions.fillColor = this.companyColors.danger;
+                        styleOptions.fontColor = 'FFFFFF';
+                        styleOptions.bold = true;
                     }
                 }
+                
+                this.applyCellStyle(ws, cellAddress, styleOptions);
             }
         }
 
-        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 4, r: 0 } }];
+        if (!ws['!merges']) ws['!merges'] = [];
+        ws['!merges'].push({ s: { c: 0, r: 0 }, e: { c: 4, r: 0 } });
     }
 
     formatDocumentsSheet(ws, rowCount) {
@@ -566,7 +872,7 @@ export class PersistenceManager {
         ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 4, r: 0 } }];
     }
 
-    // Extraire les détails du contrôle (inchangé)
+    // Extraire les détails du contrôle
     extractDetails(controlData) {
         const details = [];
         
@@ -580,7 +886,7 @@ export class PersistenceManager {
                     question: response.question,
                     reponse: response.answer,
                     qualite: response.quality || '',
-                    conforme: response.answer === 'Oui' && response.quality !== 'Non conforme',
+                    conforme: response.conforme, // ✅ Utiliser la valeur déjà calculée
                     obligatoire: response.obligation === 'Obligatoire',
                     justification: response.justification || ''
                 });
@@ -615,7 +921,7 @@ export class PersistenceManager {
     // Export Excel global enrichi avec tous les contrôles
     saveToExcel(fileName = null) {
         if (!fileName) {
-            fileName = `Historique_Controles_Complet_${new Date().toISOString().split('T')[0]}.xlsx`;
+            fileName = `Historique_Controles_${new Date().toISOString().split('T')[0]}.xlsx`;
         }
 
         if (this.controles.length === 0) {
@@ -626,31 +932,71 @@ export class PersistenceManager {
         try {
             const wb = XLSX.utils.book_new();
             
-            // 1. Onglet Vue d'ensemble (tableau résumé de tous les contrôles)
+            // 1. Onglet Vue d'ensemble (inchangé)
             this.createOverviewSheet(wb);
             
-            // 2. Onglet Détail Questions-Réponses (toutes les Q&R de tous les contrôles)
-            this.createAllQuestionsSheet(wb);
+            // 2. NOUVEAU : Créer les onglets dynamiques par type de contrôle
+            this.createControlTypeSheets(wb);
             
-            // 3. Onglet Anomalies Globales (toutes les anomalies détectées)
-            this.createGlobalAnomaliesSheet(wb);
-            
-            // 4. Onglet Statistiques par Type de Contrôle
+            // 3. Onglet Statistiques (gardé)
             this.createStatsSheet(wb);
-            
-            // 5. Onglet Données Brutes (pour import/analyse)
-            this.createRawDataSheet(wb);
             
             XLSX.writeFile(wb, fileName);
             
-            Utils.showNotification(`Export global généré: ${fileName}`, 'success');
+            Utils.showNotification(`Export généré: ${fileName}`, 'success');
             return true;
 
         } catch (error) {
-            console.error('Erreur export Excel global:', error);
-            Utils.showNotification('Erreur lors de l\'export global: ' + error.message, 'error');
+            console.error('Erreur export Excel:', error);
+            Utils.showNotification('Erreur lors de l\'export: ' + error.message, 'error');
             return false;
         }
+    }
+
+    // NOUVELLE MÉTHODE : Diagnostiquer les données d'export
+    diagnoseExportData(controlType = null) {
+        Utils.debugLog('=== DIAGNOSTIC DONNÉES EXPORT ===');
+        
+        let controles = this.controles;
+        if (controlType) {
+            controles = this.controles.filter(c => c.type === controlType);
+            Utils.debugLog(`Analysant ${controles.length} contrôles de type ${controlType}`);
+        } else {
+            Utils.debugLog(`Analysant ${controles.length} contrôles au total`);
+        }
+        
+        controles.forEach(controle => {
+            Utils.debugLog(`\n--- ${controle.client} (${controle.type}) ---`);
+            
+            if (!controle.rawControlData?.responses) {
+                Utils.debugLog('❌ Pas de rawControlData.responses');
+                return;
+            }
+            
+            Object.entries(controle.rawControlData.responses).forEach(([docId, responses]) => {
+                const docName = this.getDocumentName(parseInt(docId));
+                const responseCount = Object.keys(responses).length;
+                Utils.debugLog(`📄 ${docName}: ${responseCount} questions`);
+                
+                Object.values(responses).forEach(response => {
+                    const status = response.conforme ? '✅' : '❌';
+                    Utils.debugLog(`  ${status} ${response.question}: ${response.answer}`);
+                    if (response.justification) {
+                        Utils.debugLog(`    💬 ${response.justification}`);
+                    }
+                });
+            });
+        });
+        
+        return {
+            totalControles: controles.length,
+            typesAnalyses: [...new Set(controles.map(c => c.type))],
+            totalQuestions: controles.reduce((sum, c) => {
+                if (!c.rawControlData?.responses) return sum;
+                return sum + Object.values(c.rawControlData.responses)
+                    .reduce((docSum, responses) => docSum + Object.keys(responses).length, 0);
+            }, 0)
+        };
     }
 
     // ONGLET 1: VUE D'ENSEMBLE - Tableau récapitulatif de tous les contrôles
@@ -680,6 +1026,704 @@ export class PersistenceManager {
         const ws = XLSX.utils.aoa_to_sheet(overviewData);
         this.formatOverviewSheet(ws, overviewData.length);
         XLSX.utils.book_append_sheet(wb, ws, "Vue d'ensemble");
+    }
+
+    // NOUVELLE MÉTHODE : Créer les onglets par type de contrôle
+    createControlTypeSheets(wb) {
+        // Grouper les contrôles par type
+        const controlesByType = {};
+        this.controles.forEach(controle => {
+            if (!controlesByType[controle.type]) {
+                controlesByType[controle.type] = [];
+            }
+            controlesByType[controle.type].push(controle);
+        });
+
+        // Créer un onglet pour chaque type
+        Object.entries(controlesByType).forEach(([type, controles]) => {
+            this.createControlTypeSheet(wb, type, controles);
+        });
+    }
+
+    // NOUVELLE MÉTHODE : Créer un onglet pour un type de contrôle spécifique
+    createControlTypeSheet(wb, controlType, controles) {
+        // Définir toutes les colonnes de base
+        const baseColumns = [
+            'Date', 'Client', 'Code Dossier', 'Conseiller', 'Montant', 
+            'Domaine', 'Nouveau Client', 'Conformité Globale', 'Anomalies Majeures'
+        ];
+
+        // Définir les colonnes pour chaque document
+        const documentColumns = [
+            { id: 1, name: 'FR', fullName: 'Fiche de Renseignements' },
+            { id: 2, name: 'Profil Risques', fullName: 'Profil de Risques' },
+            { id: 3, name: 'Profil ESG', fullName: 'Profil ESG' },
+            { id: 4, name: 'Harvest', fullName: 'Harvest' },
+            { id: 5, name: 'FIL', fullName: 'FIL' },
+            { id: 6, name: 'LM Entrée', fullName: 'LM Entrée en Relation' },
+            { id: 7, name: 'CNI', fullName: 'Carte Nationale d\'Identité' },
+            { id: 8, name: 'Justif Domicile', fullName: 'Justificatif de Domicile' },
+            { id: 9, name: 'Etude', fullName: 'Etude' },
+            { id: 10, name: 'RIB', fullName: 'Relevé d\'Identité Bancaire' },
+            { id: 11, name: 'Convention RTO', fullName: 'Convention RTO' },
+            { id: 12, name: 'Origine Fonds', fullName: 'Origine des Fonds' },
+            { id: 13, name: 'Carto Opération', fullName: 'Cartographie Opération' },
+            { id: 14, name: 'Destination Fonds', fullName: 'Destination des Fonds' },
+            { id: 99, name: 'Zeendoc', fullName: 'Zeendoc' }
+        ];
+
+        // Construire l'en-tête
+        const headers = [...baseColumns];
+        documentColumns.forEach(doc => {
+            headers.push(`${doc.name} Présent`);
+            headers.push(`${doc.name} Justification`);
+        });
+
+        // Construire les données
+        const sheetData = [headers];
+        
+        controles.forEach(controle => {
+            const row = [
+                controle.date.toLocaleDateString('fr-FR'),
+                controle.client,
+                controle.codeDossier || 'N/A',
+                controle.conseiller || 'N/A',
+                controle.montant || 'N/A',
+                controle.domaine || 'N/A',
+                controle.nouveauClient || 'N/A',
+                controle.conformiteGlobale,
+                controle.anomaliesMajeures
+            ];
+
+            // Ajouter les informations de chaque document
+            documentColumns.forEach(doc => {
+                const docInfo = this.getDocumentInfoFromControl(controle, doc.id);
+                row.push(docInfo.present ? 'Oui' : 'Non');
+                row.push(docInfo.justification || '');
+            });
+
+            sheetData.push(row);
+        });
+
+        // Créer la feuille
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        
+        // Formater la feuille
+        this.formatControlTypeSheet(ws, sheetData.length, baseColumns.length, documentColumns.length);
+        
+        // Nom d'onglet sécurisé (Excel limite à 31 caractères)
+        const sheetName = this.sanitizeSheetName(controlType);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+
+    // NOUVELLE MÉTHODE : Extraire les informations d'un document depuis un contrôle
+    getDocumentInfoFromControl(controle, documentId) {
+        // Priorité 1 : Utiliser les statistiques enrichies si disponibles
+        if (controle.documentsStatus && controle.documentsStatus[documentId]) {
+            const docStatus = controle.documentsStatus[documentId];
+            return {
+                present: docStatus.isPresent,
+                justification: this.buildJustificationFromDocStatus(docStatus),
+                totalQuestions: docStatus.totalQuestions,
+                conformeAnswers: docStatus.questionsConformes,
+                nonConformeAnswers: docStatus.questionsNonConformes,
+                status: docStatus.globalStatus,
+                conformityRate: docStatus.conformityRate,
+                anomalies: docStatus.anomaliesObligatoires + docStatus.anomaliesOptionnelles
+            };
+        }
+        
+        // Priorité 2 : Analyser les détails comme fallback
+        if (controle.details && controle.details.length > 0) {
+            const documentName = this.getDocumentName(documentId);
+            const documentDetails = controle.details.filter(detail => 
+                detail.document === documentName || detail.documentId == documentId
+            );
+            
+            if (documentDetails.length > 0) {
+                return this.analyzeDocumentDetailsLegacy(documentDetails);
+            }
+        }
+        
+        // Priorité 3 : Fallback complet
+        return { 
+            present: false, 
+            justification: 'Données non disponibles pour ce document',
+            totalQuestions: 0,
+            conformeAnswers: 0,
+            nonConformeAnswers: 0,
+            status: 'NON VÉRIFIÉ',
+            conformityRate: 0,
+            anomalies: 0
+        };
+    }
+
+    // NOUVELLE MÉTHODE : Créer les onglets par type de contrôle avec colonnes dynamiques
+    createControlTypeSheets(wb) {
+        // Grouper les contrôles par type
+        const controlesByType = {};
+        this.controles.forEach(controle => {
+            if (!controlesByType[controle.type]) {
+                controlesByType[controle.type] = [];
+            }
+            controlesByType[controle.type].push(controle);
+        });
+
+        // Créer un onglet pour chaque type
+        Object.entries(controlesByType).forEach(([type, controles]) => {
+            this.createDynamicControlTypeSheet(wb, type, controles);
+        });
+    }
+
+    // NOUVELLE MÉTHODE : Créer un onglet avec colonnes complètement dynamiques
+    createDynamicControlTypeSheet(wb, controlType, controles) {
+        // 1. Analyser toutes les questions de tous les contrôles de ce type
+        const allQuestions = this.analyzeAllQuestionsForType(controles);
+        
+        // 2. Construire l'en-tête dynamique
+        const baseColumns = [
+            'Date', 'Client', 'Code Dossier', 'Conseiller', 'Montant', 
+            'Domaine', 'Nouveau Client', 'Conformité Globale', 'Anomalies Majeures'
+        ];
+        
+        const questionColumns = allQuestions.map(q => q.columnName);
+        const headers = [...baseColumns, ...questionColumns];
+        
+        // 3. Construire les données
+        const sheetData = [headers];
+        
+        controles.forEach(controle => {
+            const row = [
+                controle.date.toLocaleDateString('fr-FR'),
+                controle.client,
+                controle.codeDossier || 'N/A',
+                controle.conseiller || 'N/A',
+                controle.montant || 'N/A',
+                controle.domaine || 'N/A',
+                controle.nouveauClient || 'N/A',
+                controle.conformiteGlobale,
+                controle.anomaliesMajeures
+            ];
+
+            // Ajouter les réponses pour chaque question identifiée
+            allQuestions.forEach(questionInfo => {
+                const cellValue = this.getQuestionResponseForExport(controle, questionInfo);
+                row.push(cellValue);
+            });
+
+            sheetData.push(row);
+        });
+
+        // 4. Créer la feuille
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        
+        // 5. Formater la feuille
+        this.formatDynamicControlTypeSheet(ws, sheetData.length, baseColumns.length, questionColumns.length, allQuestions);
+        
+        // 6. Nom d'onglet sécurisé
+        const sheetName = this.sanitizeSheetName(controlType);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        
+        Utils.debugLog(`Onglet ${controlType} créé avec ${questionColumns.length} colonnes de questions`);
+    }
+
+    // NOUVELLE MÉTHODE : Analyser toutes les questions de tous les contrôles d'un type
+    analyzeAllQuestionsForType(controles) {
+        const questionsMap = new Map();
+        
+        controles.forEach(controle => {
+            // Vérifier les données brutes
+            if (!controle.rawControlData?.responses) {
+                Utils.debugLog(`Pas de rawControlData.responses pour ${controle.client}`);
+                return;
+            }
+            
+            // Parcourir tous les documents et leurs réponses
+            Object.entries(controle.rawControlData.responses).forEach(([docId, documentResponses]) => {
+                const docName = this.getDocumentName(parseInt(docId));
+                
+                Object.values(documentResponses).forEach(response => {
+                    if (!response.question) return;
+                    
+                    // Créer une clé unique pour la question
+                    const questionKey = `${docId}_${response.question}`;
+                    
+                    if (!questionsMap.has(questionKey)) {
+                        questionsMap.set(questionKey, {
+                            docId: parseInt(docId),
+                            docName: docName,
+                            questionText: response.question,
+                            columnName: this.generateColumnName(docName, response.question),
+                            frequency: 0,
+                            samples: []
+                        });
+                    }
+                    
+                    // Incrémenter la fréquence et ajouter un échantillon
+                    const questionInfo = questionsMap.get(questionKey);
+                    questionInfo.frequency++;
+                    questionInfo.samples.push({
+                        answer: response.answer,
+                        conforme: response.conforme,
+                        justification: response.justification
+                    });
+                });
+            });
+        });
+        
+        // Convertir en array et trier par document puis par fréquence
+        return Array.from(questionsMap.values())
+            .sort((a, b) => {
+                if (a.docId !== b.docId) {
+                    return a.docId - b.docId; // Trier par ordre de document
+                }
+                return b.frequency - a.frequency; // Puis par fréquence décroissante
+            });
+    }
+
+    // NOUVELLE MÉTHODE : Générer un nom de colonne lisible
+    generateColumnName(docName, questionText) {
+        // Règles de transformation pour des noms de colonnes courts et clairs
+        let shortName = questionText;
+        
+        // Supprimer les formulations courantes
+        shortName = shortName.replace(/^Est-ce que /i, '');
+        shortName = shortName.replace(/^Est-ce /i, '');
+        shortName = shortName.replace(/^Le /i, '');
+        shortName = shortName.replace(/^La /i, '');
+        shortName = shortName.replace(/^Les /i, '');
+        shortName = shortName.replace(/ \?$/i, '');
+        shortName = shortName.replace(/^Quel(le)? est /i, '');
+        shortName = shortName.replace(/^Comment /i, '');
+        shortName = shortName.replace(/^Quels? /i, '');
+        
+        // Remplacements spécifiques
+        const replacements = {
+            'le document est présent': 'Présent',
+            'document est présent': 'Présent',
+            'tous les documents sont-ils bien ajoutés dans Zeendoc': 'Zeendoc Complet',
+            'la signature du conseiller est-elle présente': 'Signature Conseiller',
+            'la signature de tous les clients est-elle présente': 'Signature Clients',
+            'le type de document': 'Type',
+            'la bonne version': 'Version',
+            'le document est entièrement complété': 'Complété',
+            'les mentions sont-elles présentes sur le document': 'Mentions',
+            'la date est-elle présente sur le document': 'Date',
+            'date est-elle présente': 'Date',
+            'document est-il valide': 'Valide',
+            'Date de moins de 3 mois': 'Date < 3 mois',
+            'Datant de - de 24 mois': 'Date < 24 mois',
+            'le RIB correspond t-il bien au client': 'Correspond Client',
+            'cartographie client a-t-elle été réalisée': 'Carto Réalisée',
+            'cartographie de l\'opération a-t-elle été réalisée': 'Carto Opé Réalisée'
+        };
+        
+        const lowerShortName = shortName.toLowerCase();
+        for (const [pattern, replacement] of Object.entries(replacements)) {
+            if (lowerShortName.includes(pattern.toLowerCase())) {
+                shortName = replacement;
+                break;
+            }
+        }
+        
+        // Si pas de remplacement trouvé, essayer de raccourcir intelligemment
+        if (shortName.length > 40) {
+            // Garder les premiers mots importants
+            const words = shortName.split(' ');
+            if (words.length > 6) {
+                shortName = words.slice(0, 6).join(' ') + '...';
+            }
+        }
+        
+        // Préfixer avec le nom du document
+        return `${docName} ${shortName}`;
+    }
+
+    // NOUVELLE MÉTHODE : Obtenir la réponse d'une question pour l'export
+    getQuestionResponseForExport(controle, questionInfo) {
+        if (!controle.rawControlData?.responses) {
+            return 'N/A';
+        }
+        
+        const docResponses = controle.rawControlData.responses[questionInfo.docId];
+        if (!docResponses) {
+            return 'N/A';
+        }
+        
+        // Chercher la réponse correspondante
+        const response = Object.values(docResponses).find(r => 
+            r.question === questionInfo.questionText
+        );
+        
+        if (!response) {
+            return 'N/C'; // Pas applicable
+        }
+        
+        // Construire la valeur de cellule selon le type de réponse
+        return this.formatCellValue(response);
+    }
+
+    // NOUVELLE MÉTHODE : Formater la valeur d'une cellule selon la réponse
+    formatCellValue(response) {
+        let cellValue = response.answer || 'N/A';
+        
+        // Gestion spéciale pour les checklists
+        if (response.missingElements && Array.isArray(response.missingElements)) {
+            if (response.missingElements.length === 0) {
+                return 'Aucun manquant';
+            } else {
+                return `${response.missingElements.length} manquants: ${response.missingElements.join(', ')}`;
+            }
+        }
+        
+        // Gestion des réponses non conformes
+        if (response.conforme === false || response.quality === 'Non conforme') {
+            if (response.justification && response.justification.trim()) {
+                cellValue += ` - ${response.justification}`;
+            }
+        }
+        
+        // Gestion des réponses partiellement conformes
+        if (response.quality === 'Partiellement conforme') {
+            if (response.justification && response.justification.trim()) {
+                cellValue += ` (Partiel - ${response.justification})`;
+            } else {
+                cellValue += ' (Partiel)';
+            }
+        }
+        
+        // Gestion des détails de qualité pour les signatures
+        if (response.qualityDetails) {
+            if (response.qualityDetails.signatureType) {
+                cellValue += ` (${response.qualityDetails.signatureType})`;
+            }
+            if (response.qualityDetails.cifStatus) {
+                cellValue += ` (${response.qualityDetails.cifStatus})`;
+            }
+        }
+        
+        return cellValue;
+    }
+
+    // NOUVELLE MÉTHODE : Formater un onglet de type de contrôle dynamique
+    formatDynamicControlTypeSheet(ws, rowCount, baseColumnsCount, questionColumnsCount, allQuestions) {
+        if (!ws['!ref']) return;
+        
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        // Largeurs de colonnes
+        const colWidths = [];
+        
+        // Colonnes de base
+        for (let i = 0; i < baseColumnsCount; i++) {
+            colWidths.push({ width: i === 1 ? 25 : 15 }); // Client plus large
+        }
+        
+        // Colonnes questions (largeur selon le contenu)
+        allQuestions.forEach(questionInfo => {
+            const columnWidth = Math.min(Math.max(questionInfo.columnName.length * 0.8, 12), 30);
+            colWidths.push({ width: columnWidth });
+        });
+        
+        ws['!cols'] = colWidths;
+
+        // Créer les styles avec patternFill (méthode alternative pour Excel)
+        const createCellStyle = (fillColor, fontColor = '000000', bold = false) => ({
+            alignment: { vertical: 'center', wrapText: true },
+            font: { 
+                name: 'Calibri', 
+                sz: 10, 
+                bold: bold,
+                color: { rgb: fontColor }
+            },
+            fill: { 
+                fgColor: { rgb: fillColor },
+                patternType: 'solid' // Ajout explicite du pattern
+            },
+            border: {
+                top: { style: 'thin', color: { rgb: '000000' } },
+                bottom: { style: 'thin', color: { rgb: '000000' } },
+                left: { style: 'thin', color: { rgb: '000000' } },
+                right: { style: 'thin', color: { rgb: '000000' } }
+            }
+        });
+
+        // Formatage des cellules
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+
+                // En-têtes
+                if (R === 0) {
+                    let headerColor = this.companyColors.primary.substring(2);
+                    
+                    // Couleur différente pour les colonnes de questions selon le document
+                    if (C >= baseColumnsCount) {
+                        const questionIndex = C - baseColumnsCount;
+                        const questionInfo = allQuestions[questionIndex];
+                        headerColor = this.getDocumentColor(questionInfo.docId).substring(2);
+                    }
+                    
+                    ws[cell_address].s = createCellStyle(headerColor, 'FFFFFF', true);
+                    ws[cell_address].s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                    
+                } else {
+                    // Couleur de base (alternance)
+                    const isEvenRow = R % 2 === 0;
+                    let bgColor = isEvenRow ? 'FFFFFF' : this.companyColors.light.substring(2);
+                    let fontColor = '000000';
+                    let isBold = false;
+
+                    // Coloration spéciale pour certaines colonnes
+                    if (C < baseColumnsCount) {
+                        // Colonnes de base - conformité globale
+                        if (C === baseColumnsCount - 2) { // Conformité globale
+                            if (ws[cell_address].v === 'CONFORME') {
+                                bgColor = this.companyColors.success.substring(2);
+                                fontColor = 'FFFFFF';
+                                isBold = true;
+                            } else if (ws[cell_address].v === 'NON CONFORME') {
+                                bgColor = this.companyColors.danger.substring(2);
+                                fontColor = 'FFFFFF';
+                                isBold = true;
+                            }
+                        }
+                    } else {
+                        // Colonnes de questions - coloration selon le contenu
+                        const cellValue = ws[cell_address].v;
+                        if (cellValue) {
+                            const cellStr = cellValue.toString().toLowerCase();
+                            
+                            // Vert pour les réponses positives
+                            if (cellStr === 'oui' || cellStr === 'conforme' || cellStr === 'aucun manquant') {
+                                bgColor = this.companyColors.success.substring(2);
+                                fontColor = 'FFFFFF';
+                                isBold = true;
+                            }
+                            // Rouge pour les non-conformités
+                            else if (cellStr.includes('non -') || cellStr === 'non' || cellStr.includes('manquants:')) {
+                                bgColor = this.companyColors.danger.substring(2);
+                                fontColor = 'FFFFFF';
+                                isBold = true;
+                            }
+                            // Orange pour les partiels
+                            else if (cellStr.includes('partiel')) {
+                                bgColor = this.companyColors.warning.substring(2);
+                                fontColor = '000000';
+                                isBold = true;
+                            }
+                            // Gris pour N/A, N/C, Absent
+                            else if (cellStr === 'n/a' || cellStr === 'n/c' || cellStr === 'absent') {
+                                bgColor = 'E9ECEF';
+                                fontColor = '6C757D';
+                                isBold = false;
+                            }
+                        }
+                    }
+                    
+                    ws[cell_address].s = createCellStyle(bgColor, fontColor, isBold);
+                }
+            }
+        }
+
+        // Filtres automatiques
+        ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
+    }
+
+     createCellStyle(options = {}) {
+        const {
+            fillColor = null,
+            fontColor = '000000',
+            bold = false,
+            fontSize = 10,
+            alignment = { vertical: 'center', wrapText: true }
+        } = options;
+
+        const style = {
+            alignment: alignment,
+            font: { 
+                name: 'Calibri', 
+                sz: fontSize, 
+                bold: bold,
+                color: { rgb: fontColor }
+            },
+            border: {
+                top: { style: 'thin', color: { rgb: '000000' } },
+                bottom: { style: 'thin', color: { rgb: '000000' } },
+                left: { style: 'thin', color: { rgb: '000000' } },
+                right: { style: 'thin', color: { rgb: '000000' } }
+            }
+        };
+
+        // Ajouter le remplissage seulement si spécifié
+        if (fillColor) {
+            style.fill = {
+                patternType: 'solid',
+                fgColor: { rgb: fillColor }
+            };
+        }
+
+        return style;
+    }
+
+    applyCellStyle(ws, cellAddress, styleOptions) {
+        // Créer la cellule si elle n'existe pas
+        if (!ws[cellAddress]) {
+            ws[cellAddress] = { v: '', t: 's' };
+        }
+        
+        // Appliquer le style
+        ws[cellAddress].s = this.createCellStyle(styleOptions);
+    }
+
+    // NOUVELLE MÉTHODE : Obtenir une couleur selon le document
+    getDocumentColor(docId) {
+        const documentColors = {
+            1: '1A1A2E',    // FR - Bleu foncé
+            2: '6F42C1',    // Profil Risques - Violet
+            4: '20C997',    // Carto Client - Teal
+            5: 'FD7E14',    // FIL - Orange
+            6: '6610F2',    // LM - Indigo
+            7: 'DC3545',    // CNI - Rouge
+            8: '28A745',    // Justif - Vert
+            9: '17A2B8',    // Etude - Cyan
+            10: 'FFC107',   // RIB - Jaune
+            11: '343A40',   // Convention RTO - Dark
+            12: 'E83E8C',   // Origine fonds - Pink
+            13: '6C757D',   // Carto Opé - Gris
+            14: '495057',   // Destination - Gris foncé
+            21: '007BFF',   // Harvest - Bleu
+            99: 'ADB5BD'    // Zeendoc - Gris clair
+        };
+        
+        return documentColors[docId] || this.companyColors.secondary.substring(2);
+    }
+
+    // NOUVELLE MÉTHODE : Construire une justification détaillée
+    buildJustificationFromDocStatus(docStatus) {
+        if (docStatus.totalQuestions === 0) {
+            return 'Document non vérifié';
+        }
+        
+        const parts = [];
+        
+        if (docStatus.anomaliesObligatoires > 0) {
+            parts.push(`${docStatus.anomaliesObligatoires} anomalie(s) obligatoire(s)`);
+        }
+        
+        if (docStatus.anomaliesOptionnelles > 0) {
+            parts.push(`${docStatus.anomaliesOptionnelles} anomalie(s) optionnelle(s)`);
+        }
+        
+        if (parts.length === 0) {
+            return `Document conforme (${docStatus.questionsConformes}/${docStatus.totalQuestions} vérifications)`;
+        }
+        
+        return parts.join(', ') + ` - Taux conformité: ${docStatus.conformityRate}%`;
+    }
+
+    // NOUVELLE MÉTHODE : Formater un onglet de type de contrôle
+    formatControlTypeSheet(ws, rowCount, baseColumnsCount, documentColumnsCount) {
+        if (!ws['!ref']) return;
+        
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        // Largeurs de colonnes
+        const colWidths = [];
+        
+        // Colonnes de base
+        for (let i = 0; i < baseColumnsCount; i++) {
+            colWidths.push({ width: i === 1 ? 25 : 15 }); // Client plus large
+        }
+        
+        // Colonnes documents (présent + justification)
+        for (let i = 0; i < documentColumnsCount; i++) {
+            colWidths.push({ width: 12 }); // Présent
+            colWidths.push({ width: 30 }); // Justification
+        }
+        
+        ws['!cols'] = colWidths;
+
+        // Formatage des cellules
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+
+                // Style de base
+                ws[cell_address].s = {
+                    alignment: { vertical: 'center', wrapText: true },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+
+                // En-têtes
+                if (R === 0) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                } else {
+                    // Alternance de couleurs pour les lignes
+                    const isEvenRow = R % 2 === 0;
+                    ws[cell_address].s.fill = { 
+                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substr(2) } 
+                    };
+
+                    // Coloration spéciale pour certaines colonnes
+                    if (C < baseColumnsCount) {
+                        // Colonnes de base
+                        if (C === baseColumnsCount - 2) { // Conformité globale
+                            if (ws[cell_address].v === 'CONFORME') {
+                                ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
+                                ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                            } else if (ws[cell_address].v === 'NON CONFORME') {
+                                ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                                ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                            }
+                        }
+                    } else {
+                        // Colonnes documents
+                        const docColumnIndex = (C - baseColumnsCount) % 2;
+                        if (docColumnIndex === 0) { // Colonne "Présent"
+                            if (ws[cell_address].v === 'Oui') {
+                                ws[cell_address].s.font = { 
+                                    ...ws[cell_address].s.font, 
+                                    color: { rgb: this.companyColors.success.substr(2) }, 
+                                    bold: true 
+                                };
+                            } else if (ws[cell_address].v === 'Non') {
+                                ws[cell_address].s.font = { 
+                                    ...ws[cell_address].s.font, 
+                                    color: { rgb: this.companyColors.danger.substr(2) }, 
+                                    bold: true 
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Filtres automatiques
+        ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
+    }
+
+    // NOUVELLE MÉTHODE : Nettoyer le nom d'onglet pour Excel
+    sanitizeSheetName(name) {
+        // Excel limite les noms d'onglets à 31 caractères et interdit certains caractères
+        return name
+            .replace(/[\\\/\?\*\[\]]/g, '') // Supprimer caractères interdits
+            .substring(0, 31) // Limiter à 31 caractères
+            .trim();
     }
 
     // ONGLET 2: TOUTES LES QUESTIONS-RÉPONSES
@@ -723,6 +1767,48 @@ export class PersistenceManager {
         const ws = XLSX.utils.aoa_to_sheet(questionsData);
         this.formatQuestionsGlobalSheet(ws, questionsData.length);
         XLSX.utils.book_append_sheet(wb, ws, "Questions-Réponses");
+    }
+
+    // MÉTHODE LEGACY pour compatibilité descendante
+    analyzeDocumentDetailsLegacy(documentDetails) {
+        const totalQuestions = documentDetails.length;
+        const conformeAnswers = documentDetails.filter(d => d.conforme).length;
+        const nonConformeAnswers = totalQuestions - conformeAnswers;
+        const anomaliesObligatoires = documentDetails.filter(d => !d.conforme && d.obligatoire).length;
+        
+        const hasYesResponse = documentDetails.some(detail => detail.reponse === 'Oui');
+        const hasObligatoryNo = documentDetails.some(detail => 
+            detail.reponse === 'Non' && detail.obligatoire
+        );
+        
+        let status;
+        if (anomaliesObligatoires > 0) {
+            status = 'NON CONFORME';
+        } else if (nonConformeAnswers > 0) {
+            status = 'AVEC RÉSERVES';
+        } else {
+            status = 'CONFORME';
+        }
+        
+        return {
+            present: hasYesResponse && !hasObligatoryNo,
+            justification: this.buildLegacyJustification(documentDetails),
+            totalQuestions,
+            conformeAnswers,
+            nonConformeAnswers,
+            status,
+            conformityRate: totalQuestions > 0 ? Math.round((conformeAnswers / totalQuestions) * 100) : 0,
+            anomalies: nonConformeAnswers
+        };
+    }
+
+    buildLegacyJustification(documentDetails) {
+        const justifications = documentDetails
+            .map(detail => detail.justification)
+            .filter(j => j && j.trim() !== '')
+            .join(' | ');
+            
+        return justifications || 'Analyse basée sur les réponses disponibles';
     }
 
     // ONGLET 3: TOUTES LES ANOMALIES
@@ -853,35 +1939,31 @@ export class PersistenceManager {
         
         for (let R = range.s.r; R <= range.e.r; ++R) {
             for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
-                if (!ws[cell_address]) continue;
-
-                ws[cell_address].s = {
-                    alignment: { vertical: 'center', wrapText: true },
-                    font: { name: 'Calibri', sz: 10 },
-                    border: {
-                        top: { style: 'thin', color: { rgb: '000000' } },
-                        bottom: { style: 'thin', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
-                    }
+                const cellAddress = XLSX.utils.encode_cell({ c: C, r: R });
+                const cellValue = ws[cellAddress]?.v;
+                
+                let styleOptions = {
+                    fontSize: 10,
+                    alignment: { vertical: 'center', wrapText: true }
                 };
 
                 // Titre principal
                 if (R === 0) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                    styleOptions = {
+                        fillColor: this.companyColors.primary,
+                        fontColor: 'FFFFFF',
+                        bold: true,
+                        fontSize: 14,
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
                 // En-têtes de colonnes
                 else if (R === 2) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                    styleOptions = {
+                        fillColor: this.companyColors.secondary,
+                        fontColor: 'FFFFFF',
+                        bold: true,
+                        fontSize: 11,
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
@@ -889,47 +1971,70 @@ export class PersistenceManager {
                 else if (R > 2) {
                     // Alternance de couleurs
                     const isEvenRow = (R - 3) % 2 === 0;
-                    ws[cell_address].s.fill = { 
-                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substr(2) } 
-                    };
+                    if (!isEvenRow) {
+                        styleOptions.fillColor = this.companyColors.light;
+                    }
                     
                     // Coloration spéciale pour la conformité (dernière colonne)
                     if (C === range.e.c) {
-                        if (ws[cell_address].v === 'CONFORME') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
-                        } else if (ws[cell_address].v === 'NON CONFORME') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        if (cellValue === 'CONFORME') {
+                            styleOptions.fillColor = this.companyColors.success;
+                            styleOptions.fontColor = 'FFFFFF';
+                            styleOptions.bold = true;
+                        } else if (cellValue === 'NON CONFORME') {
+                            styleOptions.fillColor = this.companyColors.danger;
+                            styleOptions.fontColor = 'FFFFFF';
+                            styleOptions.bold = true;
                         }
                     }
                     
                     // Coloration pour les anomalies (avant-dernière colonne)
                     if (C === range.e.c - 1) {
-                        const anomalies = parseInt(ws[cell_address].v) || 0;
+                        const anomalies = parseInt(cellValue) || 0;
                         if (anomalies > 0) {
-                            ws[cell_address].s.font = { 
-                                ...ws[cell_address].s.font, 
-                                color: { rgb: this.companyColors.danger.substr(2) }, 
-                                bold: true 
-                            };
+                            styleOptions.fontColor = this.companyColors.danger;
+                            styleOptions.bold = true;
                         } else {
-                            ws[cell_address].s.font = { 
-                                ...ws[cell_address].s.font, 
-                                color: { rgb: this.companyColors.success.substr(2) },
-                                bold: true
-                            };
+                            styleOptions.fontColor = this.companyColors.success;
+                            styleOptions.bold = true;
                         }
                     }
                 }
+                
+                this.applyCellStyle(ws, cellAddress, styleOptions);
             }
         }
 
         // Fusionner le titre
-        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 9, r: 0 } }];
+        if (!ws['!merges']) ws['!merges'] = [];
+        ws['!merges'].push({ s: { c: 0, r: 0 }, e: { c: 9, r: 0 } });
         
         // Filtres automatiques
         ws['!autofilter'] = { ref: `A3:${XLSX.utils.encode_col(range.e.c)}3` };
+    }
+
+    validateExportData() {
+        const issues = [];
+        
+        // Vérifier les contrôles
+        this.controles.forEach((controle, index) => {
+            if (!controle.date || !(controle.date instanceof Date)) {
+                issues.push(`Contrôle ${index}: date invalide`);
+            }
+            if (!controle.client || typeof controle.client !== 'string') {
+                issues.push(`Contrôle ${index}: client invalide`);
+            }
+            if (!controle.type || typeof controle.type !== 'string') {
+                issues.push(`Contrôle ${index}: type invalide`);
+            }
+        });
+        
+        if (issues.length > 0) {
+            console.warn('Problèmes de données détectés:', issues);
+            return false;
+        }
+        
+        return true;
     }
 
     formatQuestionsGlobalSheet(ws, rowCount) {
