@@ -490,37 +490,6 @@ export class TableManager {
             }
         });
 
-        // NOUVEAU : Gestion du filtre de date personnalisée
-        const dateEnvoiFilter = document.getElementById('filter-date-envoi');
-        if (dateEnvoiFilter) {
-            dateEnvoiFilter.addEventListener('change', (e) => {
-                const customDateGroup = document.getElementById('custom-date-group');
-                if (e.target.value === 'custom') {
-                    customDateGroup.style.display = 'block';
-                } else {
-                    customDateGroup.style.display = 'none';
-                    // Effacer les dates personnalisées quand on change de filtre
-                    document.getElementById('filter-date-from').value = '';
-                    document.getElementById('filter-date-to').value = '';
-                }
-                
-                // Appliquer les filtres automatiquement
-                this.applyFilters();
-            });
-        }
-        
-        // Écouter les changements sur les dates personnalisées
-        const dateFromInput = document.getElementById('filter-date-from');
-        const dateToInput = document.getElementById('filter-date-to');
-        
-        if (dateFromInput) {
-            dateFromInput.addEventListener('change', () => this.applyFilters());
-        }
-        
-        if (dateToInput) {
-            dateToInput.addEventListener('change', () => this.applyFilters());
-        }
-
         // Configuration de la recherche en temps réel
         const searchInput = document.getElementById('filter-search');
         if (searchInput) {
@@ -558,26 +527,15 @@ export class TableManager {
                 .map(d => d.domaine)
                 .filter(d => d && d.trim() !== '' && d.trim() !== '-')
         )].sort();
-
-        // NOUVEAU : Filtre Type d'Acte
-        const typesActe = [...new Set(
-            allDossiers
-                .map(d => d.typeActe)
-                .filter(t => t && t.trim() !== '' && t.trim() !== '-')
-        )].sort();
         
         Utils.debugLog(`Conseillers trouvés: ${conseillers.length} - ${conseillers.slice(0, 5).join(', ')}${conseillers.length > 5 ? '...' : ''}`);
         Utils.debugLog(`Domaines trouvés: ${domaines.length} - ${domaines.slice(0, 5).join(', ')}${domaines.length > 5 ? '...' : ''}`);
-        Utils.debugLog(`Types d'acte trouvés: ${typesActe.length} - ${typesActe.slice(0, 5).join(', ')}${typesActe.length > 5 ? '...' : ''}`);
         
         // Remplir le filtre conseiller
         this.populateSelectFilter('filter-conseiller', conseillers, 'Tous les conseillers', 'Aucun conseiller trouvé');
         
         // Remplir le filtre domaine
         this.populateSelectFilter('filter-domaine', domaines, 'Tous les domaines', 'Aucun domaine trouvé');
-
-        // Remplir le filtre type d'acte
-        this.populateSelectFilter('filter-type-acte', typesActe, 'Tous les types', 'Aucun type d\'acte trouvé');
     }
 
     populateSelectFilter(selectId, options, defaultText, emptyText) {
@@ -599,123 +557,6 @@ export class TableManager {
             optionElement.textContent = emptyText;
             optionElement.disabled = true;
             select.appendChild(optionElement);
-        }
-    }
-
-    analyzeDateEnvoi(dossiers) {
-        const datesWithData = dossiers
-            .map(d => d.dateEnvoi)
-            .filter(date => date && date.trim() !== '' && date.trim() !== '-');
-        
-        const validDates = datesWithData
-            .map(dateStr => this.parseDate(dateStr))
-            .filter(date => date && !isNaN(date.getTime()));
-        
-        if (validDates.length > 0) {
-            const minDate = new Date(Math.min(...validDates));
-            const maxDate = new Date(Math.max(...validDates));
-            
-            Utils.debugLog(`Dates d'envoi analysées: ${validDates.length}/${dossiers.length} valides`);
-            Utils.debugLog(`Période couverte: du ${minDate.toLocaleDateString('fr-FR')} au ${maxDate.toLocaleDateString('fr-FR')}`);
-        } else {
-            Utils.debugLog('Aucune date d\'envoi valide trouvée');
-        }
-    }
-    
-    // 2.4 NOUVELLE méthode pour parser les dates en différents formats
-    parseDate(dateStr) {
-        if (!dateStr) return null;
-        
-        // Nettoyer la chaîne
-        const cleaned = dateStr.toString().trim();
-        
-        // Format DD/MM/YYYY ou DD-MM-YYYY
-        const frenchDateMatch = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if (frenchDateMatch) {
-            const [, day, month, year] = frenchDateMatch;
-            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        }
-        
-        // Format YYYY-MM-DD
-        const isoDateMatch = cleaned.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-        if (isoDateMatch) {
-            const [, year, month, day] = isoDateMatch;
-            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        }
-        
-        // Essayer le parsing natif
-        const nativeDate = new Date(cleaned);
-        if (!isNaN(nativeDate.getTime())) {
-            return nativeDate;
-        }
-        
-        return null;
-    }
-    
-    // 2.5 NOUVELLE méthode pour vérifier si une date correspond au filtre
-    isDateInRange(dateStr, filterValue, customFrom = null, customTo = null) {
-        const date = this.parseDate(dateStr);
-        if (!date || isNaN(date.getTime())) return false;
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const dateToCheck = new Date(date);
-        dateToCheck.setHours(0, 0, 0, 0);
-        
-        switch (filterValue) {
-            case 'today':
-                return dateToCheck.getTime() === today.getTime();
-                
-            case 'yesterday':
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                return dateToCheck.getTime() === yesterday.getTime();
-                
-            case 'this-week':
-                const startOfWeek = new Date(today);
-                startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Lundi
-                const endOfWeek = new Date(startOfWeek);
-                endOfWeek.setDate(startOfWeek.getDate() + 6); // Dimanche
-                return dateToCheck >= startOfWeek && dateToCheck <= endOfWeek;
-                
-            case 'last-week':
-                const lastWeekStart = new Date(today);
-                lastWeekStart.setDate(today.getDate() - today.getDay() - 6); // Lundi dernier
-                const lastWeekEnd = new Date(lastWeekStart);
-                lastWeekEnd.setDate(lastWeekStart.getDate() + 6); // Dimanche dernier
-                return dateToCheck >= lastWeekStart && dateToCheck <= lastWeekEnd;
-                
-            case 'this-month':
-                return dateToCheck.getMonth() === today.getMonth() && 
-                       dateToCheck.getFullYear() === today.getFullYear();
-                       
-            case 'last-month':
-                const lastMonth = new Date(today);
-                lastMonth.setMonth(today.getMonth() - 1);
-                return dateToCheck.getMonth() === lastMonth.getMonth() && 
-                       dateToCheck.getFullYear() === lastMonth.getFullYear();
-                       
-            case 'custom':
-                if (!customFrom && !customTo) return true;
-                
-                const fromDate = customFrom ? new Date(customFrom) : null;
-                const toDate = customTo ? new Date(customTo) : null;
-                
-                if (fromDate) fromDate.setHours(0, 0, 0, 0);
-                if (toDate) toDate.setHours(23, 59, 59, 999);
-                
-                if (fromDate && toDate) {
-                    return dateToCheck >= fromDate && dateToCheck <= toDate;
-                } else if (fromDate) {
-                    return dateToCheck >= fromDate;
-                } else if (toDate) {
-                    return dateToCheck <= toDate;
-                }
-                return true;
-                
-            default:
-                return true;
         }
     }
 
@@ -1517,70 +1358,34 @@ export class TableManager {
     }
 
     applyFilters() {
-        Utils.debugLog('=== APPLICATION FILTRES AVEC NOUVEAUX CHAMPS ===');
-    
+        Utils.debugLog('=== APPLICATION FILTRES ===');
+        
         if (!this.dataProcessor) return;
-    
+
         const conseillerEl = document.getElementById('filter-conseiller');
         const domaineEl = document.getElementById('filter-domaine');
-        const typeActeEl = document.getElementById('filter-type-acte'); // NOUVEAU
         const nouveauEl = document.getElementById('filter-nouveau');
-        const dateEnvoiEl = document.getElementById('filter-date-envoi'); // NOUVEAU
         const searchEl = document.getElementById('filter-search');
-        
-        // NOUVEAU : Récupérer les dates personnalisées
-        const dateFromEl = document.getElementById('filter-date-from');
-        const dateToEl = document.getElementById('filter-date-to');
-    
+
         const filters = {
             conseiller: conseillerEl ? conseillerEl.value : '',
             domaine: domaineEl ? domaineEl.value : '',
-            typeActe: typeActeEl ? typeActeEl.value : '', // NOUVEAU
             nouveau: nouveauEl ? nouveauEl.value : '',
-            dateEnvoi: dateEnvoiEl ? dateEnvoiEl.value : '', // NOUVEAU
-            dateFrom: dateFromEl ? dateFromEl.value : '', // NOUVEAU
-            dateTo: dateToEl ? dateToEl.value : '', // NOUVEAU
             search: searchEl ? searchEl.value.toLowerCase().trim() : ''
         };
-    
-        Utils.debugLog(`Filtres appliqués:`, filters);
-        
-        // Appliquer les filtres via le DataProcessor avec les nouveaux champs
-        this.dataProcessor.applyFiltersExtended(filters, (dossier, filters) => {
-            // Filtre Type d'Acte
-            if (filters.typeActe && dossier.typeActe !== filters.typeActe) {
-                return false;
-            }
-            
-            // Filtre Date d'Envoi
-            if (filters.dateEnvoi) {
-                const matchesDate = this.isDateInRange(
-                    dossier.dateEnvoi, 
-                    filters.dateEnvoi, 
-                    filters.dateFrom, 
-                    filters.dateTo
-                );
-                if (!matchesDate) return false;
-            }
-            
-            return true; // Autres filtres gérés par le DataProcessor
-        });
-        
+
+        this.dataProcessor.applyFilters(filters);
         this.loadDossiersTable();
     }
 
     clearFilters() {
         const filterElements = [
             'filter-conseiller',
-            'filter-domaine',
-            'filter-type-acte', // NOUVEAU
+            'filter-domaine', 
             'filter-nouveau',
-            'filter-date-envoi', // NOUVEAU
-            'filter-date-from', // NOUVEAU
-            'filter-date-to', // NOUVEAU
             'filter-search'
         ];
-    
+
         filterElements.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -1588,19 +1393,14 @@ export class TableManager {
             }
         });
         
-        // Masquer la zone de dates personnalisées
-        const customDateGroup = document.getElementById('custom-date-group');
-        if (customDateGroup) {
-            customDateGroup.style.display = 'none';
-        }
-        
         if (this.dataProcessor) {
+            // Réinitialiser les dossiers filtrés à tous les dossiers
             const allDossiers = this.dataProcessor.getAllDossiers();
             this.dataProcessor.setFilteredDossiers([...allDossiers]);
             this.loadDossiersTable();
         }
     }
-    
+
     proceedToControl() {
         if (this.selectedDossiers.length === 0) {
             Utils.showNotification('Veuillez sélectionner au moins un dossier à contrôler.', 'error');
@@ -2461,8 +2261,4 @@ export class TableManager {
         this.clearFilters();
     }
 }
-
-
-
-
 
