@@ -2279,6 +2279,29 @@ export class DocumentController {
         }
     }
 
+    // AJOUTER cette méthode dans documentController.js
+    generateControlDetails() {
+        const details = [];
+        
+        Object.entries(this.documentResponses).forEach(([docId, docResponses]) => {
+            const docConfig = this.documentsConfig[docId];
+            
+            Object.values(docResponses).forEach(response => {
+                details.push({
+                    document: docConfig?.name || `Document ${docId}`,
+                    question: response.question,
+                    reponse: response.answer,
+                    qualite: response.quality || '',
+                    justification: response.justification || '',
+                    conforme: response.conforme !== false, // Utilise la logique existante
+                    obligatoire: response.obligation === 'Obligatoire'
+                });
+            });
+        });
+        
+        return details;
+    }
+
     // NOUVELLE méthode pour vérifier si une question conditionnelle doit être affichée
     shouldShowConditionalQuestion(condition) {
         const { questionIndex, answer } = condition;
@@ -5042,3 +5065,4 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
