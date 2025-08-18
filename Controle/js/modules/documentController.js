@@ -1,4 +1,4 @@
-// documentController.js - Version modifiée avec question "document présent" et tuile Zeendoc
+// documentController.js
 
 import { Utils } from './utils.js';
 
@@ -5065,5 +5065,6 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
