@@ -416,23 +416,81 @@ export class DataProcessor {
 
     // Méthodes de filtrage
     applyFilters(filters) {
-        const { conseiller, domaine, nouveau, search } = filters;
+        const { conseiller, domaine, nouveau, typeActe, dateEnvoi, dateFrom, dateTo, search } = filters;
 
         this.filteredDossiers = this.allDossiers.filter(dossier => {
             const matchConseiller = !conseiller || (dossier.conseiller && dossier.conseiller === conseiller);
             const matchDomaine = !domaine || (dossier.domaine && dossier.domaine === domaine);
             const matchNouveau = !nouveau || (dossier.nouveauClient && dossier.nouveauClient === nouveau);
+            
+            // NOUVEAU : Filtre Type d'Acte
+            const matchTypeActe = !typeActe || (dossier.typeActe && dossier.typeActe === typeActe);
+            
+            // NOUVEAU : Filtre Date d'Envoi
+            const matchDateEnvoi = this.checkDateFilter(dossier.dateEnvoi, dateEnvoi, dateFrom, dateTo);
+            
             const matchSearch = !search || 
                 (dossier.client && dossier.client.toLowerCase().includes(search)) || 
                 (dossier.codeDossier && dossier.codeDossier.toLowerCase().includes(search)) ||
                 (dossier.contrat && dossier.contrat.toLowerCase().includes(search)) ||
                 (dossier.reference && dossier.reference.toLowerCase().includes(search));
-
-            return matchConseiller && matchDomaine && matchNouveau && matchSearch;
+    
+            return matchConseiller && matchDomaine && matchNouveau && matchTypeActe && matchDateEnvoi && matchSearch;
         });
-
+    
         Utils.debugLog(`Filtres appliqués: ${this.filteredDossiers.length} dossiers sur ${this.allDossiers.length}`);
         return this.filteredDossiers;
+    }
+
+    checkDateFilter(dossierDate, dateFilter, dateFrom, dateTo) {
+        if (!dateFilter) return true;
+        
+        if (!dossierDate) return false;
+        
+        // Convertir la date du dossier en objet Date
+        const dossierDateObj = new Date(dossierDate);
+        if (isNaN(dossierDateObj.getTime())) return false;
+        
+        const today = new Date();
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        switch (dateFilter) {
+            case 'today':
+                const dossierDateStart = new Date(dossierDateObj.getFullYear(), dossierDateObj.getMonth(), dossierDateObj.getDate());
+                return dossierDateStart.getTime() === todayStart.getTime();
+                
+            case 'yesterday':
+                const yesterday = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+                const dossierYesterday = new Date(dossierDateObj.getFullYear(), dossierDateObj.getMonth(), dossierDateObj.getDate());
+                return dossierYesterday.getTime() === yesterday.getTime();
+                
+            case 'this-week':
+                const weekStart = new Date(todayStart.getTime() - (today.getDay() - 1) * 24 * 60 * 60 * 1000);
+                return dossierDateObj >= weekStart && dossierDateObj <= today;
+                
+            case 'last-week':
+                const lastWeekEnd = new Date(todayStart.getTime() - today.getDay() * 24 * 60 * 60 * 1000);
+                const lastWeekStart = new Date(lastWeekEnd.getTime() - 6 * 24 * 60 * 60 * 1000);
+                return dossierDateObj >= lastWeekStart && dossierDateObj <= lastWeekEnd;
+                
+            case 'this-month':
+                return dossierDateObj.getMonth() === today.getMonth() && dossierDateObj.getFullYear() === today.getFullYear();
+                
+            case 'last-month':
+                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                return dossierDateObj.getMonth() === lastMonth.getMonth() && dossierDateObj.getFullYear() === lastMonth.getFullYear();
+                
+            case 'custom':
+                if (!dateFrom && !dateTo) return true;
+                
+                const fromDate = dateFrom ? new Date(dateFrom) : new Date('1900-01-01');
+                const toDate = dateTo ? new Date(dateTo) : new Date('2100-12-31');
+                
+                return dossierDateObj >= fromDate && dossierDateObj <= toDate;
+                
+            default:
+                return true;
+        }
     }
 
     getUniqueValues(fieldName) {
@@ -449,3 +507,4 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
