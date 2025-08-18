@@ -455,7 +455,7 @@ export class TableManager {
                         Utils.debugLog('❌ Aucun en-tête original trouvé');
                     }
                     
-                    this.();
+                    this.populateFilters();
                     
                     setTimeout(() => {
                         this.addColumnConfigButton();
@@ -526,38 +526,54 @@ export class TableManager {
         }
     }
 
-    // Ajoutez des logs de debug dans populateFilters()
     populateFilters() {
-        console.log('=== DEBUT populateFilters ===');
+        Utils.debugLog('=== INITIALISATION FILTRES ===');
         
         if (!this.dataProcessor) {
-            console.error('❌ dataProcessor manquant');
+            Utils.debugLog('TableManager: Pas de dataProcessor disponible pour les filtres');
             return;
         }
-        
+    
         const allDossiers = this.dataProcessor.getAllDossiers();
-        console.log('Dossiers récupérés:', allDossiers.length);
+        if (!allDossiers || allDossiers.length === 0) {
+            Utils.debugLog('TableManager: Aucun dossier disponible pour les filtres');
+            return;
+        }
+    
+        // Obtenir les valeurs uniques pour les filtres directement
+        const conseillers = [...new Set(
+            allDossiers
+                .map(d => d.conseiller)
+                .filter(c => c && c.trim() !== '' && c.trim() !== '-')
+        )].sort();
         
-        // Types d'acte
+        const domaines = [...new Set(
+            allDossiers
+                .map(d => d.domaine)
+                .filter(d => d && d.trim() !== '' && d.trim() !== '-')
+        )].sort();
+        
+        // NOUVEAU : Types d'acte
         const typesActe = [...new Set(
             allDossiers
                 .map(d => d.typeActe)
                 .filter(t => t && t.trim() !== '' && t.trim() !== '-')
         )].sort();
         
-        console.log('Types d\'acte extraits:', typesActe);
+        Utils.debugLog(`Conseillers trouvés: ${conseillers.length} - ${conseillers.slice(0, 5).join(', ')}${conseillers.length > 5 ? '...' : ''}`);
+        Utils.debugLog(`Domaines trouvés: ${domaines.length} - ${domaines.slice(0, 5).join(', ')}${domaines.length > 5 ? '...' : ''}`);
+        Utils.debugLog(`Types d'acte trouvés: ${typesActe.length} - ${typesActe.slice(0, 5).join(', ')}${typesActe.length > 5 ? '...' : ''}`);
         
-        // Vérifier si l'élément existe
-        const selectElement = document.getElementById('filter-type-acte');
-        console.log('Élément select trouvé:', !!selectElement);
+        // Remplir le filtre conseiller
+        this.populateSelectFilter('filter-conseiller', conseillers, 'Tous les conseillers', 'Aucun conseiller trouvé');
         
-        if (selectElement) {
-            console.log('Avant remplissage, options:', selectElement.children.length);
-            this.populateSelectFilter('filter-type-acte', typesActe, 'Tous les types', 'Aucun type d\'acte trouvé');
-            console.log('Après remplissage, options:', selectElement.children.length);
-        }
+        // Remplir le filtre domaine
+        this.populateSelectFilter('filter-domaine', domaines, 'Tous les domaines', 'Aucun domaine trouvé');
+        
+        // NOUVEAU : Remplir le filtre type d'acte
+        this.populateSelectFilter('filter-type-acte', typesActe, 'Tous les types', 'Aucun type d\'acte trouvé');
     }
-    
+
     populateSelectFilter(selectId, options, defaultText, emptyText) {
         const select = document.getElementById(selectId);
         if (!select) return;
@@ -2299,9 +2315,3 @@ export class TableManager {
         this.clearFilters();
     }
 }
-
-
-
-
-
-
