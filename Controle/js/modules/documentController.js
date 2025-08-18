@@ -476,7 +476,7 @@ export class DocumentController {
             4: {
                 id: 4,
                 name: 'Carto Client',
-                fullName: 'Cartographie Client',
+                fullName: 'Cartographie Client & GDA',
                 questions: [
                     {
                         text: 'La cartographie client a-t-elle été réalisée ?',
@@ -5065,4 +5065,5 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
