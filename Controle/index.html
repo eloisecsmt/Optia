@@ -85,11 +85,30 @@
                         </select>
                     </div>
                     <div class="filter-group">
+                        <label class="filter-label">Type d'Acte</label>
+                        <select class="filter-select" id="filter-type-acte">
+                            <option value="">Tous les types</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
                         <label class="filter-label">Nouveau Client</label>
                         <select class="filter-select" id="filter-nouveau">
                             <option value="">Tous</option>
                             <option value="Oui">Nouveaux clients uniquement</option>
                             <option value="Non">Clients existants uniquement</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Date d'Envoi</label>
+                        <select class="filter-select" id="filter-date-envoi">
+                            <option value="">Toutes les dates</option>
+                            <option value="today">Aujourd'hui</option>
+                            <option value="yesterday">Hier</option>
+                            <option value="this-week">Cette semaine</option>
+                            <option value="last-week">Semaine dernière</option>
+                            <option value="this-month">Ce mois</option>
+                            <option value="last-month">Mois dernier</option>
+                            <option value="custom">Période personnalisée</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -464,3 +483,4 @@
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
+
