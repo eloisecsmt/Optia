@@ -1,4 +1,4 @@
-// documentController.js
+// documentController.js - listes des questions pour chaque contrôle
 
 import { Utils } from './utils.js';
 
@@ -5065,6 +5065,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
