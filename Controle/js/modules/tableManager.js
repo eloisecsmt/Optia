@@ -490,6 +490,31 @@ export class TableManager {
             }
         });
 
+        // NOUVEAU : Gestion du filtre date personnalisée
+        const dateEnvoiSelect = document.getElementById('filter-date-envoi');
+        if (dateEnvoiSelect) {
+            dateEnvoiSelect.addEventListener('change', (e) => {
+                const customGroup = document.getElementById('custom-date-group');
+                if (customGroup) {
+                    customGroup.style.display = e.target.value === 'custom' ? 'block' : 'none';
+                }
+            });
+        }
+    
+        // NOUVEAU : Application automatique des filtres sur changement de dates
+        const dateInputs = ['filter-date-from', 'filter-date-to'];
+        dateInputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('change', () => {
+                    const dateEnvoi = document.getElementById('filter-date-envoi');
+                    if (dateEnvoi && dateEnvoi.value === 'custom') {
+                        this.applyFilters();
+                    }
+                });
+            }
+        });
+
         // Configuration de la recherche en temps réel
         const searchInput = document.getElementById('filter-search');
         if (searchInput) {
@@ -502,20 +527,20 @@ export class TableManager {
     }
 
     populateFilters() {
-        Utils.debugLog('=== INITIALISATION FILTRES ===');
-        
+         Utils.debugLog('=== INITIALISATION FILTRES ===');
+    
         if (!this.dataProcessor) {
             Utils.debugLog('TableManager: Pas de dataProcessor disponible pour les filtres');
             return;
         }
-
+    
         const allDossiers = this.dataProcessor.getAllDossiers();
         if (!allDossiers || allDossiers.length === 0) {
             Utils.debugLog('TableManager: Aucun dossier disponible pour les filtres');
             return;
         }
-
-        // Obtenir les valeurs uniques pour les filtres directement
+    
+        // Filtres existants
         const conseillers = [...new Set(
             allDossiers
                 .map(d => d.conseiller)
@@ -528,14 +553,21 @@ export class TableManager {
                 .filter(d => d && d.trim() !== '' && d.trim() !== '-')
         )].sort();
         
-        Utils.debugLog(`Conseillers trouvés: ${conseillers.length} - ${conseillers.slice(0, 5).join(', ')}${conseillers.length > 5 ? '...' : ''}`);
-        Utils.debugLog(`Domaines trouvés: ${domaines.length} - ${domaines.slice(0, 5).join(', ')}${domaines.length > 5 ? '...' : ''}`);
+        // NOUVEAUX FILTRES
+        const typesActe = [...new Set(
+            allDossiers
+                .map(d => d.typeActe)
+                .filter(t => t && t.trim() !== '' && t.trim() !== '-')
+        )].sort();
         
-        // Remplir le filtre conseiller
+        Utils.debugLog(`Conseillers trouvés: ${conseillers.length}`);
+        Utils.debugLog(`Domaines trouvés: ${domaines.length}`);
+        Utils.debugLog(`Types d'acte trouvés: ${typesActe.length} - ${typesActe.slice(0, 5).join(', ')}${typesActe.length > 5 ? '...' : ''}`);
+        
+        // Remplir les filtres
         this.populateSelectFilter('filter-conseiller', conseillers, 'Tous les conseillers', 'Aucun conseiller trouvé');
-        
-        // Remplir le filtre domaine
         this.populateSelectFilter('filter-domaine', domaines, 'Tous les domaines', 'Aucun domaine trouvé');
+        this.populateSelectFilter('filter-type-acte', typesActe, 'Tous les types', 'Aucun type d\'acte trouvé');
     }
 
     populateSelectFilter(selectId, options, defaultText, emptyText) {
@@ -1359,21 +1391,29 @@ export class TableManager {
 
     applyFilters() {
         Utils.debugLog('=== APPLICATION FILTRES ===');
-        
+    
         if (!this.dataProcessor) return;
-
+    
         const conseillerEl = document.getElementById('filter-conseiller');
         const domaineEl = document.getElementById('filter-domaine');
         const nouveauEl = document.getElementById('filter-nouveau');
+        const typeActeEl = document.getElementById('filter-type-acte');
+        const dateEnvoiEl = document.getElementById('filter-date-envoi');
+        const dateFromEl = document.getElementById('filter-date-from');
+        const dateToEl = document.getElementById('filter-date-to');
         const searchEl = document.getElementById('filter-search');
-
+    
         const filters = {
             conseiller: conseillerEl ? conseillerEl.value : '',
             domaine: domaineEl ? domaineEl.value : '',
             nouveau: nouveauEl ? nouveauEl.value : '',
+            typeActe: typeActeEl ? typeActeEl.value : '',        // NOUVEAU
+            dateEnvoi: dateEnvoiEl ? dateEnvoiEl.value : '',     // NOUVEAU
+            dateFrom: dateFromEl ? dateFromEl.value : '',        // NOUVEAU
+            dateTo: dateToEl ? dateToEl.value : '',              // NOUVEAU
             search: searchEl ? searchEl.value.toLowerCase().trim() : ''
         };
-
+    
         this.dataProcessor.applyFilters(filters);
         this.loadDossiersTable();
     }
@@ -1383,6 +1423,10 @@ export class TableManager {
             'filter-conseiller',
             'filter-domaine', 
             'filter-nouveau',
+            'filter-type-acte',
+            'filter-date-envoi',
+            'filter-date-from',
+            'filter-date-to',
             'filter-search'
         ];
 
@@ -1392,6 +1436,12 @@ export class TableManager {
                 element.value = '';
             }
         });
+
+        // NOUVEAU : Masquer le groupe de dates personnalisées
+        const customGroup = document.getElementById('custom-date-group');
+        if (customGroup) {
+            customGroup.style.display = 'none';
+        }
         
         if (this.dataProcessor) {
             // Réinitialiser les dossiers filtrés à tous les dossiers
@@ -2261,4 +2311,5 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
 
