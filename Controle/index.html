@@ -111,6 +111,13 @@
                             <option value="custom">Période personnalisée</option>
                         </select>
                     </div>
+                    <div class="filter-group" id="custom-date-group" style="display: none;">
+                        <label class="filter-label">Période personnalisée</label>
+                        <div class="date-range-inputs">
+                            <input type="date" class="filter-input" id="filter-date-from" placeholder="Du">
+                            <input type="date" class="filter-input" id="filter-date-to" placeholder="Au">
+                        </div>
+                    </div>
                     <div class="filter-group">
                         <label class="filter-label">Recherche</label>
                         <input type="text" class="filter-input" id="filter-search" placeholder="Nom, prénom, référence...">
@@ -483,4 +490,5 @@
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
+
 
