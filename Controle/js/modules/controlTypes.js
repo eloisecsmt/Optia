@@ -26,7 +26,7 @@ export class ControlTypes {
                         'Déclaration origine des fonds',
                         'Contrôle listes de sanctions'
                     ],
-                    montantMinimum: 10000,
+                    montantMinimum: 0,
                     excludeDomaines: [],
                     includePPE: false,
                     nouveauxClients: false
@@ -53,7 +53,7 @@ export class ControlTypes {
                         'Garanties',
                         'Analyse financière'
                     ],
-                    montantMinimum: 50000,
+                    montantMinimum: 0,
                     excludeDomaines: [],
                     includePPE: false,
                     nouveauxClients: false
@@ -109,7 +109,7 @@ export class ControlTypes {
                         'Origine/Destination des fonds',
                         'Archivage Zeendoc'
                     ],
-                    montantMinimum: 5000,
+                    montantMinimum: 0,
                     excludeDomaines: [],
                     includePPE: false,
                     nouveauxClients: false
@@ -875,3 +875,4 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
