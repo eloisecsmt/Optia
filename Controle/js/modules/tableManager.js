@@ -557,6 +557,7 @@ export class TableManager {
             console.log('Après remplissage, options:', selectElement.children.length);
         }
     }
+    
     populateSelectFilter(selectId, options, defaultText, emptyText) {
         const select = document.getElementById(selectId);
         if (!select) return;
@@ -2298,6 +2299,7 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
 
 
 
