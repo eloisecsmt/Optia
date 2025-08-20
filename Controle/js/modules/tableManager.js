@@ -455,7 +455,7 @@ export class TableManager {
                         Utils.debugLog('❌ Aucun en-tête original trouvé');
                     }
                     
-                    this.();
+                    this.populateFilters();
                     
                     setTimeout(() => {
                         this.addColumnConfigButton();
@@ -557,15 +557,12 @@ export class TableManager {
         const typesActe = [...new Set(
             allDossiers
                 .map(d => d.typeActe)
-                .filter(t => t && t.toString().trim() !== '') // Plus permissif
+                .filter(t => t && t.trim() !== '' && t.trim() !== '-')
         )].sort();
         
         Utils.debugLog(`Conseillers trouvés: ${conseillers.length} - ${conseillers.slice(0, 5).join(', ')}${conseillers.length > 5 ? '...' : ''}`);
         Utils.debugLog(`Domaines trouvés: ${domaines.length} - ${domaines.slice(0, 5).join(', ')}${domaines.length > 5 ? '...' : ''}`);
         Utils.debugLog(`Types d'acte trouvés: ${typesActe.length} - ${typesActe.slice(0, 5).join(', ')}${typesActe.length > 5 ? '...' : ''}`);
-        Utils.debugLog(`Types d'acte trouvés: ${typesActe.length} - ${typesActe.slice(0, 5).join(', ')}${typesActe.length > 5 ? '...' : ''}`);
-        Utils.debugLog('Mapping typeActe:', this.dataProcessor.getColumnMapping().typeActe);
-        Utils.debugLog('Exemple de dossier typeActe:', allDossiers[0]?.typeActe);
         
         // Remplir le filtre conseiller
         this.populateSelectFilter('filter-conseiller', conseillers, 'Tous les conseillers', 'Aucun conseiller trouvé');
