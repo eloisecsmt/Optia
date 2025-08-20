@@ -2141,7 +2141,6 @@ export class TableManager {
         return { totalDossiers, controlled, suspended, available: totalDossiers - controlled };
     }
 
-    // Méthodes existantes inchangées...
      getEligibleDossiers(controlType) {
         if (!this.dataProcessor) return [];
         
@@ -2263,6 +2262,3 @@ export class TableManager {
         this.clearFilters();
     }
 }
-
-
-
