@@ -2138,62 +2138,6 @@ export class TableManager {
         return { totalDossiers, controlled, suspended, available: totalDossiers - controlled };
     }
 
-    // Méthodes existantes inchangées...
-    populateFilters() {
-        Utils.debugLog('=== INITIALISATION FILTRES ===');
-        
-        if (!this.dataProcessor) {
-            Utils.debugLog('TableManager: Pas de dataProcessor disponible pour les filtres');
-            return;
-        }
-
-        const allDossiers = this.dataProcessor.getAllDossiers();
-        if (!allDossiers || allDossiers.length === 0) {
-            Utils.debugLog('TableManager: Aucun dossier disponible pour les filtres');
-            return;
-        }
-
-        const conseillers = [...new Set(
-            allDossiers
-                .map(d => d.conseiller)
-                .filter(c => c && c.trim() !== '' && c.trim() !== '-')
-        )].sort();
-        
-        const domaines = [...new Set(
-            allDossiers
-                .map(d => d.domaine)
-                .filter(d => d && d.trim() !== '' && d.trim() !== '-')
-        )].sort();
-        
-        Utils.debugLog(`Conseillers trouvés: ${conseillers.length} - ${conseillers.slice(0, 5).join(', ')}${conseillers.length > 5 ? '...' : ''}`);
-        Utils.debugLog(`Domaines trouvés: ${domaines.length} - ${domaines.slice(0, 5).join(', ')}${domaines.length > 5 ? '...' : ''}`);
-        
-        this.populateSelectFilter('filter-conseiller', conseillers, 'Tous les conseillers', 'Aucun conseiller trouvé');
-        this.populateSelectFilter('filter-domaine', domaines, 'Tous les domaines', 'Aucun domaine trouvé');
-    }
-
-    populateSelectFilter(selectId, options, defaultText, emptyText) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-
-        select.innerHTML = `<option value="">${defaultText}</option>`;
-        
-        if (options.length > 0) {
-            options.forEach(option => {
-                const optionElement = document.createElement('option');
-                optionElement.value = option;
-                optionElement.textContent = option;
-                select.appendChild(optionElement);
-            });
-        } else {
-            const optionElement = document.createElement('option');
-            optionElement.value = '';
-            optionElement.textContent = emptyText;
-            optionElement.disabled = true;
-            select.appendChild(optionElement);
-        }
-    }
-
      getEligibleDossiers(controlType) {
         if (!this.dataProcessor) return [];
         
@@ -2315,3 +2259,4 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
