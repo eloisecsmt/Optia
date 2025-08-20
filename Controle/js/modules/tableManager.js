@@ -572,6 +572,9 @@ export class TableManager {
         
         // NOUVEAU : Remplir le filtre type d'acte
         this.populateSelectFilter('filter-type-acte', typesActe, 'Tous les types', 'Aucun type d\'acte trouvé');
+
+        // NOUVEAU : Peupler le filtre des mois
+        this.populateMonthFilter();
     }
 
     populateSelectFilter(selectId, options, defaultText, emptyText) {
@@ -2259,4 +2262,5 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
 
