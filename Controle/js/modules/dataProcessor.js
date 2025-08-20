@@ -476,36 +476,6 @@ export class DataProcessor {
             return b.month - a.month;
         });
     }
-    
-    //Peupler le filtre avec les mois disponibles
-    populateMonthFilter() {
-        if (!this.dataProcessor) return;
-        
-        const monthSelect = document.getElementById('filter-date-envoi');
-        if (!monthSelect) return;
-        
-        const availableMonths = this.dataProcessor.getAvailableMonths();
-        
-        // Vider et remplir le select
-        monthSelect.innerHTML = '<option value="">Tous les mois</option>';
-        
-        if (availableMonths.length > 0) {
-            availableMonths.forEach(monthData => {
-                const option = document.createElement('option');
-                option.value = monthData.key; // Format : "2024-10"
-                option.textContent = monthData.label; // Format : "Novembre 2024"
-                monthSelect.appendChild(option);
-            });
-        } else {
-            const option = document.createElement('option');
-            option.value = '';
-            option.textContent = 'Aucune date trouvée';
-            option.disabled = true;
-            monthSelect.appendChild(option);
-        }
-        
-        console.log(`Filtre mois peuplé avec ${availableMonths.length} mois`);
-    }
 
     checkDateFilter(dossierDate, dateFilter, dateFrom, dateTo) {
         // Si pas de filtre de date, tout passe
@@ -551,5 +521,6 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
 
 
