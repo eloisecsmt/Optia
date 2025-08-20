@@ -485,7 +485,7 @@ export class DataProcessor {
 
     parseExcelDate(dateValue) {
         if (!dateValue) return null;
-        
+    
         // Si c'est déjà un objet Date
         if (dateValue instanceof Date) {
             return dateValue;
@@ -503,24 +503,20 @@ export class DataProcessor {
         const dateString = dateValue.toString().trim();
         if (!dateString) return null;
         
-        // Détecter le format de date
+        // Traitement des formats avec slash
         if (dateString.includes('/')) {
-            // Format américain MM/DD/YYYY ou DD/MM/YYYY
             const parts = dateString.split('/');
             if (parts.length === 3) {
                 let [part1, part2, year] = parts.map(p => parseInt(p, 10));
                 
-                // Détection intelligente du format
-                if (part1 > 12) {
-                    // part1 > 12, donc c'est DD/MM/YYYY
-                    return new Date(year, part2 - 1, part1); // month est 0-indexed
-                } else if (part2 > 12) {
-                    // part2 > 12, donc c'est MM/DD/YYYY
-                    return new Date(year, part1 - 1, part2);
-                } else {
-                    // Ambiguïté - utiliser votre logique métier
-                    // Supposer format américain MM/DD/YYYY par défaut pour Excel
-                    return new Date(year, part1 - 1, part2);
+                // CORRECTION: Forcer l'interprétation DD/MM/YYYY (format européen)
+                // Comme vous affichez 07/01/2025 = 07 Janvier 2025
+                const day = part1;    // 07
+                const month = part2;  // 01 (Janvier)
+                
+                // Validation basique
+                if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+                    return new Date(year, month - 1, day); // month est 0-indexed en JavaScript
                 }
             }
         }
@@ -572,6 +568,7 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
 
 
 
