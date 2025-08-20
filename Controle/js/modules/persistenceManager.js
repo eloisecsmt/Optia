@@ -52,6 +52,8 @@ export class PersistenceManager {
                 montant: controlData.dossier.montant || '',
                 domaine: controlData.dossier.domaine || '',
                 nouveauClient: controlData.dossier.nouveauClient || '',
+                typeActe: controlData.dossier.typeActe || '',
+                dateEnvoi: controlData.dossier.dateEnvoi || '',
                 statut: 'Terminé',
                 anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
                 documentsControles: controlData.documents ? 
@@ -2059,3 +2061,4 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
