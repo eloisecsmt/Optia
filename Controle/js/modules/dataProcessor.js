@@ -445,51 +445,105 @@ export class DataProcessor {
     getAvailableMonths() {
         if (!this.allDossiers || this.allDossiers.length === 0) return [];
         
-        const months = new Set();
+        const monthsMap = new Map(); // Utiliser Map au lieu de Set pour éviter les doublons
         
         this.allDossiers.forEach(dossier => {
             if (dossier.dateEnvoi) {
-                const date = new Date(dossier.dateEnvoi);
-                if (!isNaN(date.getTime())) {
+                // Utiliser la même logique de parsing que votre fonction de formatage
+                const date = this.parseExcelDate(dossier.dateEnvoi); // Nouvelle méthode
+                
+                if (date && !isNaN(date.getTime())) {
                     const year = date.getFullYear();
                     const month = date.getMonth(); // 0-11
                     const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-                    const monthNames = [
-                        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-                    ];
-                    const monthLabel = `${monthNames[month]} ${year}`;
                     
-                    months.add({
-                        key: monthKey,
-                        label: monthLabel,
-                        year: year,
-                        month: month
-                    });
+                    // Utiliser la clé comme identifiant unique pour éviter les doublons
+                    if (!monthsMap.has(monthKey)) {
+                        const monthNames = [
+                            'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+                        ];
+                        const monthLabel = `${monthNames[month]} ${year}`;
+                        
+                        monthsMap.set(monthKey, {
+                            key: monthKey,
+                            label: monthLabel,
+                            year: year,
+                            month: month
+                        });
+                    }
                 }
             }
         });
         
         // Convertir en array et trier par date (plus récent en premier)
-        return Array.from(months).sort((a, b) => {
+        return Array.from(monthsMap.values()).sort((a, b) => {
             if (a.year !== b.year) return b.year - a.year;
             return b.month - a.month;
         });
     }
 
-    checkDateFilter(dossierDate, dateFilter, dateFrom, dateTo) {
-        // Si pas de filtre de date, tout passe
-        if (!dateFilter) return true;
+    parseExcelDate(dateValue) {
+        if (!dateValue) return null;
         
-        // Si pas de date dans le dossier, ne pas inclure
+        // Si c'est déjà un objet Date
+        if (dateValue instanceof Date) {
+            return dateValue;
+        }
+        
+        // Si c'est un nombre (date Excel sérialisée)
+        if (typeof dateValue === 'number') {
+            // Convertir le nombre Excel en date JavaScript
+            const excelEpoch = new Date(1900, 0, 1);
+            const daysOffset = dateValue - 2; // Correction pour l'époque Excel
+            return new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+        }
+        
+        // Si c'est une chaîne
+        const dateString = dateValue.toString().trim();
+        if (!dateString) return null;
+        
+        // Détecter le format de date
+        if (dateString.includes('/')) {
+            // Format américain MM/DD/YYYY ou DD/MM/YYYY
+            const parts = dateString.split('/');
+            if (parts.length === 3) {
+                let [part1, part2, year] = parts.map(p => parseInt(p, 10));
+                
+                // Détection intelligente du format
+                if (part1 > 12) {
+                    // part1 > 12, donc c'est DD/MM/YYYY
+                    return new Date(year, part2 - 1, part1); // month est 0-indexed
+                } else if (part2 > 12) {
+                    // part2 > 12, donc c'est MM/DD/YYYY
+                    return new Date(year, part1 - 1, part2);
+                } else {
+                    // Ambiguïté - utiliser votre logique métier
+                    // Supposer format américain MM/DD/YYYY par défaut pour Excel
+                    return new Date(year, part1 - 1, part2);
+                }
+            }
+        }
+        
+        // Format ISO ou autres formats standard
+        const isoDate = new Date(dateString);
+        if (!isNaN(isoDate.getTime())) {
+            return isoDate;
+        }
+        
+        return null;
+    }
+
+    checkDateFilter(dossierDate, dateFilter, dateFrom, dateTo) {
+        if (!dateFilter) return true;
         if (!dossierDate) return false;
         
-        // Si c'est le filtre personnalisé, utiliser les dates from/to
+        // Utiliser la même méthode de parsing que pour les mois disponibles
+        const dossierDateObj = this.parseExcelDate(dossierDate);
+        if (!dossierDateObj || isNaN(dossierDateObj.getTime())) return false;
+        
         if (dateFilter === 'custom') {
             if (!dateFrom && !dateTo) return true;
-            
-            const dossierDateObj = new Date(dossierDate);
-            if (isNaN(dossierDateObj.getTime())) return false;
             
             const fromDate = dateFrom ? new Date(dateFrom) : new Date('1900-01-01');
             const toDate = dateTo ? new Date(dateTo) : new Date('2100-12-31');
@@ -498,9 +552,6 @@ export class DataProcessor {
         }
         
         // Pour les filtres de mois (format "2024-10")
-        const dossierDateObj = new Date(dossierDate);
-        if (isNaN(dossierDateObj.getTime())) return false;
-        
         const [filterYear, filterMonth] = dateFilter.split('-').map(Number);
         
         return dossierDateObj.getFullYear() === filterYear && 
@@ -521,6 +572,7 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
 
 
 
