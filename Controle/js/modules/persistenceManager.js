@@ -51,6 +51,8 @@ export class PersistenceManager {
                 conseiller: controlData.dossier.conseiller || '',
                 montant: controlData.dossier.montant || '',
                 domaine: controlData.dossier.domaine || '',
+                typeActe: controlData.dossier.typeActe || '',
+                dateEnvoi: controlData.dossier.dateEnvoi || '',
                 nouveauClient: controlData.dossier.nouveauClient || '',
                 statut: 'Terminé',
                 anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
@@ -613,42 +615,39 @@ export class PersistenceManager {
     }
 
     // Export Excel global enrichi avec tous les contrôles
-    saveToExcel(fileName = null) {
+   saveToExcel(fileName = null) {
         if (!fileName) {
-            fileName = `Historique_Controles_Complet_${new Date().toISOString().split('T')[0]}.xlsx`;
+            fileName = `Historique_Controles_Par_Type_${new Date().toISOString().split('T')[0]}.xlsx`;
         }
-
+    
         if (this.controles.length === 0) {
             Utils.showNotification('Aucun contrôle à exporter', 'warning');
             return false;
         }
-
+    
         try {
             const wb = XLSX.utils.book_new();
             
-            // 1. Onglet Vue d'ensemble (tableau résumé de tous les contrôles)
+            // 1. Onglet Vue d'ensemble (inchangé)
             this.createOverviewSheet(wb);
             
-            // 2. Onglet Détail Questions-Réponses (toutes les Q&R de tous les contrôles)
+            // 2. Onglet Questions-Réponses globales (inchangé)
             this.createAllQuestionsSheet(wb);
             
-            // 3. Onglet Anomalies Globales (toutes les anomalies détectées)
-            this.createGlobalAnomaliesSheet(wb);
-            
-            // 4. Onglet Statistiques par Type de Contrôle
+            // 3. Onglet Statistiques (inchangé)
             this.createStatsSheet(wb);
             
-            // 5. Onglet Données Brutes (pour import/analyse)
-            this.createRawDataSheet(wb);
+            // 4. NOUVEAU : Onglets par type de contrôle
+            this.createControlTypeSheets(wb);
             
             XLSX.writeFile(wb, fileName);
             
-            Utils.showNotification(`Export global généré: ${fileName}`, 'success');
+            Utils.showNotification(`Export par type généré: ${fileName}`, 'success');
             return true;
-
+    
         } catch (error) {
-            console.error('Erreur export Excel global:', error);
-            Utils.showNotification('Erreur lors de l\'export global: ' + error.message, 'error');
+            console.error('Erreur export Excel par type:', error);
+            Utils.showNotification('Erreur lors de l\'export par type: ' + error.message, 'error');
             return false;
         }
     }
@@ -658,7 +657,7 @@ export class PersistenceManager {
         const overviewData = [
             ['HISTORIQUE COMPLET DES CONTRÔLES DOCUMENTAIRES', '', '', '', '', '', '', '', '', ''],
             ['', '', '', '', '', '', '', '', '', ''],
-            ['Date', 'Type', 'Client', 'Code Dossier', 'Conseiller', 'Montant', 'Domaine', 'Documents', 'Anomalies', 'Conformité']
+            ['Date', 'Type', 'Client', 'Code Dossier', 'Conseiller', 'Montant', 'Domaine', 'Type d\'acte', 'Date d\'envoi', 'Documents', 'Conformité']
         ];
 
         // Ajouter tous les contrôles
@@ -671,6 +670,8 @@ export class PersistenceManager {
                 controle.conseiller || 'N/A',
                 controle.montant || 'N/A',
                 controle.domaine || 'N/A',
+                controle.typeActe || 'N/A',
+                controle.dateEnvoi || 'N/A',
                 controle.documentsControles,
                 controle.anomaliesMajeures,
                 controle.conformiteGlobale
@@ -844,8 +845,9 @@ export class PersistenceManager {
             { width: 20 },  // Conseiller
             { width: 15 },  // Montant
             { width: 12 },  // Domaine
+            { width: 15 },  // Type d'acte
+            { width: 12 },  // Date d'envoi
             { width: 12 },  // Documents
-            { width: 10 },  // Anomalies
             { width: 15 }   // Conformité
         ];
 
@@ -926,7 +928,7 @@ export class PersistenceManager {
         }
 
         // Fusionner le titre
-        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 9, r: 0 } }];
+        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 10, r: 0 } }];
         
         // Filtres automatiques
         ws['!autofilter'] = { ref: `A3:${XLSX.utils.encode_col(range.e.c)}3` };
@@ -1953,7 +1955,374 @@ export class PersistenceManager {
         // Filtres automatiques
         ws['!autofilter'] = { ref: `A3:${XLSX.utils.encode_col(range.e.c)}3` };
     }
+    // NOUVELLE MÉTHODE : Créer les onglets par type de contrôle
+    createControlTypeSheets(wb) {
+        const controlesByType = this.groupControlsByType();
+        const sortedTypes = Object.keys(controlesByType).sort();
+        
+        Utils.debugLog(`Création de ${sortedTypes.length} onglets par type: ${sortedTypes.join(', ')}`);
+        
+        sortedTypes.forEach(type => {
+            const controles = controlesByType[type];
+            this.createSingleTypeSheet(wb, type, controles);
+        });
+    }
+    
+    // NOUVELLE MÉTHODE : Grouper les contrôles par type
+    groupControlsByType() {
+        const groups = {};
+        
+        this.controles.forEach(controle => {
+            const type = controle.type || 'Non défini';
+            if (!groups[type]) {
+                groups[type] = [];
+            }
+            groups[type].push(controle);
+        });
+        
+        return groups;
+    }
+    
+    // NOUVELLE MÉTHODE : Créer un onglet pour un type spécifique
+    createSingleTypeSheet(wb, type, controles) {
+        Utils.debugLog(`Création onglet pour type: ${type} (${controles.length} contrôles)`);
+        
+        const documentsInfo = this.analyzeDocumentsForType(controles);
+        const headers = this.createTypeSheetHeaders(documentsInfo);
+        const data = [headers];
+        
+        controles.forEach(controle => {
+            const row = this.createTypeSheetRow(controle, documentsInfo);
+            data.push(row);
+        });
+        
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        this.formatTypeSheet(ws, data.length, headers.length, documentsInfo);
+        
+        const safeName = this.createSafeSheetName(type);
+        XLSX.utils.book_append_sheet(wb, ws, safeName);
+        
+        Utils.debugLog(`Onglet créé: ${safeName}`);
+    }
 
+    // NOUVELLE MÉTHODE : Analyser les documents pour un type de contrôle
+    analyzeDocumentsForType(controles) {
+        const documentsMap = new Map();
+        
+        controles.forEach(controle => {
+            if (controle.details && controle.details.length > 0) {
+                const detailsByDoc = {};
+                controle.details.forEach(detail => {
+                    if (!detailsByDoc[detail.document]) {
+                        detailsByDoc[detail.document] = [];
+                    }
+                    detailsByDoc[detail.document].push(detail);
+                });
+                
+                Object.entries(detailsByDoc).forEach(([docName, details]) => {
+                    if (!documentsMap.has(docName)) {
+                        documentsMap.set(docName, {
+                            name: docName,
+                            questions: new Set(),
+                            maxQuestions: 0
+                        });
+                    }
+                    
+                    const docInfo = documentsMap.get(docName);
+                    details.forEach(detail => {
+                        docInfo.questions.add(detail.question);
+                    });
+                    docInfo.maxQuestions = Math.max(docInfo.maxQuestions, details.length);
+                });
+            }
+        });
+        
+        const result = Array.from(documentsMap.entries()).map(([name, info]) => ({
+            name,
+            questionsArray: Array.from(info.questions),
+            maxQuestions: info.maxQuestions
+        })).sort((a, b) => a.name.localeCompare(b.name));
+        
+        Utils.debugLog(`Documents analysés pour ce type: ${result.map(d => `${d.name}(${d.maxQuestions}q)`).join(', ')}`);
+        
+        return result;
+    }
+    
+    // NOUVELLE MÉTHODE : Créer les en-têtes pour un onglet de type
+    createTypeSheetHeaders(documentsInfo) {
+        const headers = [
+            'Date', 'Client', 'Code Dossier', 'Conseiller', 'Montant', 
+            'Domaine', 'Nouveau Client', 'Type d\'acte', 'Date d\'envoi'
+        ];
+        
+        documentsInfo.forEach(docInfo => {
+            headers.push(`${docInfo.name} - Statut`);
+            
+            docInfo.questionsArray.forEach((question, index) => {
+                const shortQuestion = this.shortenQuestionText(question);
+                headers.push(`${docInfo.name} - Q${index + 1}: ${shortQuestion}`);
+            });
+        });
+        
+        return headers;
+    }
+    
+    // NOUVELLE MÉTHODE : Raccourcir le texte des questions
+    shortenQuestionText(question) {
+        if (!question) return 'Question';
+        
+        let short = question
+            .replace(/Est-ce que le document/gi, 'Document')
+            .replace(/est-il présent/gi, 'présent?')
+            .replace(/a été réalisé\(e\)/gi, 'réalisé?')
+            .replace(/a été créé/gi, 'créé?')
+            .replace(/Tous les documents sont-ils bien ajoutés dans Zeendoc/gi, 'Zeendoc?')
+            .replace(/Le document/gi, 'Doc')
+            .replace(/La pièce/gi, 'Pièce')
+            .trim();
+        
+        if (short.length > 50) {
+            short = short.substring(0, 47) + '...';
+        }
+        
+        return short;
+    }
+    
+    // NOUVELLE MÉTHODE : Créer une ligne de données pour un contrôle
+    createTypeSheetRow(controle, documentsInfo) {
+        const row = [
+            controle.date.toLocaleDateString('fr-FR'),
+            controle.client,
+            controle.codeDossier || '',
+            controle.conseiller || '',
+            controle.montant || '',
+            controle.domaine || '',
+            controle.nouveauClient || '',
+            controle.typeActe || '',
+            controle.dateEnvoi || ''
+        ];
+        
+        const detailsByDoc = {};
+        if (controle.details && controle.details.length > 0) {
+            controle.details.forEach(detail => {
+                if (!detailsByDoc[detail.document]) {
+                    detailsByDoc[detail.document] = [];
+                }
+                detailsByDoc[detail.document].push(detail);
+            });
+        }
+        
+        documentsInfo.forEach(docInfo => {
+            const docDetails = detailsByDoc[docInfo.name] || [];
+            const docStatus = this.getDocumentStatus(docDetails);
+            row.push(docStatus);
+            
+            docInfo.questionsArray.forEach(question => {
+                const detail = docDetails.find(d => d.question === question);
+                if (detail) {
+                    if (docStatus === 'ABSENT') {
+                        row.push('-');
+                    } else {
+                        const cellValue = detail.justification && detail.justification.trim() !== '' 
+                            ? detail.justification 
+                            : detail.reponse;
+                        row.push(cellValue || '-');
+                    }
+                } else {
+                    row.push('-');
+                }
+            });
+        });
+        
+        return row;
+    }
+
+    // NOUVELLE MÉTHODE : Déterminer le statut d'un document
+    getDocumentStatus(docDetails) {
+        if (!docDetails || docDetails.length === 0) {
+            return 'NON CONTRÔLÉ';
+        }
+        
+        const firstDetail = docDetails[0];
+        if (firstDetail && this.isDocumentPresenceQuestion(firstDetail.question) && firstDetail.reponse === 'Non') {
+            return 'ABSENT';
+        }
+        
+        const anomalies = docDetails.filter(d => !d.conforme);
+        const anomaliesObligatoires = anomalies.filter(d => d.obligatoire);
+        
+        if (anomaliesObligatoires.length > 0) {
+            return 'NON CONFORME';
+        } else if (anomalies.length > 0) {
+            return 'AVEC RÉSERVES';
+        } else {
+            return 'CONFORME';
+        }
+    }
+    
+    // NOUVELLE MÉTHODE : Détecter si c'est une question de présence de document
+    isDocumentPresenceQuestion(question) {
+        if (!question) return false;
+        
+        const lowerQuestion = question.toLowerCase();
+        return lowerQuestion.includes('est-ce que le document est présent') ||
+               lowerQuestion.includes('a été réalisé') ||
+               lowerQuestion.includes('a été créé') ||
+               lowerQuestion.includes('tous les documents sont-ils bien ajoutés dans zeendoc');
+    }
+    
+    // NOUVELLE MÉTHODE : Créer un nom d'onglet sécurisé
+    createSafeSheetName(typeName) {
+        let safeName = typeName
+            .replace(/[:\\/?*\[\]]/g, '_')
+            .substring(0, 31);
+            
+        if (!safeName.trim()) {
+            safeName = 'Controle';
+        }
+        
+        return safeName;
+    }
+
+    // NOUVELLE MÉTHODE : Formater un onglet de type
+    formatTypeSheet(ws, rowCount, colCount, documentsInfo) {
+        if (!ws['!ref']) return;
+        
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        const colWidths = this.calculateColumnWidths(documentsInfo);
+        ws['!cols'] = colWidths;
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+                
+                ws[cell_address].s = {
+                    alignment: { 
+                        vertical: 'top', 
+                        wrapText: true,
+                        horizontal: C < 9 ? 'left' : 'center'
+                    },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+                
+                if (R === 0) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+                    };
+                } else if (R > 0) {
+                    const isEvenRow = R % 2 === 0;
+                    ws[cell_address].s.fill = { 
+                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substr(2) } 
+                    };
+                    
+                    if (this.isDocumentStatusColumn(C, documentsInfo)) {
+                        const cellValue = ws[cell_address].v;
+                        if (cellValue === 'CONFORME') {
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        } else if (cellValue === 'AVEC RÉSERVES') {
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
+                        } else if (cellValue === 'NON CONFORME' || cellValue === 'ABSENT') {
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        }
+                    } else if (this.isDocumentQuestionColumn(C, R, ws, documentsInfo)) {
+                        const statusCol = this.getDocumentStatusColumnIndex(C, documentsInfo);
+                        if (statusCol !== -1) {
+                            const statusCell = ws[XLSX.utils.encode_cell({ c: statusCol, r: R })];
+                            if (statusCell && statusCell.v === 'ABSENT' && ws[cell_address].v === '-') {
+                                ws[cell_address].s.fill = { fgColor: { rgb: 'E9ECEF' } };
+                                ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: '6C757D' } };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        ws['!rows'] = [{ hpt: 40 }];
+        ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
+    }
+
+    // NOUVELLE MÉTHODE : Calculer les largeurs de colonnes
+    calculateColumnWidths(documentsInfo) {
+        const widths = [
+            { width: 12 }, { width: 25 }, { width: 15 }, { width: 20 }, { width: 15 },
+            { width: 15 }, { width: 15 }, { width: 15 }, { width: 12 }
+        ];
+        
+        documentsInfo.forEach(docInfo => {
+            widths.push({ width: 15 });
+            docInfo.questionsArray.forEach(() => {
+                widths.push({ width: 25 });
+            });
+        });
+        
+        return widths;
+    }
+    
+    // NOUVELLE MÉTHODE : Vérifier si c'est une colonne de statut de document
+    isDocumentStatusColumn(colIndex, documentsInfo) {
+        let currentCol = 9;
+        
+        for (const docInfo of documentsInfo) {
+            if (colIndex === currentCol) {
+                return true;
+            }
+            currentCol += 1 + docInfo.questionsArray.length;
+        }
+        
+        return false;
+    }
+    
+    // NOUVELLE MÉTHODE : Vérifier si c'est une colonne de question de document
+    isDocumentQuestionColumn(colIndex, rowIndex, ws, documentsInfo) {
+        let currentCol = 9;
+        
+        for (const docInfo of documentsInfo) {
+            const questionsStart = currentCol + 1;
+            const questionsEnd = questionsStart + docInfo.questionsArray.length - 1;
+            
+            if (colIndex >= questionsStart && colIndex <= questionsEnd) {
+                return true;
+            }
+            
+            currentCol += 1 + docInfo.questionsArray.length;
+        }
+        
+        return false;
+    }
+    
+    // NOUVELLE MÉTHODE : Obtenir l'index de la colonne statut pour une colonne de question
+    getDocumentStatusColumnIndex(questionColIndex, documentsInfo) {
+        let currentCol = 9;
+        
+        for (const docInfo of documentsInfo) {
+            const statusCol = currentCol;
+            const questionsStart = currentCol + 1;
+            const questionsEnd = questionsStart + docInfo.questionsArray.length - 1;
+            
+            if (questionColIndex >= questionsStart && questionColIndex <= questionsEnd) {
+                return statusCol;
+            }
+            
+            currentCol += 1 + docInfo.questionsArray.length;
+        }
+        
+        return -1;
+    }
+    
     // NOUVELLE MÉTHODE : Import de sauvegarde JSON
     importBackupJSON(file) {
         if (!file) return;
@@ -2059,3 +2428,4 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
