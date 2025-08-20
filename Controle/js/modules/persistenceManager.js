@@ -2201,7 +2201,7 @@ export class PersistenceManager {
                     alignment: { 
                         vertical: 'top', 
                         wrapText: true,
-                        horizontal: C < 9 ? 'left'
+                        horizontal: 'left'
                     },
                     font: { name: 'Calibri', sz: 10 },
                     border: {
@@ -2428,5 +2428,6 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
