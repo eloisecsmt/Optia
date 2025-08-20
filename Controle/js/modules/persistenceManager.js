@@ -10,7 +10,7 @@ export class PersistenceManager {
         this.lastSaveTime = 0;
         this.companyColors = {
             primary: 'FF1A1A2E',      // Bleu foncé
-            secondary: 'FFD4AF37',    // Or
+            secondary: 'FFD4AF37',    // Or  
             success: 'FF28A745',      // Vert
             warning: 'FFFFC107',      // Jaune
             danger: 'FFDC3545',       // Rouge
@@ -342,7 +342,7 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.primary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
@@ -354,16 +354,16 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } }
+                        fill: { fgColor: { rgb: this.companyColors.secondary.substring(2) } }
                     };
                 }
                 // Conformité globale
                 else if (ws[cell_address].v === 'CONFORME') {
-                    ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
+                    ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substring(2) } };
                     ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                 }
                 else if (ws[cell_address].v === 'NON CONFORME') {
-                    ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                    ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                     ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                 }
             }
@@ -409,7 +409,7 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.primary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
@@ -418,26 +418,26 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.secondary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
                 // Coloration des conformités
                 else if (C === 4) { // Colonne Conformité
                     if (ws[cell_address].v === 'CONFORME') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substring(2) } };
                         ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                     } else if (ws[cell_address].v === 'NON CONFORME') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                         ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                     }
                 }
                 // Coloration des réponses
                 else if (C === 2) { // Colonne Réponse
                     if (ws[cell_address].v === 'Oui') {
-                        ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.success.substr(2) }, bold: true };
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.success.substring(2) }, bold: true };
                     } else if (ws[cell_address].v === 'Non') {
-                        ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.danger.substr(2) }, bold: true };
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.danger.substring(2) }, bold: true };
                     }
                 }
             }
@@ -481,7 +481,7 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.danger.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.danger.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
@@ -490,14 +490,14 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.warning.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.warning.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
                 // Colonne obligatoire
                 else if (C === 3) {
                     if (ws[cell_address].v === 'OUI') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                         ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                     }
                 }
@@ -540,25 +540,25 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.info.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.info.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 } else if (R === 2) {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.secondary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 } else if (C === 4) { // Colonne Statut
                     if (ws[cell_address].v === 'CONFORME') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substring(2) } };
                         ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                     } else if (ws[cell_address].v === 'NON CONFORME') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                         ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                     } else if (ws[cell_address].v === 'AVEC RÉSERVES') {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substring(2) } };
                         ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
                     }
                 }
@@ -874,7 +874,7 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.primary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
@@ -883,7 +883,7 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.secondary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
@@ -892,16 +892,16 @@ export class PersistenceManager {
                     // Alternance de couleurs
                     const isEvenRow = (R - 3) % 2 === 0;
                     ws[cell_address].s.fill = { 
-                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substr(2) } 
+                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substring(2) } 
                     };
                     
                     // Coloration spéciale pour la conformité (dernière colonne)
                     if (C === range.e.c) {
                         if (ws[cell_address].v === 'CONFORME') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         } else if (ws[cell_address].v === 'NON CONFORME') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         }
                     }
@@ -912,13 +912,13 @@ export class PersistenceManager {
                         if (anomalies > 0) {
                             ws[cell_address].s.font = { 
                                 ...ws[cell_address].s.font, 
-                                color: { rgb: this.companyColors.danger.substr(2) }, 
+                                color: { rgb: this.companyColors.danger.substring(2) }, 
                                 bold: true 
                             };
                         } else {
                             ws[cell_address].s.font = { 
                                 ...ws[cell_address].s.font, 
-                                color: { rgb: this.companyColors.success.substr(2) },
+                                color: { rgb: this.companyColors.success.substring(2) },
                                 bold: true
                             };
                         }
@@ -970,23 +970,23 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.primary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 } else if (R === 2) {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.secondary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 } else if (R > 2) {
                     // Coloration des réponses
                     if (C === 5) { // Colonne Réponse
                         if (ws[cell_address].v === 'Oui') {
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.success.substr(2) }, bold: true };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.success.substring(2) }, bold: true };
                         } else if (ws[cell_address].v === 'Non') {
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.danger.substr(2) }, bold: true };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.danger.substring(2) }, bold: true };
                         }
                     }
                 }
@@ -1033,21 +1033,21 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.danger.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.danger.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 } else if (R === 2) {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.warning.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.warning.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 } else if (R > 2) {
                     // Coloration obligatoire
                     if (C === 6) { // Colonne Obligatoire
                         if (ws[cell_address].v === 'OUI') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         }
                     }
@@ -1094,7 +1094,7 @@ export class PersistenceManager {
                         ws[cell_address].s = {
                             ...ws[cell_address].s,
                             font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-                            fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                            fill: { fgColor: { rgb: this.companyColors.secondary.substring(2) } },
                             alignment: { horizontal: 'center', vertical: 'center' }
                         };
                     }
@@ -1120,7 +1120,7 @@ export class PersistenceManager {
             if (ws[cell_address]) {
                 ws[cell_address].s = {
                     font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                    fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                    fill: { fgColor: { rgb: this.companyColors.primary.substring(2) } },
                     alignment: { horizontal: 'center', vertical: 'center' },
                     border: {
                         top: { style: 'thin', color: { rgb: '000000' } },
@@ -1166,23 +1166,23 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.primary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 } else {
                     // Alternance de couleurs
                     const isEvenRow = R % 2 === 0;
                     ws[cell_address].s.fill = { 
-                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substr(2) } 
+                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substring(2) } 
                     };
                     
                     // Coloration conformité (dernière colonne)
                     if (C === range.e.c) {
                         if (ws[cell_address].v === 'CONFORME') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         } else if (ws[cell_address].v === 'NON CONFORME') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         }
                     }
@@ -1716,7 +1716,7 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.warning.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.warning.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 } else {
@@ -1730,17 +1730,17 @@ export class PersistenceManager {
                     if (C === range.e.c - 1) {
                         const days = parseInt(ws[cell_address].v) || 0;
                         if (days >= 30) {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         } else if (days >= 14) {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
                         }
                     }
                     
                     // Statut suspendu (dernière colonne)
                     if (C === range.e.c) {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substring(2) } };
                         ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
                     }
                 }
@@ -1910,7 +1910,7 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.warning.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.warning.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
@@ -1919,7 +1919,7 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.secondary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
@@ -1932,17 +1932,17 @@ export class PersistenceManager {
                     if (C === 7) { // Colonne Jours
                         const days = parseInt(ws[cell_address].v) || 0;
                         if (days >= 30) {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         } else if (days >= 14) {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
                         }
                     }
                     
                     // Statut suspendu (dernière colonne)
                     if (C === range.e.c) {
-                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                        ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substring(2) } };
                         ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
                     }
                 }
@@ -2081,9 +2081,9 @@ export class PersistenceManager {
             .replace(/La pièce/gi, 'Pièce')
             .trim();
         
-        if (short.length > 50) {
-            short = short.substring(0, 47) + '...';
-        }
+        //if (short.length > 50) {
+        //   short = short.substring(0, 47) + '...';
+        //}
         
         return short;
     }
@@ -2201,7 +2201,7 @@ export class PersistenceManager {
                     alignment: { 
                         vertical: 'top', 
                         wrapText: true,
-                        horizontal: C < 9 ? 'left' : 'center'
+                        horizontal: C < 9 ? 'left'
                     },
                     font: { name: 'Calibri', sz: 10 },
                     border: {
@@ -2216,25 +2216,25 @@ export class PersistenceManager {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
+                        fill: { fgColor: { rgb: this.companyColors.primary.substring(2) } },
                         alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
                     };
                 } else if (R > 0) {
                     const isEvenRow = R % 2 === 0;
                     ws[cell_address].s.fill = { 
-                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substr(2) } 
+                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substring(2) } 
                     };
                     
                     if (this.isDocumentStatusColumn(C, documentsInfo)) {
                         const cellValue = ws[cell_address].v;
                         if (cellValue === 'CONFORME') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         } else if (cellValue === 'AVEC RÉSERVES') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
                         } else if (cellValue === 'NON CONFORME' || cellValue === 'ABSENT') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
+                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         }
                     } else if (this.isDocumentQuestionColumn(C, R, ws, documentsInfo)) {
@@ -2265,7 +2265,7 @@ export class PersistenceManager {
         documentsInfo.forEach(docInfo => {
             widths.push({ width: 15 });
             docInfo.questionsArray.forEach(() => {
-                widths.push({ width: 25 });
+                widths.push({ width: 40 });
             });
         });
         
@@ -2428,4 +2428,5 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
