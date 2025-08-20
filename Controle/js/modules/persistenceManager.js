@@ -1191,78 +1191,7 @@ export class PersistenceManager {
             this.controlledDossiers = new Map();
         }
     }
-}encode_cell({ c: C, r: R });
-                if (!ws[cell_address]) continue;
-                
-                // Style de base
-                ws[cell_address].s = {
-                    alignment: { 
-                        vertical: 'top', 
-                        wrapText: true,
-                        horizontal: C < 9 ? 'left' : 'center' // Général à gauche, documents au centre
-                    },
-                    font: { name: 'Calibri', sz: 10 },
-                    border: {
-                        top: { style: 'thin', color: { rgb: '000000' } },
-                        bottom: { style: 'thin', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
-                    }
-                };
-                
-                // Formatage des en-têtes
-                if (R === 0) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substr(2) } },
-                        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
-                    };
-                }
-                // Formatage des données
-                else if (R > 0) {
-                    // Alternance de couleurs pour les lignes
-                    const isEvenRow = R % 2 === 0;
-                    ws[cell_address].s.fill = { 
-                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light.substr(2) } 
-                    };
-                    
-                    // Formatage spécial pour les colonnes de statut de document
-                    if (this.isDocumentStatusColumn(C, documentsInfo)) {
-                        const cellValue = ws[cell_address].v;
-                        if (cellValue === 'CONFORME') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substr(2) } };
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
-                        } else if (cellValue === 'AVEC RÉSERVES') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.warning.substr(2) } };
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
-                        } else if (cellValue === 'NON CONFORME' || cellValue === 'ABSENT') {
-                            ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substr(2) } };
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
-                        }
-                    }
-                    // Formatage spécial pour les questions de documents absents
-                    else if (this.isDocumentQuestionColumn(C, R, ws, documentsInfo)) {
-                        const statusCol = this.getDocumentStatusColumnIndex(C, documentsInfo);
-                        if (statusCol !== -1) {
-                            const statusCell = ws[XLSX.utils.encode_cell({ c: statusCol, r: R })];
-                            if (statusCell && statusCell.v === 'ABSENT' && ws[cell_address].v === '-') {
-                                // Griser les questions des documents absents
-                                ws[cell_address].s.fill = { fgColor: { rgb: 'E9ECEF' } };
-                                ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: '6C757D' } };
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Hauteur des lignes pour les en-têtes
-        ws['!rows'] = [{ hpt: 40 }]; // En-tête plus haut
-        
-        // Filtres automatiques
-        ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
-    }
+}
 
     // NOUVELLE MÉTHODE : Calculer les largeurs de colonnes
     calculateColumnWidths(documentsInfo) {
@@ -2898,3 +2827,4 @@ export class PersistenceManager {
         }
     }
 }
+
