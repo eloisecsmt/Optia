@@ -557,7 +557,7 @@ export class TableManager {
         const typesActe = [...new Set(
             allDossiers
                 .map(d => d.typeActe)
-                .filter(t => t && t.trim() !== '' && t.trim() !== '-')
+                .filter(t => t && t.toString().trim() !== '') // Plus permissif
         )].sort();
         
         Utils.debugLog(`Conseillers trouvés: ${conseillers.length} - ${conseillers.slice(0, 5).join(', ')}${conseillers.length > 5 ? '...' : ''}`);
@@ -2318,4 +2318,5 @@ export class TableManager {
         this.clearFilters();
     }
 }
+
 
