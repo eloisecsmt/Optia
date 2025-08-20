@@ -442,55 +442,99 @@ export class DataProcessor {
         return this.filteredDossiers;
     }
 
+    getAvailableMonths() {
+        if (!this.allDossiers || this.allDossiers.length === 0) return [];
+        
+        const months = new Set();
+        
+        this.allDossiers.forEach(dossier => {
+            if (dossier.dateEnvoi) {
+                const date = new Date(dossier.dateEnvoi);
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = date.getMonth(); // 0-11
+                    const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+                    const monthNames = [
+                        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+                    ];
+                    const monthLabel = `${monthNames[month]} ${year}`;
+                    
+                    months.add({
+                        key: monthKey,
+                        label: monthLabel,
+                        year: year,
+                        month: month
+                    });
+                }
+            }
+        });
+        
+        // Convertir en array et trier par date (plus récent en premier)
+        return Array.from(months).sort((a, b) => {
+            if (a.year !== b.year) return b.year - a.year;
+            return b.month - a.month;
+        });
+    }
+    
+    //Peupler le filtre avec les mois disponibles
+    populateMonthFilter() {
+        if (!this.dataProcessor) return;
+        
+        const monthSelect = document.getElementById('filter-date-envoi');
+        if (!monthSelect) return;
+        
+        const availableMonths = this.dataProcessor.getAvailableMonths();
+        
+        // Vider et remplir le select
+        monthSelect.innerHTML = '<option value="">Tous les mois</option>';
+        
+        if (availableMonths.length > 0) {
+            availableMonths.forEach(monthData => {
+                const option = document.createElement('option');
+                option.value = monthData.key; // Format : "2024-10"
+                option.textContent = monthData.label; // Format : "Novembre 2024"
+                monthSelect.appendChild(option);
+            });
+        } else {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Aucune date trouvée';
+            option.disabled = true;
+            monthSelect.appendChild(option);
+        }
+        
+        console.log(`Filtre mois peuplé avec ${availableMonths.length} mois`);
+    }
+
     checkDateFilter(dossierDate, dateFilter, dateFrom, dateTo) {
+        // Si pas de filtre de date, tout passe
         if (!dateFilter) return true;
         
+        // Si pas de date dans le dossier, ne pas inclure
         if (!dossierDate) return false;
         
-        // Convertir la date du dossier en objet Date
+        // Si c'est le filtre personnalisé, utiliser les dates from/to
+        if (dateFilter === 'custom') {
+            if (!dateFrom && !dateTo) return true;
+            
+            const dossierDateObj = new Date(dossierDate);
+            if (isNaN(dossierDateObj.getTime())) return false;
+            
+            const fromDate = dateFrom ? new Date(dateFrom) : new Date('1900-01-01');
+            const toDate = dateTo ? new Date(dateTo) : new Date('2100-12-31');
+            
+            return dossierDateObj >= fromDate && dossierDateObj <= toDate;
+        }
+        
+        // Pour les filtres de mois (format "2024-10")
         const dossierDateObj = new Date(dossierDate);
         if (isNaN(dossierDateObj.getTime())) return false;
         
-        const today = new Date();
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const [filterYear, filterMonth] = dateFilter.split('-').map(Number);
         
-        switch (dateFilter) {
-            case 'today':
-                const dossierDateStart = new Date(dossierDateObj.getFullYear(), dossierDateObj.getMonth(), dossierDateObj.getDate());
-                return dossierDateStart.getTime() === todayStart.getTime();
-                
-            case 'yesterday':
-                const yesterday = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
-                const dossierYesterday = new Date(dossierDateObj.getFullYear(), dossierDateObj.getMonth(), dossierDateObj.getDate());
-                return dossierYesterday.getTime() === yesterday.getTime();
-                
-            case 'this-week':
-                const weekStart = new Date(todayStart.getTime() - (today.getDay() - 1) * 24 * 60 * 60 * 1000);
-                return dossierDateObj >= weekStart && dossierDateObj <= today;
-                
-            case 'last-week':
-                const lastWeekEnd = new Date(todayStart.getTime() - today.getDay() * 24 * 60 * 60 * 1000);
-                const lastWeekStart = new Date(lastWeekEnd.getTime() - 6 * 24 * 60 * 60 * 1000);
-                return dossierDateObj >= lastWeekStart && dossierDateObj <= lastWeekEnd;
-                
-            case 'this-month':
-                return dossierDateObj.getMonth() === today.getMonth() && dossierDateObj.getFullYear() === today.getFullYear();
-                
-            case 'last-month':
-                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                return dossierDateObj.getMonth() === lastMonth.getMonth() && dossierDateObj.getFullYear() === lastMonth.getFullYear();
-                
-            case 'custom':
-                if (!dateFrom && !dateTo) return true;
-                
-                const fromDate = dateFrom ? new Date(dateFrom) : new Date('1900-01-01');
-                const toDate = dateTo ? new Date(dateTo) : new Date('2100-12-31');
-                
-                return dossierDateObj >= fromDate && dossierDateObj <= toDate;
-                
-            default:
-                return true;
-        }
+        return dossierDateObj.getFullYear() === filterYear && 
+               dossierDateObj.getMonth() === filterMonth;
     }
 
     getUniqueValues(fieldName) {
@@ -507,4 +551,5 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
 
