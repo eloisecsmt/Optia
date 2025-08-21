@@ -3828,7 +3828,7 @@ export class DocumentController {
     }
 
     // Méthode corrigée pour isResponseConforme
-isResponseConforme(response) {
+    isResponseConforme(response) {
     const questionData = this.documentsConfig[response.documentId].questions[response.questionIndex];
     
         // Les checklists sont toujours considérées comme des anomalies à signaler
@@ -5127,6 +5127,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
