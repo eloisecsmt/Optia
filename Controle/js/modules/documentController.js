@@ -3827,34 +3827,95 @@ export class DocumentController {
         Utils.debugLog(`Réponse sauvegardée: Doc ${response.documentId}, Q ${response.questionIndex}, Réponse: ${response.answer}, Conforme: ${response.conforme}`);
     }
 
-    isResponseConforme(response) {
-        const questionData = this.documentsConfig[response.documentId].questions[response.questionIndex];
+    // Méthode corrigée pour isResponseConforme
+isResponseConforme(response) {
+    const questionData = this.documentsConfig[response.documentId].questions[response.questionIndex];
+    
+        // Les checklists sont toujours considérées comme des anomalies à signaler
         if (questionData.type === 'checklist') {
             return false; // Toujours rouge/non conforme pour les checklists
         }
-
+    
         // Si c'est explicitement marqué comme non conforme par la qualité
         if (response.quality === 'Non conforme') {
             return false;
         }
+    
+        // NOUVELLE LOGIQUE : Identifier les types de questions où seules certaines réponses sont des anomalies
+        const questionType = questionData.type;
+        const questionText = response.question.toLowerCase();
         
-        // NOUVELLE LOGIQUE : Toute réponse "Non" est une anomalie, sauf cas très spécifiques
-        if (response.answer === 'Non') {
-            // Seules quelques questions très spécifiques où "Non" est acceptable
-            const questionText = response.question.toLowerCase();
-            
-            // Questions où "Non" est normal/attendu
-            if (questionText.includes('est-ce que le conseiller est cif') ||
-                questionText.includes('le client connaissait-il tous les produits') ||
-                questionText.includes('des rachats répétés ont-ils été effectués')) {
-                return true; // "Non" est acceptable pour ces questions
-            }
-            
-            // Pour toutes les autres questions, "Non" = anomalie
-            return false;
+        // Types de questions avec des réponses valides multiples (pas d'anomalie)
+        const validChoiceTypes = [
+            'document_type',        // Papier/Electronique sont tous valides
+            'carto_support',        // Harvest/Papier sont tous valides
+            'patrimoine_tranche',   // Toutes les tranches sont valides
+            'revenus_tranche',      // Toutes les tranches sont valides
+            'vigilance_level',      // Standard/Complémentaire/Renforcée sont tous valides
+            'gda_status',          // Automatique/Manuel/Pas fait sont tous valides
+            'operation_type',       // Tous les types d'opération sont valides
+            'operation_status',     // Tous les statuts sont valides
+            'rachat_motif',        // Tous les motifs sont valides
+            'origin_type',         // Tous les types de déclaration sont valides
+            'suspicion_declaration', // Toutes les évaluations sont valides
+            'risque_niveau',       // Tous les niveaux de risque sont valides
+            'esg_respect',         // Oui/Non/Partiellement sont tous valides
+            'profile_origin',      // Papier/Electronique sont tous valides
+            'text',                // Les réponses texte sont généralement valides
+            'gda_date'             // Les dates sont valides si saisies
+        ];
+        
+        // Si c'est un type de question avec choix multiples valides
+        if (validChoiceTypes.includes(questionType)) {
+            return true; // Toutes les réponses de ces types sont conformes
         }
         
-        // Toutes les autres réponses sont conformes (Oui, NC, tranches, etc.)
+        // Pour les questions boolean standard, analyser la réponse
+        if (questionType === 'boolean' || !questionType) {
+            
+            // Réponse "NC" (Non Concerné) est toujours valide
+            if (response.answer === 'NC') {
+                return true;
+            }
+            
+            // Réponse "Oui" est généralement valide (sauf si qualité non conforme)
+            if (response.answer === 'Oui') {
+                return response.quality !== 'Non conforme' && response.quality !== 'Partiellement conforme';
+            }
+            
+            // Pour "Non", vérifier s'il s'agit d'une question où "Non" est acceptable
+            if (response.answer === 'Non') {
+                // Questions où "Non" est normal/attendu/acceptable
+                const acceptableNoQuestions = [
+                    'est-ce que le conseiller est cif',
+                    'le client connaissait-il tous les produits',
+                    'des rachats répétés ont-ils été effectués',
+                    'y a-t-il un profil risque correspondant',
+                    'est-ce que le patrimoine est-il connu',
+                    'est-ce que les revenus sont-ils connus',
+                    'des éléments sont-ils manquants',
+                    'd\'autres informations détaillées sont-elles manquantes',
+                    'si montant > 150 000€, une diligence renforcée',
+                    'en cas de doute, une déclaration de soupçon',
+                    'si compte tiers, y a-t-il une procuration',
+                    'l\'opération concerne-t-elle un produit cif'
+                ];
+                
+                // Vérifier si la question fait partie des cas où "Non" est acceptable
+                const isAcceptableNo = acceptableNoQuestions.some(acceptableQuestion => 
+                    questionText.includes(acceptableQuestion)
+                );
+                
+                if (isAcceptableNo) {
+                    return true; // "Non" est acceptable pour ces questions
+                }
+                
+                // Pour les autres questions, "Non" indique généralement une anomalie
+                return false;
+            }
+        }
+        
+        // Par défaut, considérer comme conforme si pas d'indication contraire
         return true;
     }
 
@@ -5066,6 +5127,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
