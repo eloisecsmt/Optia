@@ -3755,7 +3755,8 @@ export class DocumentController {
             'Tous les documents sont-ils bien ajoutés dans Zeendoc ?',
             'Est-ce que le patrimoine est-il connu ?',
             'Est-ce que les revenus sont-ils connus ?',
-            'Le client connaissait-il tous les produits proposés ?'
+            'Le client connaissait-il tous les produits proposés ?',
+            'Les informations client sont-elles correctement saisies dans Harvest ?'
         ];
 
         // Les checklists ne nécessitent jamais de justification
@@ -5065,6 +5066,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
