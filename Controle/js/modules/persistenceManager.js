@@ -10,7 +10,7 @@ export class PersistenceManager {
         this.lastSaveTime = 0;
         this.companyColors = {
             primary: '1A1A2E',      // Bleu foncé
-            secondary: 'D4AF37',    // Or  
+            secondary: '6C757D',    // Or  
             success: '28A745',      // Vert
             warning: 'FFC107',      // Jaune
             danger: 'DC3545',       // Rouge
@@ -2577,6 +2577,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
