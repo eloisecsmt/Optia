@@ -9,13 +9,13 @@ export class PersistenceManager {
         this.controlledDossiers = new Map();
         this.lastSaveTime = 0;
         this.companyColors = {
-            primary: 'FF1A1A2E',      // Bleu foncé
-            secondary: 'FFD4AF37',    // Or  
-            success: 'FF28A745',      // Vert
-            warning: 'FFFFC107',      // Jaune
-            danger: 'FFDC3545',       // Rouge
-            light: 'FFF8F9FA',        // Gris clair
-            info: 'FF17A2B8'          // Bleu info
+            primary: '1A1A2E',      // Bleu foncé
+            secondary: 'D4AF37',    // Or  
+            success: '28A745',      // Vert
+            warning: 'FFC107',      // Jaune
+            danger: 'DC3545',       // Rouge
+            light: 'F8F9FA',        // Gris clair
+            info: '17A2B8'          // Bleu info
         };
         this.init();
     }
@@ -309,26 +309,32 @@ export class PersistenceManager {
 
     formatSummarySheet(ws, controle) {
         if (!ws['!ref']) return;
-        
+    
         const range = XLSX.utils.decode_range(ws['!ref']);
         
         // Largeurs de colonnes
         ws['!cols'] = [
-            { width: 30 },  // Libellé
-            { width: 25 },  // Valeur
-            { width: 15 },  // Extra
-            { width: 15 }   // Extra
+            { width: 30 },
+            { width: 25 },
+            { width: 15 },
+            { width: 15 }
         ];
-
+    
         for (let R = range.s.r; R <= range.e.r; ++R) {
             for (let C = range.s.c; C <= range.e.c; ++C) {
                 const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
                 if (!ws[cell_address]) continue;
-
-                // Style de base
+    
+                // ✅ STRUCTURE CORRECTE
                 ws[cell_address].s = {
-                    alignment: { vertical: 'center', wrapText: true },
-                    font: { name: 'Calibri', sz: 10 },
+                    alignment: { 
+                        vertical: 'center', 
+                        wrapText: true 
+                    },
+                    font: { 
+                        name: 'Calibri', 
+                        sz: 10 
+                    },
                     border: {
                         top: { style: 'thin', color: { rgb: '000000' } },
                         bottom: { style: 'thin', color: { rgb: '000000' } },
@@ -336,39 +342,53 @@ export class PersistenceManager {
                         right: { style: 'thin', color: { rgb: '000000' } }
                     }
                 };
-
+    
                 // Titre principal
                 if (R === 0) {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.primary.substring(2) } },
-                        alignment: { horizontal: 'center', vertical: 'center' }
-                    };
-                }
-                // Titres de sections
-                else if (ws[cell_address].v && typeof ws[cell_address].v === 'string' && 
-                        (ws[cell_address].v.includes('INFORMATIONS') || 
-                         ws[cell_address].v.includes('RÉSULTATS') || 
-                         ws[cell_address].v.includes('STATISTIQUES'))) {
-                    ws[cell_address].s = {
-                        ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-                        fill: { fgColor: { rgb: this.companyColors.secondary.substring(2) } }
+                        font: { 
+                            name: 'Calibri', 
+                            sz: 16, 
+                            bold: true, 
+                            color: { rgb: 'FFFFFF' } 
+                        },
+                        fill: { 
+                            patternType: "solid",  // ✅ OBLIGATOIRE
+                            fgColor: { rgb: this.companyColors.primary } // ✅ Sans substring(2)
+                        },
+                        alignment: { 
+                            horizontal: 'center', 
+                            vertical: 'center' 
+                        }
                     };
                 }
                 // Conformité globale
                 else if (ws[cell_address].v === 'CONFORME') {
-                    ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.success.substring(2) } };
-                    ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                    ws[cell_address].s.fill = { 
+                        patternType: "solid",  // ✅ OBLIGATOIRE
+                        fgColor: { rgb: this.companyColors.success } 
+                    };
+                    ws[cell_address].s.font = { 
+                        ...ws[cell_address].s.font, 
+                        bold: true, 
+                        color: { rgb: 'FFFFFF' } 
+                    };
                 }
                 else if (ws[cell_address].v === 'NON CONFORME') {
-                    ws[cell_address].s.fill = { fgColor: { rgb: this.companyColors.danger.substring(2) } };
-                    ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                    ws[cell_address].s.fill = { 
+                        patternType: "solid",  // ✅ OBLIGATOIRE
+                        fgColor: { rgb: this.companyColors.danger } 
+                    };
+                    ws[cell_address].s.font = { 
+                        ...ws[cell_address].s.font, 
+                        bold: true, 
+                        color: { rgb: 'FFFFFF' } 
+                    };
                 }
             }
         }
-
+    
         // Fusionner les cellules du titre
         ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 3, r: 0 } }];
     }
@@ -2428,6 +2448,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
