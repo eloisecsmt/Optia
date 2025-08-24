@@ -638,7 +638,7 @@ export class PersistenceManager {
                     question: response.question,
                     reponse: response.answer,
                     qualite: response.quality || '',
-                    conforme: response.answer === 'Oui' && response.quality !== 'Non conforme',
+                    conforme: this.isResponseConformeFromController(response, docId),
                     obligatoire: response.obligation === 'Obligatoire',
                     justification: response.justification || ''
                 });
@@ -646,6 +646,26 @@ export class PersistenceManager {
         });
         
         return details;
+    }
+
+    isResponseConformeFromController(response, docId) {
+        // Récupérer la config du document depuis documentController
+        if (window.documentController && window.documentController.documentsConfig) {
+            const docConfig = window.documentController.documentsConfig[docId];
+            if (docConfig) {
+                const questionData = docConfig.questions[response.questionIndex];
+                if (questionData) {
+                    // Utiliser la vraie logique de conformité
+                    return window.documentController.isResponseConforme({
+                        ...response,
+                        documentId: docId
+                    });
+                }
+            }
+        }
+        
+        // Fallback vers l'ancienne logique si pas disponible
+        return response.conforme !== false;
     }
 
     // Obtenir le nom du document (inchangé)
@@ -2577,6 +2597,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
