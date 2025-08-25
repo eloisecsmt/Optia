@@ -219,7 +219,7 @@ export class DocumentController {
             'LCB-FT': [1, 4, 7, 8, 12, 99], // FR, Carto Client, CNI, Justificatif Domicile, Zeendoc
             'FINANCEMENT': [4, 13, 15, 16, 17, 18, 99], // Harvest, Carto Opé, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
             'CARTO_CLIENT': [4,7, 8, 9, 99], // Harvest, Zeendoc
-            'OPERATION': [1, 2, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
+            'OPERATION': [22, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
             'NOUVEAU_CLIENT': [1, 2, 4, 5, 6, 7, 8, 9, 10, 21, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
@@ -2093,9 +2093,31 @@ export class DocumentController {
                 }
             ]
         },
-            // 22: {
-            // id : FR + Profil Risques (opération)
-            // Tuile Zeendoc pour tous les contrôles
+            22: {
+            id: 22,
+            name: 'FR + Profil Risques (opération)',
+            fullName: 'Mise à jour FR et Profil Risques pour opération client existant',
+            questions: [
+                {
+                    text: 'La mise à jour de la FR est-elle conforme pour cette opération ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Considérez la date de DCC affichée ci-dessus et les règles de votre établissement'
+                },
+                {
+                    text: 'La mise à jour du profil investisseur est-elle conforme pour cette opération ?',
+                    type: 'boolean', 
+                    required: true,
+                    help: 'Considérez la date du profil investisseur affichée ci-dessus et les règles métier'
+                },
+                {
+                    text: 'Y a-t-il des éléments particuliers à signaler concernant ces mises à jour ?',
+                    type: 'text',
+                    required: false,
+                    help: 'Observations sur les dates, cohérence avec l\'opération, etc.'
+                }
+            ]
+        },
             99: {
                 id: 99,
                 name: 'Zeendoc',
@@ -5179,6 +5201,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
