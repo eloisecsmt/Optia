@@ -5192,5 +5192,23 @@ body {
 .document-card .status-indicators {
     flex-shrink: 0;
 }
+.context-item {
+    min-width: 280px; /* Augmenté pour les dates complètes */
+    flex: 1; /* Permet l'expansion si nécessaire */
+}
+
+.context-details {
+    display: flex;
+    flex-direction: column; /* Stack verticalement pour éviter l'encombrement */
+    gap: 12px;
+}
+
+@media (min-width: 768px) {
+    .context-details {
+        flex-direction: row; /* Horizontal sur écrans plus larges */
+        flex-wrap: wrap;
+    }
+}
+
 
 
