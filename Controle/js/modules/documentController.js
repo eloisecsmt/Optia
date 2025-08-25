@@ -2900,29 +2900,30 @@ export class DocumentController {
         this.addHelpBubbleStyles();
     }
 
-    calculateMonthsDifference(dateDoc, dateOperation) {
-    if (!dateDoc || !dateOperation) return 999; // Valeur par défaut si dates manquantes
-    
-    const date1 = new Date(dateDoc);
-    const date2 = new Date(dateOperation);
-    
-    // Vérifier si les dates sont valides
-    if (isNaN(date1.getTime()) || isNaN(date2.getTime())) {
-        return 999;
+
+    calculateMonthsDifference(dateDoc, dateEnvoi) {
+        if (!dateDoc || !dateEnvoi) return 999; // Valeur par défaut si dates manquantes
+        
+        const date1 = new Date(dateDoc);
+        const date2 = new Date(dateEnvoi);
+        
+        // Vérifier si les dates sont valides
+        if (isNaN(date1.getTime()) || isNaN(date2.getTime())) {
+            return 999;
+        }
+        
+        return (date2.getFullYear() - date1.getFullYear()) * 12 + 
+               (date2.getMonth() - date1.getMonth());
     }
     
-    return (date2.getFullYear() - date1.getFullYear()) * 12 + 
-           (date2.getMonth() - date1.getMonth());
-}
-
     getDCCStatus() {
-        if (!this.currentDossier.dateDCC || !this.currentDossier.dateOperation) {
+        if (!this.currentDossier.dateDCC || !this.currentDossier.dateEnvoi) {
             return 'unknown';
         }
         
         const diffMonths = this.calculateMonthsDifference(
             this.currentDossier.dateDCC, 
-            this.currentDossier.dateOperation
+            this.currentDossier.dateEnvoi
         );
         
         if (diffMonths <= 24) return 'valid';
@@ -2930,16 +2931,16 @@ export class DocumentController {
     }
     
     getDCCStatusText() {
-        if (!this.currentDossier.dateDCC || !this.currentDossier.dateOperation) {
+        if (!this.currentDossier.dateDCC || !this.currentDossier.dateEnvoi) {
             return 'Dates manquantes';
         }
         
         const diffMonths = this.calculateMonthsDifference(
             this.currentDossier.dateDCC, 
-            this.currentDossier.dateOperation
+            this.currentDossier.dateEnvoi
         );
         
-        if (diffMonths <= 0) return 'Postérieure à l\'opération';
+        if (diffMonths <= 0) return 'Postérieure à l\'envoi';
         if (diffMonths <= 6) return `Très récente (${diffMonths} mois)`;
         if (diffMonths <= 12) return `Récente (${diffMonths} mois)`;
         if (diffMonths <= 24) return `Valide (${diffMonths} mois)`;
@@ -2947,13 +2948,13 @@ export class DocumentController {
     }
     
     getProfilStatus() {
-        if (!this.currentDossier.dateProfilInvestisseur || !this.currentDossier.dateOperation) {
+        if (!this.currentDossier.dateProfilInvestisseur || !this.currentDossier.dateEnvoi) {
             return 'unknown';
         }
         
         const diffMonths = this.calculateMonthsDifference(
             this.currentDossier.dateProfilInvestisseur, 
-            this.currentDossier.dateOperation
+            this.currentDossier.dateEnvoi
         );
         
         if (diffMonths <= 24) return 'valid';
@@ -2961,16 +2962,16 @@ export class DocumentController {
     }
     
     getProfilStatusText() {
-        if (!this.currentDossier.dateProfilInvestisseur || !this.currentDossier.dateOperation) {
+        if (!this.currentDossier.dateProfilInvestisseur || !this.currentDossier.dateEnvoi) {
             return 'Dates manquantes';
         }
         
         const diffMonths = this.calculateMonthsDifference(
             this.currentDossier.dateProfilInvestisseur, 
-            this.currentDossier.dateOperation
+            this.currentDossier.dateEnvoi
         );
         
-        if (diffMonths <= 0) return 'Postérieur à l\'opération';
+        if (diffMonths <= 0) return 'Postérieur à l\'envoi';
         if (diffMonths <= 6) return `Très récent (${diffMonths} mois)`;
         if (diffMonths <= 12) return `Récent (${diffMonths} mois)`;
         if (diffMonths <= 24) return `Valide (${diffMonths} mois)`;
@@ -5304,6 +5305,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
