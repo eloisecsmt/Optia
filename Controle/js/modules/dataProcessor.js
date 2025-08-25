@@ -54,7 +54,9 @@ export class DataProcessor {
             'codeDossier': ['code dossier', 'n° dossier', 'numero dossier', 'id dossier', 'dossier'],
             'ppe': ['ppe', 'personne politiquement exposée', 'politiquement exposé'],
             'dateEnvoi': ["date d envoi", 'date d\'envoi', "date d'envoi", 'envoi', 'date transmission', 'expédition'],
-            'dateValidation': ['date validation', 'validation', 'validé', 'approuvé']
+            'dateValidation': ['date validation', 'validation', 'validé', 'approuvé'],
+            'dateDCC': ['date dcc', 'dcc date', 'date collecte', 'collecte date'],
+            'dateProfilInvestisseur': ['date profil', 'profil date', 'date profil investisseur', 'profil investisseur date'],
         };
 
         // Pour chaque type de données, trouver la PREMIÈRE colonne qui correspond (sauf si déjà forcé)
@@ -212,6 +214,8 @@ export class DataProcessor {
                     ppe: this.getColumnValue(row, 'ppe') || '',
                     dateEnvoi: Utils.formatDate(this.getColumnValue(row, 'dateEnvoi')) || '',
                     dateValidation: Utils.formatDate(this.getColumnValue(row, 'dateValidation')) || '',
+                    dateDCC: Utils.formatDate(this.getColumnValue(row, 'dateDCC')) || '',
+                    dateProfilInvestisseur: Utils.formatDate(this.getColumnValue(row, 'dateProfilInvestisseur')) || '',
                     
                     rawData: row
                 };
@@ -568,6 +572,7 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
 
 
 
