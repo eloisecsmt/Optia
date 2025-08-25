@@ -191,8 +191,7 @@ export class ControlTypes {
                     'Conformité avec les obligations de révision périodique',
                     'Documentation des raisons de mise à jour'
                 ]
-            }
-        },
+            },
         'ADEQUATION': {
             name: 'Adéquation',
             description: 'Contrôle de l\'adéquation des conseils et recommandations clients',
@@ -212,11 +211,6 @@ export class ControlTypes {
                 ],
                 montantMinimum: 0,
                 excludeDomaines: [],
-                includePPE: false,
-                nouveauxClients: false,
-                // Critères spécifiques pour l'adéquation
-                requiresInvestmentAdvice: true, // Nécessite du conseil en investissement
-                excludeSimpleOperations: true   // Exclut les opérations simples sans conseil
             },
             checklistItems: [
                 'Vérification de la complétude de la déclaration d\'adéquation',
@@ -232,8 +226,7 @@ export class ControlTypes {
                 'Validation de la signature et acceptation client',
                 'Conformité de l\'archivage documentaire'
             ]
-        },
-        
+        },   
         'ARBITRAGE': {
             name: 'Arbitrage',
             description: 'Contrôle spécifique des opérations d\'arbitrage entre supports',
@@ -1001,5 +994,6 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
 
 
