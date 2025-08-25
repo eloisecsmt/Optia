@@ -2275,7 +2275,7 @@ export class DocumentController {
                 }
             }
             
-            this.();
+            this.updateQuestionInterface();
         } else {
             this.completeDocument();
         }
@@ -2817,10 +2817,8 @@ export class DocumentController {
                 </div>
                 
                 <div class="question-actions">
-                    <button class="btn btn-secondary ${this.currentQuestionIndex === 0 ? 'disabled' : ''}" 
-                        onclick="window.documentController?.goToPreviousQuestion()"
-                        ${this.currentQuestionIndex === 0 ? 'disabled' : ''}>
-                        ⬅️ Question précédente
+                    <button class="btn btn-secondary" onclick="window.documentController?.cancelQuestion()">
+                        ⬅️ Retour
                     </button>
                     <button class="btn btn-danger" onclick="window.documentController?.suspendControl()">
                         ⏸️ Suspendre
@@ -2843,38 +2841,6 @@ export class DocumentController {
         }
 
         this.addHelpBubbleStyles();
-    }
-
-    goToPreviousQuestion() {
-        if (this.currentQuestionIndex > 0) {
-            // Supprimer la réponse actuelle si elle existe
-            if (this.documentResponses[this.currentDocument] && 
-                this.documentResponses[this.currentDocument][this.currentQuestionIndex]) {
-                delete this.documentResponses[this.currentDocument][this.currentQuestionIndex];
-            }
-            
-            // Revenir à la question précédente
-            this.currentQuestionIndex--;
-            
-            // Gérer les questions de suivi (followUp) qui ont pu être injectées
-            const docConfig = this.documentsConfig[this.currentDocument];
-            const questions = docConfig.questions;
-            const currentQuestion = questions[this.currentQuestionIndex];
-            
-            // Si c'est une question de suivi, la supprimer de la liste
-            if (currentQuestion && currentQuestion.isFollowUp) {
-                questions.splice(this.currentQuestionIndex, 1);
-                this.documentsState[this.currentDocument].totalQuestions = questions.length;
-                
-                // Revenir encore d'une question si on était sur une followUp
-                if (this.currentQuestionIndex > 0) {
-                    this.currentQuestionIndex--;
-                }
-            }
-            
-            this.updateQuestionInterface();
-            Utils.debugLog(`Retour à la question ${this.currentQuestionIndex + 1}`);
-        }
     }
 
     generateResponseOptions(questionData) {
@@ -3759,68 +3725,26 @@ export class DocumentController {
     }
 
     saveQuestionResponse() {
-       // 1. Nettoyer les questions followUp futures avant de continuer
-       this.cleanupFutureFollowUpQuestions();
-       
-       // 2. Collecter la réponse actuelle
-       const response = this.collectQuestionResponse();
-       
-       // 3. Valider la réponse
-       if (!this.validateResponse(response)) {
-           return;
-       }
-    
-       // 4. Vérifier si une justification est nécessaire
-       const questionData = this.documentsConfig[this.currentDocument].questions[this.currentQuestionIndex];
-       const needsJustification = this.doesResponseNeedJustification(questionData, response);
-    
-       if (needsJustification) {
-           this.showJustificationModal(response);
-           return;
-       }
-    
-       // 5. Sauvegarder et continuer
-       this.saveResponse(response);
-       this.moveToNextQuestion();
-    }
-    
-    // Nouvelle méthode pour nettoyer les questions followUp futures
-    cleanupFutureFollowUpQuestions() {
-       const docConfig = this.documentsConfig[this.currentDocument];
-       const questions = docConfig.questions;
-       
-       // Supprimer toutes les questions followUp qui suivent la question actuelle
-       for (let i = questions.length - 1; i > this.currentQuestionIndex; i--) {
-           if (questions[i].isFollowUp) {
-               questions.splice(i, 1);
-               
-               // Nettoyer aussi les réponses associées si elles existent
-               if (this.documentResponses[this.currentDocument] && 
-                   this.documentResponses[this.currentDocument][i]) {
-                   delete this.documentResponses[this.currentDocument][i];
-               }
-           }
-       }
-       
-       // Mettre à jour le nombre total de questions
-       this.documentsState[this.currentDocument].totalQuestions = questions.length;
-    }
-    
-    // Nouvelle méthode pour déterminer si une justification est nécessaire
-    doesResponseNeedJustification(questionData, response) {
-       // Les questions exemptées de justification
-       if (this.isQuestionExemptFromJustification(questionData, response)) {
-           return false;
-       }
-       
-       // Vérifier si c'est une réponse qui nécessite une justification
-       const needsJustification = (
-           response.answer === 'Non' || 
-           response.quality === 'Non conforme' || 
-           response.quality === 'Partiellement conforme'
-       );
-       
-       return needsJustification;
+        const response = this.collectQuestionResponse();
+        
+        if (!this.validateResponse(response)) {
+            return;
+        }
+
+        // Vérifier si c'est une question qui ne nécessite pas de justification même si "Non"
+        const questionData = this.documentsConfig[this.currentDocument].questions[this.currentQuestionIndex];
+        const isExemptFromJustification = this.isQuestionExemptFromJustification(questionData, response);
+
+        // Afficher la justification seulement si nécessaire
+        if (!isExemptFromJustification && 
+            (response.answer === 'Non' || response.quality === 'Non conforme' || response.quality === 'Partiellement conforme')) {
+            this.showJustificationModal(response);
+            return;
+        }
+
+        // Sinon, sauvegarder directement la réponse
+        this.saveResponse(response);
+        this.moveToNextQuestion();
     }
 
     isQuestionExemptFromJustification(questionData, response) {
@@ -5205,14 +5129,3 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
-
-
-
-
-
-
-
-
-
-
-
