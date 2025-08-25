@@ -3042,6 +3042,12 @@ export class DocumentController {
     }
     
     getUpdateContextInfo() {
+        console.log('Debug dates:', {
+            dateDCC: this.currentDossier.dateDCC,
+            dateProfilInvestisseur: this.currentDossier.dateProfilInvestisseur,
+            dateEnvoi: this.currentDossier.dateEnvoi
+        });
+        
         return {
             dccStatus: this.getDCCStatus(),
             dccText: this.getDCCStatusText(),
@@ -5368,6 +5374,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
