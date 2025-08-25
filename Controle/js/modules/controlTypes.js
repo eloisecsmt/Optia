@@ -267,6 +267,7 @@ export class ControlTypes {
                 'Vérification du respect des limites d\'arbitrages gratuits',
                 'Contrôle de la conformité avec les restrictions éventuelles'
             ]
+        }
         };
     }
 
@@ -994,6 +995,7 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
 
 
 
