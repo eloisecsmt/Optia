@@ -2900,7 +2900,23 @@ export class DocumentController {
         this.addHelpBubbleStyles();
     }
 
-
+    formatDisplayDate(dateString) {
+        if (!dateString) return 'N/A';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString; // Retourner la chaîne originale si conversion échoue
+            
+            return date.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric'
+            });
+        } catch (error) {
+            return dateString;
+        }
+    }
+    
     calculateMonthsDifference(dateDoc, dateEnvoi) {
         if (!dateDoc || !dateEnvoi) return 999; // Valeur par défaut si dates manquantes
         
@@ -5305,6 +5321,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
