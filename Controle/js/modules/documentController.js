@@ -2869,6 +2869,23 @@ export class DocumentController {
                 </div>
             </div>
         `;
+        
+            if (this.currentDocument === 22) {
+            const contextInfo = this.getUpdateContextInfo();
+            questionContainer.insertAdjacentHTML('afterbegin', `
+                <div class="update-context-info">
+                    <div class="context-header">Informations de mise à jour :</div>
+                    <div class="context-details">
+                        <span class="context-item ${contextInfo.dccStatus}">
+                            DCC : ${contextInfo.dccText}
+                        </span>
+                        <span class="context-item ${contextInfo.profilStatus}">
+                            Profil : ${contextInfo.profilText}
+                        </span>
+                    </div>
+                </div>
+            `);
+        }
 
         const questionData = this.documentsConfig[this.currentDocument].questions[this.currentQuestionIndex];
         if (questionData.type === 'checklist') {
@@ -2881,6 +2898,42 @@ export class DocumentController {
         }
 
         this.addHelpBubbleStyles();
+    }
+
+    getDCCStatus() {
+        const diffMonths = this.calculateMonthsDifference(
+            this.currentDossier.dateDCC, 
+            this.currentDossier.dateOperation
+        );
+        if (diffMonths <= 24) return 'valid';
+        return 'expired';
+    }
+    
+    getDCCStatusText() {
+        const diffMonths = this.calculateMonthsDifference(
+            this.currentDossier.dateDCC, 
+            this.currentDossier.dateOperation
+        );
+        if (diffMonths <= 24) return `Valide (${diffMonths} mois)`;
+        return `Expiré (${diffMonths} mois)`;
+    }
+    
+    getProfilStatus() {
+        const diffMonths = this.calculateMonthsDifference(
+            this.currentDossier.dateProfilInvestisseur, 
+            this.currentDossier.dateOperation
+        );
+        if (diffMonths <= 24) return 'valid';
+        return 'expired';
+    }
+    
+    getUpdateContextInfo() {
+        return {
+            dccStatus: this.getDCCStatus(),
+            dccText: this.getDCCStatusText(),
+            profilStatus: this.getProfilStatus(), 
+            profilText: this.getProfilStatusText()
+        };
     }
 
     goToPreviousQuestion() {
@@ -5201,6 +5254,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
