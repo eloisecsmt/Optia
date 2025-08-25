@@ -2817,11 +2817,16 @@ export class DocumentController {
                 </div>
                 
                 <div class="question-actions">
-                    <button class="btn btn-secondary" onclick="window.documentController?.cancelQuestion()">
-                        ⬅️ Retour
+                    <button class="btn btn-secondary ${this.currentQuestionIndex === 0 ? 'disabled' : ''}" 
+                            onclick="window.documentController?.goToPreviousQuestion()"
+                            ${this.currentQuestionIndex === 0 ? 'disabled' : ''}>
+                        ⬅️ Question précédente
                     </button>
                     <button class="btn btn-danger" onclick="window.documentController?.suspendControl()">
                         ⏸️ Suspendre
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.documentController?.cancelQuestion()">
+                        🏠 Retour au menu
                     </button>
                     <button class="btn btn-primary" onclick="window.documentController?.saveQuestionResponse()">
                         ${this.currentQuestionIndex === questions.length - 1 ? 'Terminer le document' : 'Question suivante'} ➡️
@@ -2841,6 +2846,38 @@ export class DocumentController {
         }
 
         this.addHelpBubbleStyles();
+    }
+
+    goToPreviousQuestion() {
+        if (this.currentQuestionIndex > 0) {
+            // Supprimer la réponse actuelle si elle existe
+            if (this.documentResponses[this.currentDocument] && 
+                this.documentResponses[this.currentDocument][this.currentQuestionIndex]) {
+                delete this.documentResponses[this.currentDocument][this.currentQuestionIndex];
+            }
+            
+            // Revenir à la question précédente
+            this.currentQuestionIndex--;
+            
+            // Gérer les questions de suivi (followUp) qui ont pu être injectées
+            const docConfig = this.documentsConfig[this.currentDocument];
+            const questions = docConfig.questions;
+            const currentQuestion = questions[this.currentQuestionIndex];
+            
+            // Si c'est une question de suivi, la supprimer de la liste
+            if (currentQuestion && currentQuestion.isFollowUp) {
+                questions.splice(this.currentQuestionIndex, 1);
+                this.documentsState[this.currentDocument].totalQuestions = questions.length;
+                
+                // Revenir encore d'une question si on était sur une followUp
+                if (this.currentQuestionIndex > 0) {
+                    this.currentQuestionIndex--;
+                }
+            }
+            
+            this.updateQuestionInterface();
+            Utils.debugLog(`Retour à la question ${this.currentQuestionIndex + 1}`);
+        }
     }
 
     generateResponseOptions(questionData) {
@@ -5129,3 +5166,4 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
