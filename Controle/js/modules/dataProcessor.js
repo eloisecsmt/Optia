@@ -56,7 +56,7 @@ export class DataProcessor {
             'dateEnvoi': ["date d envoi", 'date d\'envoi', "date d'envoi", 'envoi', 'date transmission', 'expédition'],
             'dateValidation': ['date validation', 'validation', 'validé', 'approuvé'],
             'dateDCC': ['date dcc', 'dcc date', 'date collecte', 'collecte date'],
-            'dateProfilInvestisseur': ['date profil', 'profil date', 'date profil investisseur', 'profil investisseur date'],
+            'dateProfilInvestisseur': ['date profil', 'profil date', 'date du profil d\'investisseur', 'profil investisseur date'],
         };
 
         // Pour chaque type de données, trouver la PREMIÈRE colonne qui correspond (sauf si déjà forcé)
@@ -572,6 +572,7 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
 
 
 
