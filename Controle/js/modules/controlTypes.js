@@ -192,6 +192,88 @@ export class ControlTypes {
                     'Documentation des raisons de mise à jour'
                 ]
             }
+        },
+        'ADEQUATION': {
+            name: 'Adéquation',
+            description: 'Contrôle de l\'adéquation des conseils et recommandations clients',
+            frequency: 'Mensuel',
+            sampleSize: 12,
+            priority: 'high',
+            criteria: {
+                requiredDocuments: [
+                    'Déclaration d\'adéquation',
+                    'Fiche conseil',
+                    'Profil de risques client',
+                    'Synthèse et analyse d\'adéquation',
+                    'DICI des supports proposés',
+                    'Bulletin de souscription',
+                    'Document d\'évolution des connaissances produits',
+                    'Archivage Zeendoc'
+                ],
+                montantMinimum: 0,
+                excludeDomaines: [],
+                includePPE: false,
+                nouveauxClients: false,
+                // Critères spécifiques pour l'adéquation
+                requiresInvestmentAdvice: true, // Nécessite du conseil en investissement
+                excludeSimpleOperations: true   // Exclut les opérations simples sans conseil
+            },
+            checklistItems: [
+                'Vérification de la complétude de la déclaration d\'adéquation',
+                'Cohérence entre profil client et niveau de risque des supports',
+                'Validation de la fiche conseil et des recommandations',
+                'Contrôle de la présence et conformité des DICI',
+                'Vérification de l\'évolution des connaissances produits si nécessaire',
+                'Analyse de l\'adéquation temporelle (horizon d\'investissement)',
+                'Contrôle de la cohérence montants/profil patrimonial',
+                'Validation des préférences ESG et leur prise en compte',
+                'Vérification de l\'information sur les risques',
+                'Contrôle de la traçabilité des conseils prodigués',
+                'Validation de la signature et acceptation client',
+                'Conformité de l\'archivage documentaire'
+            ]
+        },
+        
+        'ARBITRAGE': {
+            name: 'Arbitrage',
+            description: 'Contrôle spécifique des opérations d\'arbitrage entre supports',
+            frequency: 'Hebdomadaire',
+            sampleSize: 8,
+            priority: 'medium',
+            criteria: {
+                requiredDocuments: [
+                    'Demande d\'arbitrage signée',
+                    'Fiche de renseignements',
+                    'Profil de risques client',
+                    'Cartographie client (Harvest)',
+                    'Cartographie de l\'opération',
+                    'Supports source et destination détaillés',
+                    'Frais d\'arbitrage appliqués',
+                    'Délais de traitement',
+                    'Convention RTO si applicable',
+                    'Archivage Zeendoc'
+                ],
+                montantMinimum: 0,
+                excludeDomaines: [],
+                includePPE: false,
+                nouveauxClients: false,
+                // Critère spécifique pour filtrer les arbitrages
+                typeActeFilter: ['arbitrage', 'arbitr', 'switch', 'réallocation', 'transfert interne']
+            },
+            checklistItems: [
+                'Validation de la demande d\'arbitrage signée par le client',
+                'Vérification de l\'identification correcte des supports source et destination',
+                'Contrôle de la cohérence avec le profil de risque client',
+                'Validation des montants et pourcentages d\'arbitrage',
+                'Vérification de l\'application correcte des frais',
+                'Contrôle du respect des conditions contractuelles',
+                'Validation des délais de traitement et dates de valeur',
+                'Vérification de la disponibilité et éligibilité des supports',
+                'Contrôle de la traçabilité dans Harvest',
+                'Validation de l\'information client sur les conséquences',
+                'Vérification du respect des limites d\'arbitrages gratuits',
+                'Contrôle de la conformité avec les restrictions éventuelles'
+            ]
         };
     }
 
@@ -294,14 +376,15 @@ export class ControlTypes {
     getEligibleDossiers(controlType) {
         const control = this.controlDefinitions[controlType];
         if (!control || !this.allDossiers) return [];
-
+    
         return this.allDossiers.filter(dossier => {
             // Critère montant minimum
             if (control.criteria.montantMinimum > 0) {
                 const montantValue = this.extractNumericAmount(dossier.montant);
                 if (montantValue < control.criteria.montantMinimum) return false;
             }
-
+    
+            // Critère clients existants (pour MIS_A_JOUR)
             if (control.criteria.clientsExistants) {
                 const nouveauClient = (dossier.nouveauClient || '').toLowerCase();
                 // Exclure les nouveaux clients pour le contrôle "Mis à jour"
@@ -309,17 +392,60 @@ export class ControlTypes {
                     return false;
                 }
             }
-
+    
             // Critère domaines exclus
             if (control.criteria.excludeDomaines.length > 0) {
                 if (control.criteria.excludeDomaines.includes(dossier.domaine)) return false;
             }
-
+    
             // Critère nouveaux clients (OBLIGATOIRE pour le contrôle NOUVEAU_CLIENT)
             if (control.criteria.nouveauxClients) {
                 if (!dossier.nouveauClient || dossier.nouveauClient.toLowerCase() !== 'oui') return false;
             }
-
+    
+            // NOUVEAU : Critère filtrage par type d'acte (spécifique pour ARBITRAGE)
+            if (control.criteria.typeActeFilter && control.criteria.typeActeFilter.length > 0) {
+                const typeActe = (dossier.typeActe || '').toLowerCase();
+                const contrat = (dossier.contrat || '').toLowerCase();
+                const etatBO = (dossier.etatBO || '').toLowerCase();
+                
+                // Vérifier si l'un des mots-clés est présent dans typeActe, contrat ou etatBO
+                const matchesTypeActe = control.criteria.typeActeFilter.some(keyword => 
+                    typeActe.includes(keyword.toLowerCase()) || 
+                    contrat.includes(keyword.toLowerCase()) || 
+                    etatBO.includes(keyword.toLowerCase())
+                );
+                
+                if (!matchesTypeActe) return false;
+            }
+    
+            // NOUVEAU : Critère pour le contrôle ADEQUATION
+            if (control.criteria.requiresInvestmentAdvice) {
+                // Logique pour identifier les dossiers nécessitant du conseil en investissement
+                // Par exemple, montant significatif ou type de contrat spécifique
+                const montantValue = this.extractNumericAmount(dossier.montant);
+                const contrat = (dossier.contrat || '').toLowerCase();
+                
+                // Exclure les très petits montants qui ne nécessitent généralement pas de conseil poussé
+                if (montantValue > 0 && montantValue < 1000) return false;
+                
+                // Inclure prioritairement certains types de contrats nécessitant du conseil
+                const investmentContracts = ['assurance vie', 'pea', 'compte titres', 'capitalisation'];
+                const isInvestmentContract = investmentContracts.some(type => contrat.includes(type));
+                
+                // Si c'est un contrat d'investissement OU un montant significatif, inclure
+                if (!isInvestmentContract && montantValue < 10000) return false;
+            }
+    
+            if (control.criteria.excludeSimpleOperations) {
+                // Exclure les opérations simples comme les virements, RIB, etc.
+                const typeActe = (dossier.typeActe || '').toLowerCase();
+                const simpleOperations = ['virement', 'rib', 'changement coordonnées', 'mise à jour'];
+                
+                const isSimpleOperation = simpleOperations.some(op => typeActe.includes(op));
+                if (isSimpleOperation) return false;
+            }
+    
             return true;
         });
     }
@@ -875,4 +1001,5 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
 
