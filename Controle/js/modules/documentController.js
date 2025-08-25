@@ -2903,9 +2903,15 @@ export class DocumentController {
     formatDisplayDate(dateString) {
         if (!dateString) return 'N/A';
         
+        // Si la date est déjà formatée par Utils.formatDate, l'utiliser directement
+        if (typeof dateString === 'string' && dateString.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+            return dateString; // Déjà au format DD/MM/YYYY
+        }
+        
+        // Sinon, utiliser la même logique que DataProcessor.parseExcelDate
         try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return dateString; // Retourner la chaîne originale si conversion échoue
+            const date = this.parseExcelDateSafe(dateString);
+            if (!date || isNaN(date.getTime())) return dateString;
             
             return date.toLocaleDateString('fr-FR', {
                 day: '2-digit',
@@ -2917,14 +2923,55 @@ export class DocumentController {
         }
     }
     
+    parseExcelDateSafe(dateValue) {
+        if (!dateValue) return null;
+    
+        // Si c'est déjà un objet Date
+        if (dateValue instanceof Date) {
+            return dateValue;
+        }
+        
+        // Si c'est un nombre (date Excel sérialisée)
+        if (typeof dateValue === 'number') {
+            const excelEpoch = new Date(1900, 0, 1);
+            const daysOffset = dateValue - 2;
+            return new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+        }
+        
+        // Si c'est une chaîne
+        const dateString = dateValue.toString().trim();
+        if (!dateString) return null;
+        
+        // Format DD/MM/YYYY (format européen)
+        if (dateString.includes('/')) {
+            const parts = dateString.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10);
+                const year = parseInt(parts[2], 10);
+                
+                if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+                    return new Date(year, month - 1, day);
+                }
+            }
+        }
+        
+        // Format ISO ou autres formats standard
+        const isoDate = new Date(dateString);
+        if (!isNaN(isoDate.getTime())) {
+            return isoDate;
+        }
+        
+        return null;
+    }
+    
     calculateMonthsDifference(dateDoc, dateEnvoi) {
-        if (!dateDoc || !dateEnvoi) return 999; // Valeur par défaut si dates manquantes
+        if (!dateDoc || !dateEnvoi) return 999;
         
-        const date1 = new Date(dateDoc);
-        const date2 = new Date(dateEnvoi);
+        const date1 = this.parseExcelDateSafe(dateDoc);
+        const date2 = this.parseExcelDateSafe(dateEnvoi);
         
-        // Vérifier si les dates sont valides
-        if (isNaN(date1.getTime()) || isNaN(date2.getTime())) {
+        if (!date1 || !date2 || isNaN(date1.getTime()) || isNaN(date2.getTime())) {
             return 999;
         }
         
@@ -5321,6 +5368,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
