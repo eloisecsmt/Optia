@@ -229,7 +229,7 @@ export class DocumentController {
         };
 
             if (controlType === 'OPERATION') {
-            let documents = [1, 2, 4, 6, 10, 11, 13, 19, 20, 99]; // Base + Carto Opération
+            let documents = [22, 4, 6, 10, 11, 13, 19, 20, 99]; // Base + Carto Opération
             
             // Ajouter conditionnellement selon le type d'opération
             // NOTE: Dans une vraie implémentation, on récupérerait le type d'opération du dossier
@@ -5374,6 +5374,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
