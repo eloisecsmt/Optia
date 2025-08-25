@@ -2822,11 +2822,11 @@ export class DocumentController {
                             ${this.currentQuestionIndex === 0 ? 'disabled' : ''}>
                         ⬅️ Question précédente
                     </button>
-                    <button class="btn btn-danger" onclick="window.documentController?.suspendControl()">
-                        ⏸️ Suspendre
-                    </button>
                     <button class="btn btn-secondary" onclick="window.documentController?.cancelQuestion()">
                         🏠 Retour au menu
+                    </button>
+                    <button class="btn btn-danger" onclick="window.documentController?.suspendControl()">
+                        ⏸️ Suspendre
                     </button>
                     <button class="btn btn-primary" onclick="window.documentController?.saveQuestionResponse()">
                         ${this.currentQuestionIndex === questions.length - 1 ? 'Terminer le document' : 'Question suivante'} ➡️
@@ -5166,4 +5166,5 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
