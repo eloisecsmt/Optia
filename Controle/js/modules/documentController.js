@@ -96,6 +96,14 @@ export class DocumentController {
             'MIS_A_JOUR': {
                 name: 'Mis à jour',
                 description: 'Contrôle de mise à jour documentaire pour clients existants'
+            },
+            'ADEQUATION': {
+                name: 'Adéquation',
+                description: 'Contrôle de l\'adéquation des conseils et recommandations clients'
+            },
+            'ARBITRAGE': {
+                name: 'Arbitrage',
+                description: 'Contrôle spécifique des opérations d\'arbitrage entre supports'
             }
         };
         
@@ -216,6 +224,8 @@ export class DocumentController {
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
             'MIS_A_JOUR': [1, 2, 4, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'ADEQUATION': [19, 99], // Déclaration d'adéquation, Zeendoc
+            'ARBITRAGE': [1, 2, 4, 6, 10, 11, 13, 19, 20, 99] // Mêmes documents que OPERATION
         };
 
             if (controlType === 'OPERATION') {
@@ -2586,7 +2596,7 @@ export class DocumentController {
         if (!window.documentController) return {};
         
         const dossierKey = window.documentController.generateDossierKey(dossier);
-        const controlTypes = ['LCB-FT', 'FINANCEMENT', 'CARTO_CLIENT', 'OPERATION', 'NOUVEAU_CLIENT'];
+        const controlTypes = ['LCB-FT', 'FINANCEMENT', 'CARTO_CLIENT', 'OPERATION', 'NOUVEAU_CLIENT', 'ADEQUATION', 'ARBITRAGE'];
         const statuses = {};
         
         controlTypes.forEach(type => {
@@ -2621,7 +2631,10 @@ export class DocumentController {
             'FINANCEMENT': 'FIN',
             'CARTO_CLIENT': 'CARTO',
             'OPERATION': 'OP',
-            'NOUVEAU_CLIENT': 'NC'
+            'NOUVEAU_CLIENT': 'NC',
+            'MIS_A_JOUR': 'MAJ',
+            'ADEQUATION': 'ADQ',
+            'ARBITRAGE': 'ARB'
         };
         return shortNames[type] || type.substring(0, 3);
     }
@@ -5166,6 +5179,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
