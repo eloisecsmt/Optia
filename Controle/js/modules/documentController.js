@@ -2998,8 +2998,9 @@ export class DocumentController {
             return 'Dates manquantes';
         }
         
+        // Utiliser les valeurs brutes directement sans re-formater
         const diffMonths = this.calculateMonthsDifference(
-            this.currentDossier.dateDCC, 
+            this.currentDossier.dateDCC,  // Utiliser la valeur brute
             this.currentDossier.dateEnvoi
         );
         
@@ -3045,7 +3046,9 @@ export class DocumentController {
         console.log('Debug dates:', {
             dateDCC: this.currentDossier.dateDCC,
             dateProfilInvestisseur: this.currentDossier.dateProfilInvestisseur,
-            dateEnvoi: this.currentDossier.dateEnvoi
+            dateEnvoi: this.currentDossier.dateEnvoi,
+            typeDCC: typeof this.currentDossier.dateDCC,
+            typeEnvoi: typeof this.currentDossier.dateEnvoi
         });
         
         return {
@@ -5374,6 +5377,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
