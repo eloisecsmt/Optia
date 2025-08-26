@@ -41,11 +41,6 @@ export class PersistenceManager {
                 Utils.debugLog('Données de contrôle invalides');
                 return null;
             }
-
-            console.log('Debug - dossierKey:', dossierKey);
-            console.log('Debug - controlType:', controlType);
-            console.log('Debug - wasSuspended:', wasSuspended);
-            console.log('Debug - completionType sera:', wasSuspended ? 'C1S' : 'C1');
             
             // Définir correctement wasSuspended
             const dossierKey = this.generateDossierKey(controlData.dossier);
@@ -77,6 +72,11 @@ export class PersistenceManager {
                         suspensionDuration: Math.floor((new Date() - new Date(wasSuspended.suspendedAt)) / (1000 * 60 * 60 * 24))
                     }
                 }),
+
+                console.log('Debug - dossierKey:', dossierKey);
+                console.log('Debug - controlType:', controlType);
+                console.log('Debug - wasSuspended:', wasSuspended);
+                console.log('Debug - completionType sera:', wasSuspended ? 'C1S' : 'C1');
                 
                 anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
                 documentsControles: controlData.documents ? 
@@ -2643,6 +2643,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
