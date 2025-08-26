@@ -2110,18 +2110,13 @@ export class DocumentController {
                     // Pas de skipIfNo - on continue toujours vers les autres questions
                 },
                 {
-                    text: 'Y a-t-il eu une mise à jour de la FR dans l\'année en cours ?',
+                    text: 'Y a-t-il eu une mise à jour de la FR dans les 24 derniers mois ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez si la FR a été mise à jour durant l\'année civile en cours (2024/2025)',
+                    help: 'Vérifiez si la FR a été mise à jour dans les 24 mois précédant la date du contrôle',
                     showOnlyIf: {
                         questionIndex: 0, // Question précédente (présence FR)
                         answer: 'Oui'
-                    },
-                    qualityCheck: {
-                        text: 'La date de mise à jour est-elle clairement identifiable ?',
-                        help: 'Vérifiez que la date de dernière modification est visible et lisible sur le document'
-                    }
                 },
                 {
                     text: 'La FR mise à jour est-elle signée par le client ?',
@@ -2146,13 +2141,13 @@ export class DocumentController {
                     skipIfNo: true // Si pas de profil, terminer le contrôle de ce document
                 },
                 {
-                    text: 'Y a-t-il eu une mise à jour du profil investisseur dans l\'année en cours ?',
+                    text: 'Y a-t-il eu une mise à jour du profil investisseur dans les 24 derniers mois ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez si le profil investisseur a été mis à jour durant l\'année civile en cours (2024/2025)',
+                    help: 'Vérifiez si le profil investisseur a été mis à jour dans les 24 mois précédant la date du contrôle',
                     qualityCheck: {
-                        text: 'La date de mise à jour du profil est-elle clairement identifiable ?',
-                        help: 'Vérifiez que la date de dernière modification ou de validation est visible sur le document'
+                        text: 'La date de mise à jour respecte-t-elle le délai de 24 mois ?',
+                        help: 'Calculez la différence entre la date de mise à jour et la date du contrôle'
                     }
                 },
                 {
@@ -4059,7 +4054,9 @@ export class DocumentController {
             'Est-ce que le patrimoine est-il connu ?',
             'Est-ce que les revenus sont-ils connus ?',
             'Le client connaissait-il tous les produits proposés ?',
-            'Le dossier client a-t-il été créé sous Harvest ?'
+            'Le dossier client a-t-il été créé sous Harvest ?',
+            'Est-ce qu\'il y a une FR ?',
+            'Est-ce qu\'il y a un profil investisseur ?'
         ];
 
         // Les checklists ne nécessitent jamais de justification
@@ -5442,4 +5439,5 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
