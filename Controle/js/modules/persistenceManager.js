@@ -41,8 +41,13 @@ export class PersistenceManager {
                 Utils.debugLog('Données de contrôle invalides');
                 return null;
             }
-    
-            // CORRECTION: Définir correctement wasSuspended
+
+            console.log('Debug - dossierKey:', dossierKey);
+            console.log('Debug - controlType:', controlType);
+            console.log('Debug - wasSuspended:', wasSuspended);
+            console.log('Debug - completionType sera:', wasSuspended ? 'C1S' : 'C1');
+            
+            // Définir correctement wasSuspended
             const dossierKey = this.generateDossierKey(controlData.dossier);
             const controlType = controlData.control?.definition?.name || 'Type inconnu';
             const wasSuspended = this.getSuspendedControl(dossierKey, controlType);
@@ -2638,6 +2643,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
