@@ -55,6 +55,16 @@ export class PersistenceManager {
                 dateEnvoi: controlData.dossier.dateEnvoi || '',
                 nouveauClient: controlData.dossier.nouveauClient || '',
                 statut: 'Terminé',
+                completionType: wasSuspended ? 'C1S' : 'C1',
+            
+                // NOUVEAU: Informations sur la suspension si applicable
+                ...(wasSuspended && {
+                    suspensionInfo: {
+                        suspendedAt: wasSuspended.suspendedAt,
+                        suspendReason: wasSuspended.suspendReason,
+                        suspensionDuration: Math.floor((new Date() - new Date(wasSuspended.suspendedAt)) / (1000 * 60 * 60 * 24))
+                    }
+                }),
                 anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
                 documentsControles: controlData.documents ? 
                     `${Object.values(controlData.documents).filter(d => d.status === 'completed').length}/${Object.keys(controlData.documents).length}` : 
@@ -78,9 +88,12 @@ export class PersistenceManager {
             // NOUVEAU : Marquer le dossier comme contrôlé
             const dossierKey = this.generateDossierKey(controlData.dossier);
             this.markDossierAsControlled(dossierKey, controle.type);
-            
-            // NOUVEAU : Supprimer le contrôle suspendu s'il existait
-            this.removeSuspendedControl(dossierKey, controle.type);
+
+            // IMPORTANT: Supprimer le contrôle suspendu APRÈS avoir vérifié s'il existait
+            if (wasSuspended) {
+                this.removeSuspendedControl(dossierKey, controle.type);
+                Utils.debugLog(`Contrôle suspendu supprimé après finalisation: ${controle.client} (${controle.type})`);
+            }
             
             Utils.debugLog(`Contrôle sauvegardé et dossier marqué: ${controle.client}`);
             return controle;
@@ -749,6 +762,7 @@ export class PersistenceManager {
                 controle.typeActe || 'N/A',
                 controle.dateEnvoi || 'N/A',
                 controle.documentsControles,
+                controle.completionType || 'C1',
                 controle.anomaliesMajeures,
                 controle.conformiteGlobale
             ]);
@@ -1321,6 +1335,10 @@ export class PersistenceManager {
     getStatistics() {
         const totalControles = this.controles.length;
         const conformes = this.controles.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        const directCompletions = this.controles.filter(c => c.completionType === 'C1').length;
+        const suspendedCompletions = this.controles.filter(c => c.completionType === 'C1S').length;
+        const suspensionRate = totalControles > 0 ? Math.round((suspendedCompletions / totalControles) * 100) : 0;
+        
         
         const thisMonth = new Date();
         thisMonth.setDate(1);
@@ -1342,8 +1360,23 @@ export class PersistenceManager {
             totalAnomaliesMajeures: anomaliesMajeures,
             controlesMoisActuel,
             typePlusFrequent,
-            repartitionTypes
+            repartitionTypes,
+            directCompletions,
+            suspendedCompletions,
+            suspensionRate,
+            averageSuspensionDays: this.calculateAverageSuspensionDays()
         };
+    }
+
+    calculateAverageSuspensionDays() {
+        const suspendedCompletions = this.controles.filter(c => c.suspensionInfo);
+        if (suspendedCompletions.length === 0) return 0;
+        
+        const totalDays = suspendedCompletions.reduce((sum, controle) => {
+            return sum + (controle.suspensionInfo.suspensionDuration || 0);
+        }, 0);
+        
+        return Math.round(totalDays / suspendedCompletions.length);
     }
 
     searchControls(criteria) {
@@ -2597,6 +2630,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
