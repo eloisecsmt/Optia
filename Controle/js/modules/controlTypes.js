@@ -54,7 +54,7 @@ export class ControlTypes {
                         'Analyse financière'
                     ],
                     montantMinimum: 0,
-                    includeDomaines: ['financement'],
+                    excludeDomaines: [],
                     includePPE: false,
                     nouveauxClients: false
                 },
@@ -377,6 +377,14 @@ export class ControlTypes {
                 const montantValue = this.extractNumericAmount(dossier.montant);
                 if (montantValue < control.criteria.montantMinimum) return false;
             }
+
+            // NOUVEAU : Critère spécifique pour le contrôle FINANCEMENT
+            if (controlType === 'FINANCEMENT') {
+                const domaine = (dossier.domaine || '').toLowerCase();
+                if (domaine !== 'financement') {
+                    return false;
+                }
+            }
     
             // Critère clients existants (pour MIS_A_JOUR)
             if (control.criteria.clientsExistants) {
@@ -385,15 +393,6 @@ export class ControlTypes {
                 if (['nouveau', 'oui', 'true', '1', 'yes'].includes(nouveauClient)) {
                     return false;
                 }
-            }
-
-            // Critère domaines à inclure (pour FINANCEMENT)
-            if (control.criteria.includeDomaines && control.criteria.includeDomaines.length > 0) {
-                const domaine = (dossier.domaine || '').toLowerCase();
-                const includeThisDomain = control.criteria.includeDomaines.some(d => 
-                    domaine === d.toLowerCase()
-                );
-                if (!includeThisDomain) return false;
             }
     
             // Critère domaines exclus
@@ -1004,10 +1003,3 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
-
-
-
-
-
-
-
