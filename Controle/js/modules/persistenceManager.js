@@ -72,11 +72,6 @@ export class PersistenceManager {
                         suspensionDuration: Math.floor((new Date() - new Date(wasSuspended.suspendedAt)) / (1000 * 60 * 60 * 24))
                     }
                 }),
-
-                console.log('Debug - dossierKey:', dossierKey);
-                console.log('Debug - controlType:', controlType);
-                console.log('Debug - wasSuspended:', wasSuspended);
-                console.log('Debug - completionType sera:', wasSuspended ? 'C1S' : 'C1');
                 
                 anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
                 documentsControles: controlData.documents ? 
@@ -95,6 +90,11 @@ export class PersistenceManager {
                     completedAt: controlData.completedAt
                 }
             };
+
+                console.log('Debug - dossierKey:', dossierKey);
+                console.log('Debug - controlType:', controlType);
+                console.log('Debug - wasSuspended:', wasSuspended);
+                console.log('Debug - completionType sera:', wasSuspended ? 'C1S' : 'C1');
     
             this.controles.push(controle);
             this.saveToStorage();
@@ -2643,6 +2643,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
