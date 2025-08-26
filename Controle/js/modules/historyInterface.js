@@ -622,55 +622,43 @@ export class HistoryInterface {
             
             return `
                 <tr class="${rowClass} ${conformityClass}">
-                    <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
-                    <td><span class="badge control-type">${controle.type}</span></td>
-                    <td><strong>${controle.client}</strong></td>
-                    <td>${controle.codeDossier || 'N/A'}</td>
-                    <td>${controle.conseiller || 'N/A'}</td>
-                    <td>${controle.montant || 'N/A'}</td>
-                    <td><span class="badge secondary">${controle.documentsControles}</span></td>
-                    <!-- NOUVELLE COLONNE: Type de finalisation -->
-                    <td>
-                        <span class="badge completion-type ${controle.completionType === 'C1S' ? 'suspended-completion' : 'direct-completion'}" 
-                              title="${controle.completionType === 'C1S' ? 'Contrôle finalisé après suspension' : 'Contrôle finalisé directement'}">
-                            ${controle.completionType || 'C1'}
-                        </span>
-                    </td>
-                        <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
-                        <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
-                    `}
-                    <td>
-                        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
-                            ${this.showSuspended ? `
-                                <button class="btn btn-sm btn-primary" 
-                                        onclick="window.historyInterface?.resumeSuspended('${controle.id}')"
-                                        title="Reprendre le contrôle suspendu">
-                                    🔄 Reprendre
-                                </button>
-                                <button class="btn btn-sm btn-danger" 
-                                        onclick="window.historyInterface?.deleteSuspended('${controle.id}')"
-                                        title="Supprimer définitivement">
-                                    🗑️
-                                </button>
-                            ` : `
-                                <button class="btn btn-sm btn-secondary" 
-                                        onclick="window.historyInterface?.showDetails('${controle.id}')"
-                                        title="Voir les détails complets">
-                                    📋 Détails
-                                </button>
-                                <button class="btn btn-sm btn-primary" 
-                                        onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
-                                        title="Export Excel détaillé">
-                                    📊 Export
-                                </button>
-                            `}
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    }
-
+                <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
+                <td><span class="badge control-type">${controle.type}</span></td>
+                <td><strong>${controle.client}</strong></td>
+                <td>${controle.codeDossier || 'N/A'}</td>
+                <td>${controle.conseiller || 'N/A'}</td>
+                <td>${controle.montant || 'N/A'}</td>
+                <td><span class="badge secondary">${controle.documentsControles}</span></td>
+                
+                <!-- NOUVELLE COLONNE: Type de finalisation -->
+                <td>
+                    <span class="badge completion-type ${controle.completionType === 'C1S' ? 'suspended-completion' : 'direct-completion'}" 
+                          title="${controle.completionType === 'C1S' ? 'Contrôle finalisé après suspension' : 'Contrôle finalisé directement'}">
+                        ${controle.completionType || 'C1'}
+                    </span>
+                </td>
+                
+                <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
+                <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
+                <td>
+                    <!-- Actions existantes -->
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                        <button class="btn btn-sm btn-secondary" 
+                                onclick="window.historyInterface?.showDetails('${controle.id}')"
+                                title="Voir les détails complets">
+                            📋 Détails
+                        </button>
+                        <button class="btn btn-sm btn-primary" 
+                                onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
+                                title="Export Excel détaillé">
+                            📊 Export
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
     // Icône de tri
     getSortIcon(field) {
         if (this.sortField !== field) return '⚪';
@@ -1837,4 +1825,5 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
