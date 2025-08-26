@@ -228,6 +228,10 @@ export class DocumentController {
             'ARBITRAGE': [22, 6, 11, 19, 20, 99] //
         };
 
+        const result = documentSets[controlType] || [1, 2, 7, 8, 99];
+        console.log('Documents retournés:', result);
+        return result;
+
             if (controlType === 'OPERATION') {
             let documents = [22, 4, 6, 10, 11, 13, 19, 20, 99]; // Base + Carto Opération
             
@@ -5470,6 +5474,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
