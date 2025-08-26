@@ -4325,17 +4325,23 @@ export class DocumentController {
             Utils.showNotification('Veuillez terminer tous les documents avant de finaliser le contrôle', 'error');
             return;
         }
-
-        // Supprimer le contrôle suspendu s'il existait
-        if (this.isResumingControl && this.currentControlId) {
-            const dossierKey = this.generateDossierKey(this.currentDossier);
-            window.persistenceManager?.removeSuspendedControl(dossierKey, this.currentControl.type);
+    
+        // NOUVEAU : Récupérer les infos de suspension AVANT la génération du résumé
+        const dossierKey = this.generateDossierKey(this.currentDossier);
+        const controlType = this.currentControl.type;
+        const suspendedControl = window.persistenceManager?.getSuspendedControl(dossierKey, controlType);
+        const wasSuspended = suspendedControl !== null;
+    
+        // Supprimer le contrôle suspendu s'il existait (avant saveControl)
+        if (this.isResumingControl && this.currentControlId && wasSuspended) {
+            window.persistenceManager?.removeSuspendedControl(dossierKey, controlType);
         }
-
+    
         if (this.manualControlMode) {
             this.completeCurrentManualDossier();
         } else {
-            const summary = this.generateControlSummary();
+            // MODIFIÉ : Passer les infos de suspension dans le résumé
+            const summary = this.generateControlSummary(wasSuspended, suspendedControl);
             
             window.dispatchEvent(new CustomEvent('controlCompleted', {
                 detail: summary
@@ -4508,21 +4514,27 @@ generateManualResultsTable(results) {
     }).join('');
 }
 
-    generateControlSummary() {
+    generateControlSummary(wasSuspended = false, suspendedControl = null) {
         const summary = {
             dossier: this.currentDossier,
             control: this.currentControl,
             documents: this.documentsState,
             responses: this.documentResponses,
             completedAt: new Date(),
-            obligatoryIssuesCount: this.countObligatoryIssues()
+            obligatoryIssuesCount: this.countObligatoryIssues(),
+            // NOUVEAU : Ajouter les infos de suspension
+            wasSuspended: wasSuspended,
+            suspensionInfo: suspendedControl ? {
+                suspendedAt: suspendedControl.suspendedAt,
+                suspendReason: suspendedControl.suspendReason
+            } : null
         };
-
+    
         // Notifier l'historique
         window.dispatchEvent(new CustomEvent('controlCompleted', {
             detail: summary
         }));
-
+    
         window.persistenceManager?.saveControl(summary);
         
         Utils.showSection('automatic-control-section');
@@ -5458,6 +5470,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
