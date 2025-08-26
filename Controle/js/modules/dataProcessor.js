@@ -214,8 +214,11 @@ export class DataProcessor {
                     ppe: this.getColumnValue(row, 'ppe') || '',
                     dateEnvoi: Utils.formatDate(this.getColumnValue(row, 'dateEnvoi')) || '',
                     dateValidation: Utils.formatDate(this.getColumnValue(row, 'dateValidation')) || '',
-                    dateDCC: Utils.formatDate(this.getColumnValue(row, 'dateDCC')) || '',
-                    dateProfilInvestisseur: Utils.formatDate(this.getColumnValue(row, 'dateProfilInvestisseur')) || '',
+                    dateDCC: this.getColumnValue(row, 'dateDCC') || '', // Valeur brute
+                    dateProfilInvestisseur: this.getColumnValue(row, 'dateProfilInvestisseur') || '', // Valeur brute
+                    dateDCCRaw: this.getColumnValue(row, 'dateDCC'), // Pour debug
+                    dateProfilRaw: this.getColumnValue(row, 'dateProfilInvestisseur'), // Pour debug
+
                     
                     rawData: row
                 };
@@ -330,15 +333,6 @@ export class DataProcessor {
             }
             return '';
         }
-
-        if (columnKey === 'dateDCC' || columnKey === 'dateProfilInvestisseur') {
-            console.log(`=== DEBUG ${columnKey} ===`);
-            console.log(`Valeur brute Excel:`, value);
-            console.log(`Type:`, typeof value);
-            console.log(`Index colonne:`, columnIndex);
-        }
-        
-        return value ? value.toString().trim() : '';
 
         if (columnIndex >= row.length) {
             Utils.debugLog(`❌ Index ${columnIndex} hors limite pour la ligne (longueur: ${row.length})`);
@@ -582,6 +576,7 @@ export class DataProcessor {
         this.filteredDossiers = [];
     }
 }
+
 
 
 
