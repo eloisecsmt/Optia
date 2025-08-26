@@ -1597,71 +1597,80 @@ export class DocumentController {
             ]
         },
         17: {
-            id: 17,
-            name: 'Fiche conseil',
-            fullName: 'Fiche conseil',
-            questions: [
-                {
-                    text: 'Est-ce que le document est présent ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Vérifiez si la Fiche conseil est présente dans le dossier client',
-                    skipIfNo: true
-                },
-                {
-                    text: 'Est-ce la bonne version ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Vérifiez que la version de la fiche conseil est à jour',
-                    qualityCheck: {
-                        text: 'La version de la fiche est-elle conforme aux standards actuels ?',
-                        help: 'Version récente, format standardisé, mentions légales à jour'
-                    }
-                },
-                {
-                    text: 'Est-ce que le document est entièrement complété ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Toutes les sections de la fiche conseil renseignées',
-                    qualityCheck: {
-                        text: 'Toutes les rubriques sont-elles complètement remplies ?',
-                        help: 'Conseils détaillés, recommandations précises, aucune section vide'
-                    }
-                },
-                {
-                    text: 'La date est-elle présente sur le document ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Date de création ou de signature de la fiche conseil',
-                    qualityCheck: {
-                        text: 'La date indiquée est-elle cohérente avec le dossier ?',
-                        help: 'Date logique par rapport au processus de conseil et aux autres documents'
-                    }
-                },
-                {
-                    text: 'La signature du conseiller est-elle présente ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Signature du conseiller validant les conseils prodigués',
-                    qualityCheck: {
-                        text: 'La signature du conseiller est-elle conforme ?',
-                        help: 'Manuscrite lisible OU DocuSign certifiée, nom correct, bien datée',
-                        type: 'signature_conseiller'
-                    }
-                },
-                {
-                    text: 'La signature de tous les clients est-elle présente ?',
-                    type: 'boolean',
-                    required: true,
-                    help: 'Signatures attestant de la prise de connaissance des conseils',
-                    qualityCheck: {
-                        text: 'Toutes les signatures clients sont-elles conformes ?',
-                        help: 'Signatures distinctes, lisibles, correspondant aux identités',
-                        type: 'signature_clients'
-                    }
+        id: 17,
+        name: 'Fiche conseil',
+        fullName: 'Fiche conseil',
+        questions: [
+            {
+                text: 'Est-ce que le document est présent ?',
+                type: 'boolean',
+                required: true,
+                help: 'Vérifiez si la Fiche conseil est présente dans le dossier client',
+                skipIfNo: true
+            },
+            {
+                text: 'Est-ce la bonne version ?',
+                type: 'boolean',
+                required: true,
+                help: 'Vérifiez que la version de la fiche conseil est à jour',
+                qualityCheck: {
+                    text: 'La version de la fiche est-elle conforme aux standards actuels ?',
+                    help: 'Version récente, format standardisé, mentions légales à jour'
                 }
-            ]
-        },
+            },
+            {
+                text: 'Est-ce que le document est entièrement complété ?',
+                type: 'boolean',
+                required: true,
+                help: 'Toutes les sections de la fiche conseil renseignées',
+                qualityCheck: {
+                    text: 'Toutes les rubriques sont-elles complètement remplies ?',
+                    help: 'Conseils détaillés, recommandations précises, aucune section vide'
+                }
+            },
+            {
+                text: 'Quels éléments sont manquants ou incomplets dans la fiche conseil ?',
+                type: 'checklist',
+                required: true,
+                help: 'Cochez tous les éléments manquants ou incomplets dans la fiche conseil. Si TOUT est complet, ne cochez rien (checklist vide = aucun élément manquant).',
+                showOnlyIf: {
+                    questionIndex: 2, // Question précédente (index 2)
+                    answer: 'Non'
+                },
+                options: [
+                    'Identité du ou des emprunteurs',
+                    'Adresse',
+                    'Montant du prêt',
+                    'Caractéristiques du prêt (type, montant, durée, taux)',
+                    'Charges financières avant',
+                    'Charges financières après',
+                    'Montant de la commission bancaire',
+                    'Autres informations'
+                ]
+            },
+            {
+                text: 'La date est-elle présente sur le document ?',
+                type: 'boolean',
+                required: true,
+                help: 'Date de création ou de signature de la fiche conseil',
+                qualityCheck: {
+                    text: 'La date indiquée est-elle cohérente avec le dossier ?',
+                    help: 'Date logique par rapport au processus de conseil et aux autres documents'
+                }
+            },
+            {
+                text: 'La signature de tous les clients est-elle présente ?',
+                type: 'boolean',
+                required: true,
+                help: 'Signatures attestant de la prise de connaissance des conseils',
+                qualityCheck: {
+                    text: 'Toutes les signatures clients sont-elles conformes ?',
+                    help: 'Signatures distinctes, lisibles, correspondant aux identités',
+                    type: 'signature_clients'
+                }
+            }
+        ]
+    },
         18: {
             id: 18,
             name: 'Bon pour accord',
@@ -5481,6 +5490,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
