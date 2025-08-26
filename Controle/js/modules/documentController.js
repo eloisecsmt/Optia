@@ -225,7 +225,7 @@ export class DocumentController {
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
             'MIS_A_JOUR': [1, 2, 4, 5, 6, 7, 8, 9, 10, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'ADEQUATION': [19, 99], // Déclaration d'adéquation, Zeendoc
-            'ARBITRAGE': [22, 4, 6, 10, 11, 13, 19, 20, 99] // Mêmes documents que OPERATION
+            'ARBITRAGE': [22, 6, 11, 19, 20, 99] // Mêmes documents que OPERATION
         };
 
             if (controlType === 'OPERATION') {
@@ -5470,6 +5470,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
