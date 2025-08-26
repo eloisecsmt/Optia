@@ -218,12 +218,12 @@ export class DocumentController {
         const documentSets = {
             'LCB-FT': [1, 4, 7, 8, 12, 99], // FR, Carto Client, CNI, Justificatif Domicile, Zeendoc
             'FINANCEMENT': [4, 13, 15, 16, 17, 18, 99], // Harvest, Carto Opé, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
-            'CARTO_CLIENT': [4,7, 8, 9, 99], // Harvest, Zeendoc
+            'CARTO_CLIENT': [4,7, 8, 99], // Harvest, Zeendoc
             'OPERATION': [22, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
             'NOUVEAU_CLIENT': [1, 2, 4, 5, 6, 7, 8, 9, 10, 21, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
-            'MIS_A_JOUR': [1, 2, 4, 5, 6, 7, 8, 10, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'MIS_A_JOUR': [1, 2, 4, 5, 6, 7, 8, 9, 10, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'ADEQUATION': [19, 99], // Déclaration d'adéquation, Zeendoc
             'ARBITRAGE': [22, 4, 6, 10, 11, 13, 19, 20, 99] // Mêmes documents que OPERATION
         };
@@ -5458,6 +5458,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
