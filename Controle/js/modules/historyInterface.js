@@ -608,55 +608,85 @@ export class HistoryInterface {
 
     // Génération des lignes d'historique avec boutons export détaillé
     generateHistoryRows(controles) {
-        return controles.map((controle, index) => {
-            const rowClass = index % 2 === 0 ? 'even' : 'odd';
-            let conformityClass = '';
+        generateHistoryRows(controles) {
+    return controles.map((controle, index) => {
+        const rowClass = index % 2 === 0 ? 'even' : 'odd';
+        let conformityClass = '';
+        
+        if (this.showSuspended) {
+            if (controle.daysSuspended >= 30) conformityClass = 'row-very-old-suspended';
+            else if (controle.daysSuspended >= 14) conformityClass = 'row-old-suspended';
+            else conformityClass = 'row-suspended';
             
-            if (this.showSuspended) {
-                if (controle.daysSuspended >= 30) conformityClass = 'row-very-old-suspended';
-                else if (controle.daysSuspended >= 14) conformityClass = 'row-old-suspended';
-                else conformityClass = 'row-suspended';
-            } else {
-                conformityClass = controle.conformiteGlobale === 'CONFORME' ? 'row-conforme' : 'row-non-conforme';
-            }
-            
+            // INTERFACE SUSPENDUS - Sans colonne Finalisation
             return `
                 <tr class="${rowClass} ${conformityClass}">
-                <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
-                <td><span class="badge control-type">${controle.type}</span></td>
-                <td><strong>${controle.client}</strong></td>
-                <td>${controle.codeDossier || 'N/A'}</td>
-                <td>${controle.conseiller || 'N/A'}</td>
-                <td>${controle.montant || 'N/A'}</td>
-                <td><span class="badge secondary">${controle.documentsControles}</span></td>
-                
-                <!-- NOUVELLE COLONNE: Type de finalisation -->
-                <td>
-                    <span class="badge completion-type ${controle.completionType === 'C1S' ? 'suspended-completion' : 'direct-completion'}" 
-                          title="${controle.completionType === 'C1S' ? 'Contrôle finalisé après suspension' : 'Contrôle finalisé directement'}">
-                        ${controle.completionType || 'C1'}
-                    </span>
-                </td>
-                
-                <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
-                <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
-                <td>
-                    <!-- Actions existantes -->
-                    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
-                        <button class="btn btn-sm btn-secondary" 
-                                onclick="window.historyInterface?.showDetails('${controle.id}')"
-                                title="Voir les détails complets">
-                            📋 Détails
-                        </button>
-                        <button class="btn btn-sm btn-primary" 
-                                onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
-                                title="Export Excel détaillé">
-                            📊 Export
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
+                    <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
+                    <td><span class="badge control-type">${controle.type}</span></td>
+                    <td><strong>${controle.client}</strong></td>
+                    <td>${controle.codeDossier || 'N/A'}</td>
+                    <td>${controle.conseiller || 'N/A'}</td>
+                    <td>${controle.montant || 'N/A'}</td>
+                    <td><span class="badge secondary">${controle.documentsControles}</span></td>
+                    <td><span class="badge duration ${this.getDurationClass(controle.daysSuspended)}">${controle.daysSuspended}j</span></td>
+                    <td class="reason-cell">${controle.suspendReason || 'Non spécifiée'}</td>
+                    <td>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                            <button class="btn btn-sm btn-primary" 
+                                    onclick="window.historyInterface?.resumeSuspended('${controle.id}')"
+                                    title="Reprendre le contrôle suspendu">
+                                🔄 Reprendre
+                            </button>
+                            <button class="btn btn-sm btn-danger" 
+                                    onclick="window.historyInterface?.deleteSuspended('${controle.id}')"
+                                    title="Supprimer définitivement">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            conformityClass = controle.conformiteGlobale === 'CONFORME' ? 'row-conforme' : 'row-non-conforme';
+            
+            // INTERFACE TERMINÉS - Avec colonne Finalisation
+            return `
+                <tr class="${rowClass} ${conformityClass}">
+                    <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
+                    <td><span class="badge control-type">${controle.type}</span></td>
+                    <td><strong>${controle.client}</strong></td>
+                    <td>${controle.codeDossier || 'N/A'}</td>
+                    <td>${controle.conseiller || 'N/A'}</td>
+                    <td>${controle.montant || 'N/A'}</td>
+                    <td><span class="badge secondary">${controle.documentsControles}</span></td>
+                    
+                    <!-- COLONNE FINALISATION uniquement pour les terminés -->
+                    <td>
+                        <span class="badge completion-type ${controle.completionType === 'C1S' ? 'suspended-completion' : 'direct-completion'}" 
+                              title="${controle.completionType === 'C1S' ? 'Contrôle finalisé après suspension' : 'Contrôle finalisé directement'}">
+                            ${controle.completionType || 'C1'}
+                        </span>
+                    </td>
+                    
+                    <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
+                    <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
+                    <td>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                            <button class="btn btn-sm btn-secondary" 
+                                    onclick="window.historyInterface?.showDetails('${controle.id}')"
+                                    title="Voir les détails complets">
+                                📋 Détails
+                            </button>
+                            <button class="btn btn-sm btn-primary" 
+                                    onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
+                                    title="Export Excel détaillé">
+                                📊 Export
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
     }).join('');
 }
     // Icône de tri
@@ -1825,5 +1855,6 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
