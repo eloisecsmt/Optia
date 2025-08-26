@@ -5160,10 +5160,6 @@ generateManualResultsTable(results) {
             // Pour les rachats : destination des fonds obligatoire
             return [...baseDocuments, 14]; // Ajouter document 14 (Destination des fonds)
             
-        case 'arbitrage':
-            // Pour les arbitrages : aucun mouvement de fonds externe
-            return baseDocuments; // Pas besoin de doc 12 ou 14
-            
         case 'avance':
             // Pour les avances : destination des fonds
             return [...baseDocuments, 14];
@@ -5474,6 +5470,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
