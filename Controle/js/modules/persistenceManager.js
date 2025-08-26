@@ -41,11 +41,16 @@ export class PersistenceManager {
                 Utils.debugLog('Données de contrôle invalides');
                 return null;
             }
-
+    
+            // CORRECTION: Définir correctement wasSuspended
+            const dossierKey = this.generateDossierKey(controlData.dossier);
+            const controlType = controlData.control?.definition?.name || 'Type inconnu';
+            const wasSuspended = this.getSuspendedControl(dossierKey, controlType);
+    
             const controle = {
                 id: Date.now(),
                 date: new Date(),
-                type: controlData.control?.definition?.name || 'Type inconnu',
+                type: controlType,
                 client: controlData.dossier.client || 'Client inconnu',
                 codeDossier: controlData.dossier.codeDossier || '',
                 conseiller: controlData.dossier.conseiller || '',
@@ -55,9 +60,11 @@ export class PersistenceManager {
                 dateEnvoi: controlData.dossier.dateEnvoi || '',
                 nouveauClient: controlData.dossier.nouveauClient || '',
                 statut: 'Terminé',
+                
+                // Type de finalisation basé sur l'historique de suspension
                 completionType: wasSuspended ? 'C1S' : 'C1',
-            
-                // NOUVEAU: Informations sur la suspension si applicable
+                
+                // Informations sur la suspension si applicable
                 ...(wasSuspended && {
                     suspensionInfo: {
                         suspendedAt: wasSuspended.suspendedAt,
@@ -65,13 +72,15 @@ export class PersistenceManager {
                         suspensionDuration: Math.floor((new Date() - new Date(wasSuspended.suspendedAt)) / (1000 * 60 * 60 * 24))
                     }
                 }),
+                
                 anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
                 documentsControles: controlData.documents ? 
                     `${Object.values(controlData.documents).filter(d => d.status === 'completed').length}/${Object.keys(controlData.documents).length}` : 
                     '0/0',
                 conformiteGlobale: (controlData.obligatoryIssuesCount || 0) === 0 ? 'CONFORME' : 'NON CONFORME',
                 details: controlData.responses ? this.extractDetails(controlData) : [],
-                // NOUVEAU : Sauvegarder les données brutes pour export détaillé
+                
+                // Données brutes pour export détaillé
                 rawControlData: {
                     dossier: controlData.dossier,
                     control: controlData.control,
@@ -81,23 +90,22 @@ export class PersistenceManager {
                     completedAt: controlData.completedAt
                 }
             };
-
+    
             this.controles.push(controle);
             this.saveToStorage();
             
-            // NOUVEAU : Marquer le dossier comme contrôlé
-            const dossierKey = this.generateDossierKey(controlData.dossier);
+            // Marquer le dossier comme contrôlé
             this.markDossierAsControlled(dossierKey, controle.type);
-
-            // IMPORTANT: Supprimer le contrôle suspendu APRÈS avoir vérifié s'il existait
+            
+            // Supprimer le contrôle suspendu s'il existait
             if (wasSuspended) {
                 this.removeSuspendedControl(dossierKey, controle.type);
-                Utils.debugLog(`Contrôle suspendu supprimé après finalisation: ${controle.client} (${controle.type})`);
+                Utils.debugLog(`Contrôle suspendu supprimé après finalisation: ${controle.client}`);
             }
             
-            Utils.debugLog(`Contrôle sauvegardé et dossier marqué: ${controle.client}`);
+            Utils.debugLog(`Contrôle sauvegardé (${controle.completionType}): ${controle.client}`);
             return controle;
-
+    
         } catch (error) {
             Utils.debugLog('Erreur sauvegarde contrôle: ' + error.message);
             console.error('Erreur sauvegarde:', error);
@@ -2630,6 +2638,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
