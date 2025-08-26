@@ -45,7 +45,7 @@ export class ControlTypes {
                 name: 'Financement',
                 description: 'Contrôle des dossiers de financement et crédits',
                 frequency: 'Hebdomadaire',
-                sampleSize: 1,
+                sampleSize: 8,
                 priority: 'medium',
                 criteria: {
                     requiredDocuments: [
@@ -385,6 +385,15 @@ export class ControlTypes {
                 if (['nouveau', 'oui', 'true', '1', 'yes'].includes(nouveauClient)) {
                     return false;
                 }
+            }
+
+            // Critère domaines à inclure (pour FINANCEMENT)
+            if (control.criteria.includeDomaines && control.criteria.includeDomaines.length > 0) {
+                const domaine = (dossier.domaine || '').toLowerCase();
+                const includeThisDomain = control.criteria.includeDomaines.some(d => 
+                    domaine === d.toLowerCase()
+                );
+                if (!includeThisDomain) return false;
             }
     
             // Critère domaines exclus
@@ -995,6 +1004,7 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
 
 
 
