@@ -259,7 +259,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si la Fiche de Renseignements est présente dans le dossier client',
-                        skipIfNo: true // NOUVEAU : permet de passer les autres questions si "Non"
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -342,7 +343,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si le Profil de Risques Client est présent dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -424,7 +426,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si le Profil ESG Client est présent dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -497,7 +500,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si la cartographie client a été effectuée, que ce soit sur papier ou dans Harvest',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Comment la cartographie a-t-elle été réalisée ?',
@@ -682,7 +686,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si la Fiche d\'Information Légale est présente dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -745,7 +750,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si la Lettre de Mission d\'Entrée en Relation est présente dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -871,7 +877,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si la Carte Nationale d\'Identité est présente dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -901,7 +908,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si le Justificatif de Domicile est présent dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -931,7 +939,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si l\'Etude Financière Client est présente dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -1014,7 +1023,8 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si le Relevé d\'Identité Bancaire est présent dans le dossier client',
-                        skipIfNo: true
+                        skipIfNo: true,
+                        skipIfNC : true
                     },
                     {
                         text: 'Le RIB correspond t-il bien au client?',
@@ -5510,6 +5520,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
