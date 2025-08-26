@@ -29,116 +29,91 @@ export class PersistenceManager {
 
     // Sauvegarder un contrôle (inchangé)
     saveControl(controlData) {
-       try {
-           // Protection contre les doublons
-           const now = Date.now();
-           if (now - this.lastSaveTime < 1000) {
-               Utils.debugLog('Doublon détecté - sauvegarde ignorée');
-               return null;
-           }
-           this.lastSaveTime = now;
-           
-           // Validation des données
-           if (!controlData || !controlData.dossier) {
-               Utils.debugLog('Données de contrôle invalides');
-               return null;
-           }
+        try {
+            const now = Date.now();
+            if (now - this.lastSaveTime < 1000) {
+                Utils.debugLog('Doublon détecté - sauvegarde ignorée');
+                return null;
+            }
+            this.lastSaveTime = now;
+            
+            if (!controlData || !controlData.dossier) {
+                Utils.debugLog('Données de contrôle invalides');
+                return null;
+            }
     
-           // Génération des identifiants
-           const dossierKey = this.generateDossierKey(controlData.dossier);
-           const controlType = controlData.control?.definition?.name || 'Type inconnu';
-           
-           Utils.debugLog(`Sauvegarde contrôle: ${controlData.dossier.client} - Type: ${controlType}`);
-           Utils.debugLog(`DossierKey: ${dossierKey}`);
-           
-           // ÉTAPE CRITIQUE: Récupérer les infos de suspension AVANT toute modification
-           const suspendedControl = this.getSuspendedControl(dossierKey, controlType);
-           const wasSuspended = suspendedControl !== null && suspendedControl !== undefined;
-           
-           Utils.debugLog(`Contrôle était suspendu: ${wasSuspended}`);
-           if (wasSuspended) {
-               Utils.debugLog(`Infos suspension: suspendu le ${new Date(suspendedControl.suspendedAt).toLocaleDateString()}, raison: ${suspendedControl.suspendReason}`);
-           }
+            const dossierKey = this.generateDossierKey(controlData.dossier);
+            const controlType = controlData.control?.definition?.name || 'Type inconnu';
+            
+            // UTILISER les infos transmises par documentController
+            const wasSuspended = controlData.wasSuspended || false;
+            const suspensionInfo = controlData.suspensionInfo || null;
+            
+            Utils.debugLog(`Sauvegarde contrôle: ${controlData.dossier.client} - Type: ${controlType}`);
+            Utils.debugLog(`Était suspendu: ${wasSuspended}`);
     
-           // Suppression immédiate du contrôle suspendu si trouvé
-           if (wasSuspended) {
-               const removed = this.removeSuspendedControl(dossierKey, controlType);
-               Utils.debugLog(`Contrôle suspendu supprimé: ${removed}`);
-           }
+            const controle = {
+                id: Date.now(),
+                date: new Date(),
+                type: controlType,
+                client: controlData.dossier.client || 'Client inconnu',
+                codeDossier: controlData.dossier.codeDossier || '',
+                conseiller: controlData.dossier.conseiller || '',
+                montant: controlData.dossier.montant || '',
+                domaine: controlData.dossier.domaine || '',
+                typeActe: controlData.dossier.typeActe || '',
+                dateEnvoi: controlData.dossier.dateEnvoi || '',
+                nouveauClient: controlData.dossier.nouveauClient || '',
+                statut: 'Terminé',
+                
+                // Type de finalisation basé sur les infos transmises
+                completionType: wasSuspended ? 'C1S' : 'C1',
+                
+                // Informations sur la suspension si applicable
+                ...(wasSuspended && suspensionInfo && {
+                    suspensionInfo: {
+                        suspendedAt: suspensionInfo.suspendedAt,
+                        suspendReason: suspensionInfo.suspendReason,
+                        suspensionDuration: Math.floor((new Date() - new Date(suspensionInfo.suspendedAt)) / (1000 * 60 * 60 * 24))
+                    }
+                }),
+                
+                anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
+                documentsControles: controlData.documents ? 
+                    `${Object.values(controlData.documents).filter(d => d.status === 'completed').length}/${Object.keys(controlData.documents).length}` : 
+                    '0/0',
+                conformiteGlobale: (controlData.obligatoryIssuesCount || 0) === 0 ? 'CONFORME' : 'NON CONFORME',
+                details: controlData.responses ? this.extractDetails(controlData) : [],
+                
+                rawControlData: {
+                    dossier: controlData.dossier,
+                    control: controlData.control,
+                    documents: controlData.documents,
+                    responses: controlData.responses,
+                    obligatoryIssuesCount: controlData.obligatoryIssuesCount,
+                    completedAt: controlData.completedAt
+                }
+            };
     
-           // Construction de l'objet contrôle
-           const controle = {
-               id: Date.now(),
-               date: new Date(),
-               type: controlType,
-               client: controlData.dossier.client || 'Client inconnu',
-               codeDossier: controlData.dossier.codeDossier || '',
-               conseiller: controlData.dossier.conseiller || '',
-               montant: controlData.dossier.montant || '',
-               domaine: controlData.dossier.domaine || '',
-               typeActe: controlData.dossier.typeActe || '',
-               dateEnvoi: controlData.dossier.dateEnvoi || '',
-               nouveauClient: controlData.dossier.nouveauClient || '',
-               statut: 'Terminé',
-               
-               // Type de finalisation basé sur l'historique de suspension
-               completionType: wasSuspended ? 'C1S' : 'C1',
-               
-               // Informations sur la suspension si applicable
-               ...(wasSuspended && suspendedControl && {
-                   suspensionInfo: {
-                       suspendedAt: suspendedControl.suspendedAt,
-                       suspendReason: suspendedControl.suspendReason,
-                       suspensionDuration: Math.floor((new Date() - new Date(suspendedControl.suspendedAt)) / (1000 * 60 * 60 * 24))
-                   }
-               }),
-               
-               // Calcul des anomalies et conformité
-               anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
-               documentsControles: controlData.documents ? 
-                   `${Object.values(controlData.documents).filter(d => d.status === 'completed').length}/${Object.keys(controlData.documents).length}` : 
-                   '0/0',
-               conformiteGlobale: (controlData.obligatoryIssuesCount || 0) === 0 ? 'CONFORME' : 'NON CONFORME',
-               
-               // Extraction des détails des vérifications
-               details: controlData.responses ? this.extractDetails(controlData) : [],
-               
-               // Données brutes pour export détaillé
-               rawControlData: {
-                   dossier: controlData.dossier,
-                   control: controlData.control,
-                   documents: controlData.documents,
-                   responses: controlData.responses,
-                   obligatoryIssuesCount: controlData.obligatoryIssuesCount,
-                   completedAt: controlData.completedAt
-               }
-           };
+            this.controles.push(controle);
+            this.saveToStorage();
+            this.markDossierAsControlled(dossierKey, controle.type);
+            
+            Utils.debugLog(`Contrôle sauvegardé avec succès:`);
+            Utils.debugLog(`- Client: ${controle.client}`);
+            Utils.debugLog(`- Type finalisation: ${controle.completionType}`);
+            Utils.debugLog(`- Conformité: ${controle.conformiteGlobale}`);
+            if (wasSuspended) {
+                Utils.debugLog(`- Était suspendu depuis: ${controle.suspensionInfo?.suspensionDuration || 'durée inconnue'} jour(s)`);
+            }
+            
+            return controle;
     
-           // Ajout à la liste des contrôles
-           this.controles.push(controle);
-           
-           // Sauvegarde dans localStorage
-           this.saveToStorage();
-           
-           // Marquer le dossier comme contrôlé
-           this.markDossierAsControlled(dossierKey, controle.type);
-           
-           // Log final
-           Utils.debugLog(`Contrôle sauvegardé avec succès:`);
-           Utils.debugLog(`- Client: ${controle.client}`);
-           Utils.debugLog(`- Type finalisation: ${controle.completionType}`);
-           Utils.debugLog(`- Conformité: ${controle.conformiteGlobale}`);
-           if (wasSuspended) {
-               Utils.debugLog(`- Était suspendu depuis: ${controle.suspensionInfo.suspensionDuration} jour(s)`);
-           }
-           
-           return controle;
-    
-       } catch (error) {
-           Utils.debugLog('Erreur lors de la sauvegarde du contrôle: ' + error.message);
-           console.error('Erreur sauvegarde contrôle:', error);
-           return null;
-       }
+        } catch (error) {
+            Utils.debugLog('Erreur lors de la sauvegarde du contrôle: ' + error.message);
+            console.error('Erreur sauvegarde contrôle:', error);
+            return null;
+        }
     }
 
     // NOUVELLE MÉTHODE : Export Excel détaillé d'un contrôle spécifique
@@ -2665,6 +2640,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
