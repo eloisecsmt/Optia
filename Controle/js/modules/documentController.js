@@ -110,6 +110,28 @@ export class DocumentController {
         return defaultDefinitions[controlType];
     }
 
+    filterQuestionsForControlType(questions) {
+        const controlType = this.currentControl?.type;
+        
+        if (!controlType) return questions;
+        
+        return questions.filter(question => {
+            // Exclure les questions marquées pour exclusion
+            if (question.excludeFor && question.excludeFor.includes(controlType)) {
+                Utils.debugLog(`Question exclue pour ${controlType}: ${question.text.substring(0, 50)}...`);
+                return false;
+            }
+            
+            // Inclure seulement les questions spécifiques si définies
+            if (question.showOnlyFor && !question.showOnlyFor.includes(controlType)) {
+                Utils.debugLog(`Question non applicable pour ${controlType}: ${question.text.substring(0, 50)}...`);
+                return false;
+            }
+            
+            return true;
+        });
+    }
+
     showManualProgressInterface() {
         Utils.showSection('manual-control-progress-section');
         this.updateManualProgressInterface();
@@ -277,6 +299,17 @@ export class DocumentController {
                         qualityCheck: {
                             text: 'La version correspond-elle effectivement aux standards en vigueur ?',
                             help: 'Version récente sans modifications non autorisées'
+                        }
+                    },
+                     {
+                        text: 'La FR a-t-elle été mise à jour dans les 24 derniers mois ?',
+                        type: 'boolean',
+                        required: true,
+                        showOnlyFor: ['MIS_A_JOUR'], // NOUVEAU : Montrer seulement pour "Mis à jour"
+                        help: 'Vérifier si la FR a été actualisée récemment (obligatoire tous les 24 mois pour clients existants)',
+                        qualityCheck: {
+                            text: 'La date de mise à jour est-elle clairement documentée et dans les délais ?',
+                            help: 'Vérifier présence et cohérence de la date de mise à jour'
                         }
                     },
                     {
@@ -2925,19 +2958,32 @@ export class DocumentController {
 
     startDocumentQuestions(documentId) {
         Utils.debugLog(`=== DÉBUT QUESTIONS DOCUMENT ${documentId} ===`);
-        
+    
         this.currentDocument = documentId;
         this.currentQuestionIndex = 0;
         
         const docConfig = this.documentsConfig[documentId];
         
-        if (docConfig.questions.length === 0) {
+        // NOUVEAU : Filtrer les questions selon le type de contrôle
+        const originalQuestions = [...docConfig.questions]; // Copie pour éviter la mutation
+        const filteredQuestions = this.filterQuestionsForControlType(originalQuestions);
+        
+        Utils.debugLog(`Questions filtrées: ${originalQuestions.length} -> ${filteredQuestions.length} pour ${this.currentControl?.type}`);
+        
+        if (filteredQuestions.length === 0) {
             this.documentsState[documentId].status = 'completed';
             this.documentsState[documentId].completedQuestions = 1;
             this.updateDocumentsGrid();
             Utils.showNotification(`Document ${docConfig.name} marqué comme vérifié`, 'success');
             return;
         }
+        
+        // Sauvegarder les questions originales et utiliser les filtrées
+        docConfig.originalQuestions = originalQuestions;
+        docConfig.questions = filteredQuestions;
+        
+        // Mettre à jour le nombre total de questions pour ce document
+        this.documentsState[documentId].totalQuestions = filteredQuestions.length;
         
         this.showQuestionInterface();
     }
@@ -4302,6 +4348,14 @@ export class DocumentController {
     }
 
     completeDocument() {
+        const docConfig = this.documentsConfig[this.currentDocument];
+    
+        // Restaurer les questions originales si elles ont été sauvegardées
+        if (docConfig.originalQuestions) {
+            docConfig.questions = docConfig.originalQuestions;
+            delete docConfig.originalQuestions;
+        }
+        
         this.documentsState[this.currentDocument].status = 'completed';
         this.documentsState[this.currentDocument].completedQuestions = 
             this.documentsConfig[this.currentDocument].questions.length;
@@ -5521,6 +5575,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
