@@ -2127,6 +2127,11 @@ export class DocumentController {
                     showOnlyIf: {
                         questionIndex: 0, // Question précédente (présence FR)
                         answer: 'Oui'
+                    },
+                    qualityCheck: {
+                        text: 'La date de mise à jour respecte-t-elle le délai de 24 mois ?',
+                        help: 'Calculez la différence entre la date de mise à jour et la date du contrôle'
+                    }
                 },
                 {
                     text: 'La FR mise à jour est-elle signée par le client ?',
@@ -5450,6 +5455,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
