@@ -2103,101 +2103,69 @@ export class DocumentController {
             fullName: 'Mise à jour FR et Profil Risques pour opération client existant',
             questions: [
                 {
-                    text: 'Y a-t-il eu une mise à jour de la FR pour cette opération ?',
+                    text: 'Est-ce qu\'il y a une FR ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez si la Fiche de Renseignements a été mise à jour dans le cadre de cette opération',
-                    followUp: {
-                        condition: 'Oui',
-                        question: {
-                            text: 'La mise à jour de la FR respecte-t-elle le délai de 24 mois ?',
-                            type: 'boolean',
-                            required: true,
-                            help: 'Vérifiez si la date de mise à jour de la FR est inférieure à 24 mois par rapport à la date d\'envoi de l\'opération',
-                            qualityCheck: {
-                                text: 'La conformité du délai est-elle respectée ?',
-                                help: 'Évaluez si le délai de 24 mois est effectivement respecté selon les informations affichées'
-                            }
-                        }
-                    }
+                    help: 'Vérifiez si une Fiche de Renseignements est présente dans le dossier client'
+                    // Pas de skipIfNo - on continue toujours vers les autres questions
                 },
                 {
-                    text: 'Le document FR mis à jour est-il entièrement complété ?',
+                    text: 'Y a-t-il eu une mise à jour de la FR dans l\'année en cours ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez que la FR mise à jour contient toutes les informations nécessaires et à jour du client',
+                    help: 'Vérifiez si la FR a été mise à jour durant l\'année civile en cours (2024/2025)',
                     showOnlyIf: {
-                        questionIndex: 0,
+                        questionIndex: 0, // Question précédente (présence FR)
                         answer: 'Oui'
                     },
                     qualityCheck: {
-                        text: 'Les informations de la FR mise à jour sont-elles cohérentes et complètes ?',
-                        help: 'Vérifiez que tous les champs obligatoires sont remplis et que les informations sont à jour'
+                        text: 'La date de mise à jour est-elle clairement identifiable ?',
+                        help: 'Vérifiez que la date de dernière modification est visible et lisible sur le document'
                     }
                 },
                 {
                     text: 'La FR mise à jour est-elle signée par le client ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez la présence de la signature du client sur la FR mise à jour',
+                    help: 'Vérifiez la présence de la signature du client sur la FR mise à jour ou récente',
                     showOnlyIf: {
-                        questionIndex: 0,
+                        questionIndex: 0, // Question sur présence FR
                         answer: 'Oui'
                     },
                     qualityCheck: {
-                        text: 'La signature du client sur la FR mise à jour est-elle conforme ?',
+                        text: 'La signature du client sur la FR est-elle conforme ?',
                         help: 'Signature lisible, datée et correspondant à l\'identité du client',
                         type: 'signature_clients'
                     }
                 },
                 {
-                    text: 'Y a-t-il eu une mise à jour du profil investisseur pour cette opération ?',
+                    text: 'Est-ce qu\'il y a un profil investisseur ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez si le profil investisseur a été mis à jour dans le cadre de cette opération',
-                    followUp: {
-                        condition: 'Oui',
-                        question: {
-                            text: 'La mise à jour du profil investisseur respecte-t-elle le délai de 24 mois ?',
-                            type: 'boolean',
-                            required: true,
-                            help: 'Vérifiez si la date de mise à jour du profil est inférieure à 24 mois par rapport à la date d\'envoi de l\'opération',
-                            qualityCheck: {
-                                text: 'La conformité du délai est-elle respectée ?',
-                                help: 'Évaluez si le délai de 24 mois est effectivement respecté selon les informations affichées'
-                            }
-                        }
-                    }
+                    help: 'Vérifiez si un profil investisseur/profil de risques est présent dans le dossier client',
+                    skipIfNo: true // Si pas de profil, terminer le contrôle de ce document
                 },
                 {
-                    text: 'Le profil investisseur mis à jour est-il entièrement complété ?',
+                    text: 'Y a-t-il eu une mise à jour du profil investisseur dans l\'année en cours ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez que le profil investisseur contient toutes les réponses nécessaires et à jour',
-                    showOnlyIf: {
-                        questionIndex: 3,
-                        answer: 'Oui'
-                    },
+                    help: 'Vérifiez si le profil investisseur a été mis à jour durant l\'année civile en cours (2024/2025)',
                     qualityCheck: {
-                        text: 'Le profil investisseur mis à jour est-il cohérent avec la situation actuelle du client ?',
-                        help: 'Vérifiez que les réponses correspondent à la situation financière et aux objectifs actuels du client'
+                        text: 'La date de mise à jour du profil est-elle clairement identifiable ?',
+                        help: 'Vérifiez que la date de dernière modification ou de validation est visible sur le document'
                     }
                 },
                 {
                     text: 'Le profil investisseur mis à jour est-il signé par le client ?',
                     type: 'boolean',
                     required: true,
-                    help: 'Vérifiez la présence de la signature du client sur le profil investisseur mis à jour',
-                    showOnlyIf: {
-                        questionIndex: 3,
-                        answer: 'Oui'
-                    },
+                    help: 'Vérifiez la présence de la signature du client sur le profil investisseur mis à jour ou récent',
                     qualityCheck: {
                         text: 'La signature du client sur le profil investisseur est-elle conforme ?',
                         help: 'Signature lisible, datée et correspondant à l\'identité du client',
                         type: 'signature_clients'
                     }
-                },
+                }
             ]
         },
             99: {
@@ -5474,3 +5442,4 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
