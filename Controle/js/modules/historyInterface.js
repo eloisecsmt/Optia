@@ -608,7 +608,6 @@ export class HistoryInterface {
 
     // Génération des lignes d'historique avec boutons export détaillé
     generateHistoryRows(controles) {
-        generateHistoryRows(controles) {
     return controles.map((controle, index) => {
         const rowClass = index % 2 === 0 ? 'even' : 'odd';
         let conformityClass = '';
@@ -1855,6 +1854,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
