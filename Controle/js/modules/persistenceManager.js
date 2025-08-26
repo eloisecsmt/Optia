@@ -91,10 +91,22 @@ export class PersistenceManager {
                 }
             };
 
-                console.log('Debug - dossierKey:', dossierKey);
-                console.log('Debug - controlType:', controlType);
-                console.log('Debug - wasSuspended:', wasSuspended);
-                console.log('Debug - completionType sera:', wasSuspended ? 'C1S' : 'C1');
+                console.log('=== DEBUG SUSPENSION ===');
+                console.log('1. dossierKey généré:', dossierKey);
+                console.log('2. controlType:', controlType);
+                console.log('3. Contrôles suspendus actuels:', this.suspendedControls);
+                console.log('4. Recherche avec getSuspendedControl...');
+                
+                // Vérification manuelle
+                const foundControl = this.suspendedControls.find(sc => {
+                    console.log(`   - Comparaison: sc.dossierKey="${sc.dossierKey}" vs recherché="${dossierKey}"`);
+                    console.log(`   - Comparaison: sc.type="${sc.type}" vs recherché="${controlType}"`);
+                    return sc.dossierKey === dossierKey && sc.type === controlType;
+                });
+                
+                console.log('5. Contrôle trouvé manuellement:', foundControl);
+                console.log('6. wasSuspended (getSuspendedControl):', wasSuspended);
+                console.log('========================');
     
             this.controles.push(controle);
             this.saveToStorage();
@@ -2643,6 +2655,7 @@ export class PersistenceManager {
         reader.readAsText(file);
     }
 }
+
 
 
 
