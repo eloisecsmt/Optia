@@ -790,7 +790,7 @@ export class DocumentController {
                         required: true,
                         help: 'Date d\'entrée en relation et de prise d\'effet de la mission',
                         qualityCheck: {
-                            text: 'La date d\'entrée en relation est-elle cohérente avec le dossier ?',
+                            text: 'La date de la lettre de mission est-elle cohérente avec le dossier ?',
                             help: 'Date de signature postérieure à l\'ouverture de compte et aux premiers échanges'
                         }
                     },
@@ -1776,6 +1776,16 @@ export class DocumentController {
                     qualityCheck: {
                         text: 'Les DICI correspondent-ils exactement aux supports proposés ?',
                         help: 'Un DICI par support, versions à jour, informations cohérentes'
+                    }
+                },
+                {
+                    text: 'Pour les signatures manuscrites uniquement : tous les DICI sont-ils paraphés par le client ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Si la déclaration d\'adéquation est signée manuellement, vérifiez que chaque DICI joint porte les initiales (paraphe) du client. Répondez "N/C" si c\'est une signature électronique.',
+                    qualityCheck: {
+                        text: 'Le paraphe manuscrit est-il présent et lisible sur chaque DICI ?',
+                        help: 'Vérifiez que les initiales sont cohérentes, lisibles et correspondent bien à l\'identité du client signataire'
                     }
                 },
                 {
@@ -5439,5 +5449,6 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
