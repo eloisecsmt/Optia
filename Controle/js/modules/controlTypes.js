@@ -309,6 +309,7 @@ export class ControlTypes {
     generateControlCards() {
         return Object.entries(this.controlDefinitions).map(([key, control]) => {
             const eligibleCount = this.getEligibleDossiers(key).length;
+            const priorityColor = this.getPriorityColor(control.priority);
             
             return `
                 <div class="control-card" data-control-type="${key}">
@@ -326,14 +327,9 @@ export class ControlTypes {
                             <span class="stat-value">${eligibleCount}</span>
                             <span class="stat-label">Dossiers éligibles</span>
                         </div>
-                        <div class="stat-item sample-size-config">
-                            <input type="number" 
-                                   id="sample-size-${key}" 
-                                   value="${control.sampleSize}" 
-                                   min="1" 
-                                   max="${eligibleCount}"
-                                   class="sample-size-input">
-                            <span class="stat-label">Taille échantillon</span>
+                        <div class="stat-item">
+                            <span class="stat-value">${control.sampleSize}</span>
+                            <span class="stat-label">Échantillon</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-value">${control.frequency}</span>
@@ -341,10 +337,21 @@ export class ControlTypes {
                         </div>
                     </div>
                     
+                    <div class="control-criteria">
+                        <h4>Critères de sélection :</h4>
+                        <ul>
+                            ${control.criteria.montantMinimum > 0 ? `<li>Montant ≥ ${control.criteria.montantMinimum.toLocaleString('fr-FR')} €</li>` : ''}
+                            ${control.criteria.nouveauxClients ? '<li>Nouveaux clients uniquement</li>' : '<li>Tous types de clients</li>'}
+                        </ul>
+                    </div>
+                    
                     <button class="btn btn-primary control-type-btn" 
                             data-control-type="${key}"
-                            ${eligibleCount === 0 ? 'disabled' : ''}>
-                        Lancer le contrôle
+                            ${eligibleCount < control.sampleSize ? 'disabled' : ''}>
+                        ${eligibleCount < control.sampleSize ? 
+                            `Insuffisant (${eligibleCount}/${control.sampleSize})` : 
+                            'Lancer le contrôle'
+                        }
                     </button>
                 </div>
             `;
@@ -458,35 +465,26 @@ export class ControlTypes {
     }
 
     selectControlType(controlType) {
-       const control = this.controlDefinitions[controlType];
+        const control = this.controlDefinitions[controlType];
         if (!control) {
             Utils.showNotification('Type de contrôle invalide', 'error');
             return;
         }
-    
-        // NOUVEAU : Récupérer la taille d'échantillon personnalisée
-        const sampleSizeInput = document.getElementById(`sample-size-${controlType}`);
-        const customSampleSize = sampleSizeInput ? parseInt(sampleSizeInput.value) : control.sampleSize;
+
+        Utils.debugLog(`=== LANCEMENT CONTRÔLE ${controlType} ===`);
         
-        // Validation
-        if (customSampleSize < 1) {
-            Utils.showNotification('La taille d\'échantillon doit être au moins 1', 'error');
-            return;
-        }
-    
         const eligibleDossiers = this.getEligibleDossiers(controlType);
         
-        if (eligibleDossiers.length < customSampleSize) {
+        if (eligibleDossiers.length < control.sampleSize) {
             Utils.showNotification(
-                `Pas assez de dossiers éligibles (${eligibleDossiers.length}/${customSampleSize})`, 
+                `Pas assez de dossiers éligibles (${eligibleDossiers.length}/${control.sampleSize})`, 
                 'error'
             );
             return;
         }
 
-    // Utiliser la taille personnalisée
-    const controlWithCustomSize = { ...control, sampleSize: customSampleSize };
-    const selectedDossiers = this.selectRandomSample(eligibleDossiers, controlWithCustomSize);
+        // Sélection aléatoire de l'échantillon
+        const selectedDossiers = this.selectRandomSample(eligibleDossiers, control);
         
         // NOUVEAU : Stocker les dossiers disponibles pour remplacement
         this.availableDossiers = eligibleDossiers.filter(d => 
@@ -1005,6 +1003,3 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
-
-
-
