@@ -2301,7 +2301,7 @@ export class DocumentController {
     
         if (controlType === 'OPERATION') {
             // Utiliser la logique conditionnelle pour les opérations
-            requiredDocuments = this.determineOperationDocuments(this.currentDossier);
+            requiredDocuments = this.(this.currentDossier);
             Utils.debugLog(`Documents sélectionnés pour l'opération: ${requiredDocuments.join(', ')}`);
         } else {
             // Pour les autres contrôles, utiliser la méthode standard
@@ -5167,6 +5167,10 @@ generateManualResultsTable(results) {
         case 'avance':
             // Pour les avances : destination des fonds
             return [...baseDocuments, 14];
+
+        case 'arbitrage':
+            // Pour les arbitrages : documents spécifiques sans 4, 10, 13
+            return [22, 6, 11, 19, 20, 99];
             
         default:
             // Par défaut : inclure les deux pour être sûr
@@ -5470,6 +5474,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
