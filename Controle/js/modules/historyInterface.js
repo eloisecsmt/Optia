@@ -572,7 +572,15 @@ export class HistoryInterface {
                             👨‍💼 Conseiller ${this.getSortIcon('conseiller')}
                         </th>
                         <th>💰 Montant</th>
-                        <th>${this.showSuspended ? '📄 Progress' : '📄 Documents'}</th>
+                        <th>📄 Documents</th>
+                        
+                        ${!this.showSuspended ? `
+                            <!-- NOUVELLE COLONNE pour les contrôles terminés -->
+                            <th onclick="window.historyInterface?.sortBy('completionType')" style="cursor: pointer;" title="Trier par type de finalisation">
+                                🔄 Finalisation ${this.getSortIcon('completionType')}
+                            </th>
+                        ` : ''}
+                        
                         ${this.showSuspended ? `
                             <th onclick="window.historyInterface?.sortBy('daysSuspended')" style="cursor: pointer;" title="Trier par durée">
                                 ⏰ Durée ${this.getSortIcon('daysSuspended')}
@@ -621,10 +629,13 @@ export class HistoryInterface {
                     <td>${controle.conseiller || 'N/A'}</td>
                     <td>${controle.montant || 'N/A'}</td>
                     <td><span class="badge secondary">${controle.documentsControles}</span></td>
-                    ${this.showSuspended ? `
-                        <td><span class="badge duration ${this.getDurationClass(controle.daysSuspended)}">${controle.daysSuspended}j</span></td>
-                        <td class="reason-cell">${controle.suspendReason || 'Non spécifiée'}</td>
-                    ` : `
+                    <!-- NOUVELLE COLONNE: Type de finalisation -->
+                    <td>
+                        <span class="badge completion-type ${controle.completionType === 'C1S' ? 'suspended-completion' : 'direct-completion'}" 
+                              title="${controle.completionType === 'C1S' ? 'Contrôle finalisé après suspension' : 'Contrôle finalisé directement'}">
+                            ${controle.completionType || 'C1'}
+                        </span>
+                    </td>
                         <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
                         <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
                     `}
@@ -1711,6 +1722,38 @@ updateMailButton() {
         }
     }
 
+    .badge.completion-type {
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid;
+    }
+
+    .badge.direct-completion {
+        background-color: #e3f2fd;
+        color: #1565c0;
+        border-color: #bbdefb;
+    }
+
+    .badge.suspended-completion {
+        background-color: #fff3e0;
+        color: #f57c00;
+        border-color: #ffcc02;
+        position: relative;
+    }
+
+    .badge.suspended-completion::after {
+        content: "⏸️";
+        margin-left: 4px;
+        font-size: 0.7rem;
+    }
+
+    /* Amélioration des tooltips */
+    .badge[title] {
+        cursor: help;
+    }
+
     /* Support du mode sombre */
     @media (prefers-color-scheme: dark) {
         .btn-mail {
@@ -1794,3 +1837,4 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
