@@ -281,8 +281,7 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si la Fiche de Renseignements est présente dans le dossier client',
-                        skipIfNo: true,
-                        skipIfNC : true
+                        skipIfNo: true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -301,25 +300,46 @@ export class DocumentController {
                             help: 'Version récente sans modifications non autorisées'
                         }
                     },
-                     {
+                    {
                         text: 'La FR a-t-elle été mise à jour dans les 24 derniers mois ?',
                         type: 'boolean',
                         required: true,
-                        showOnlyFor: ['MIS_A_JOUR'], // NOUVEAU : Montrer seulement pour "Mis à jour"
-                        help: 'Vérifier si la FR a été actualisée récemment (obligatoire tous les 24 mois pour clients existants)',
-                        qualityCheck: {
-                            text: 'La date de mise à jour est-elle clairement documentée et dans les délais ?',
-                            help: 'Vérifier présence et cohérence de la date de mise à jour'
+                        showOnlyFor: ['MIS_A_JOUR'], // NOUVEAU : Question spécifique mise à jour
+                        help: 'Vérifier si la FR a été actualisée dans les 24 mois (obligation réglementaire)',
+                        followUp: {
+                            condition: 'Non',
+                            question: {
+                                text: 'Cette absence de mise à jour pose-t-elle un problème pour le dossier ?',
+                                type: 'boolean',
+                                required: true,
+                                help: 'Évaluer l\'impact de l\'absence de mise à jour sur la conformité du dossier',
+                                qualityCheck: {
+                                    text: 'L\'absence de mise à jour constitue-t-elle une anomalie réglementaire ?',
+                                    help: 'Considérer les risques, évolutions du profil client, et obligations légales'
+                                }
+                            }
                         }
                     },
                     {
                         text: 'Est-ce que le document est entièrement complété ?',
                         type: 'boolean',
                         required: true,
+                        excludeFor: ['MIS_A_JOUR'],
                         help: 'Aucun champ obligatoire vide, toutes les sections renseignées',
                         qualityCheck: {
                             text: 'Les informations renseignées sont-elles cohérentes et complètes ?',
                             help: 'Pas d\'incohérences dans les dates, montants, statuts ou noms'
+                        }
+                    },
+                    {
+                        text: 'Par rapport à l\'ancien document, les informations ont-elles bien évolué ?',
+                        type: 'boolean',
+                        required: true,
+                        showOnlyFor: ['MIS_A_JOUR'],
+                        help: 'Comparer avec l\'ancienne version du document pour vérifier les évolutions',
+                        qualityCheck: {
+                            text: 'Les modifications apportées sont-elles cohérentes et justifiées ?',
+                            help: 'Vérifier que les changements reflètent l\'évolution réelle de la situation du client (revenus, patrimoine, situation familiale, etc.)'
                         }
                     },
                     {
@@ -376,8 +396,7 @@ export class DocumentController {
                         type: 'boolean',
                         required: true,
                         help: 'Vérifiez si le Profil de Risques Client est présent dans le dossier client',
-                        skipIfNo: true,
-                        skipIfNC : true
+                        skipIfNo: true
                     },
                     {
                         text: 'Quel est le type de document ?',
@@ -397,13 +416,45 @@ export class DocumentController {
                         }
                     },
                     {
+                        text: 'Le profil a-t-il été mis à jour dans les 24 derniers mois ?',
+                        type: 'boolean',
+                        required: true,
+                        showOnlyFor: ['MIS_A_JOUR'],
+                        help: 'Vérifier la mise à jour du profil de risques (obligation tous les 24 mois)',
+                        followUp: {
+                            condition: 'Non',
+                            question: {
+                                text: 'Cette absence de mise à jour du profil pose-t-elle un problème ?',
+                                type: 'boolean',
+                                required: true,
+                                help: 'Évaluer si l\'absence de mise à jour impacte l\'adéquation des conseils',
+                                qualityCheck: {
+                                    text: 'L\'absence de mise à jour compromet-elle l\'adéquation des recommandations ?',
+                                    help: 'Considérer l\'évolution possible du profil de risque du client'
+                                }
+                            }
+                        }
+                    },
+                    {
                         text: 'Est-ce que le document est entièrement complété ?',
                         type: 'boolean',
                         required: true,
+                        excludeFor: ['MIS_A_JOUR'],
                         help: 'Toutes les questions du profil de risque renseignées',
                         qualityCheck: {
                             text: 'Toutes les sections du questionnaire sont-elles cohérentes avec le profil client ?',
                             help: 'Réponses logiques entre expérience, objectifs et horizon'
+                        }
+                    },
+                    {
+                        text: 'Par rapport à l\'ancien profil, les informations ont-elles bien évolué ?',
+                        type: 'boolean',
+                        required: true,
+                        showOnlyFor: ['MIS_A_JOUR'],
+                        help: 'Comparer avec l\'ancien profil de risques pour vérifier les évolutions',
+                        qualityCheck: {
+                            text: 'Les modifications du profil reflètent-elles l\'évolution réelle du client ?',
+                            help: 'Vérifier cohérence des changements : expérience acquise, évolution des objectifs, changement d\'horizon d\'investissement, nouvelles contraintes'
                         }
                     },
                     {
@@ -5575,6 +5626,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
