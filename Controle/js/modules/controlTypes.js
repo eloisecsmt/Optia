@@ -54,7 +54,7 @@ export class ControlTypes {
                         'Analyse financière'
                     ],
                     montantMinimum: 0,
-                    excludeDomaines: [],
+                    includeDomaines: ['financement'],
                     includePPE: false,
                     nouveauxClients: false
                 },
@@ -995,6 +995,7 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
 
 
 
