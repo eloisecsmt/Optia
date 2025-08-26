@@ -487,9 +487,6 @@ export class ControlTypes {
     // Utiliser la taille personnalisée
     const controlWithCustomSize = { ...control, sampleSize: customSampleSize };
     const selectedDossiers = this.selectRandomSample(eligibleDossiers, controlWithCustomSize);
-
-        // Sélection aléatoire de l'échantillon
-        const selectedDossiers = this.selectRandomSample(eligibleDossiers, control);
         
         // NOUVEAU : Stocker les dossiers disponibles pour remplacement
         this.availableDossiers = eligibleDossiers.filter(d => 
@@ -1008,5 +1005,6 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
 
 
