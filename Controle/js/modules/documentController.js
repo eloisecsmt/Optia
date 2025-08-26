@@ -2247,6 +2247,7 @@ export class DocumentController {
                 id: 99,
                 name: 'Zeendoc',
                 fullName: 'Archivage Zeendoc',
+                skipIfNC : true,
                 questions: [
                     {
                         text: 'Tous les documents sont-ils bien ajoutés dans Zeendoc ?',
@@ -5520,6 +5521,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
