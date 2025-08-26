@@ -3054,8 +3054,11 @@ export class DocumentController {
         return {
             dccStatus: this.getDCCStatus(),
             dccText: this.getDCCStatusText(),
+            dccDate: this.formatDisplayDate(this.currentDossier.dateDCC),
             profilStatus: this.getProfilStatus(), 
-            profilText: this.getProfilStatusText()
+            profilText: this.getProfilStatusText(),
+            profilDate: this.formatDisplayDate(this.currentDossier.dateProfilInvestisseur),
+            dateEnvoi: this.formatDisplayDate(this.currentDossier.dateEnvoi)
         };
     }
 
@@ -5377,6 +5380,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
