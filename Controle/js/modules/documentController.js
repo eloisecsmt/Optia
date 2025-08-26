@@ -217,7 +217,7 @@ export class DocumentController {
     getRequiredDocuments(controlType) {
         const documentSets = {
             'LCB-FT': [1, 4, 7, 8, 12, 99], // FR, Carto Client, CNI, Justificatif Domicile, Zeendoc
-            'FINANCEMENT': [4, 13, 15, 16, 17, 18, 99], // Harvest, Carto Opé, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
+            'FINANCEMENT': [4, 5, 13, 15, 16, 17, 18, 99], // Harvest, Carto Opé, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
             'CARTO_CLIENT': [4,7, 8, 99], // Harvest, Zeendoc
             'OPERATION': [22, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
             'NOUVEAU_CLIENT': [1, 2, 4, 5, 6, 7, 8, 9, 10, 21, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
@@ -5450,6 +5450,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
