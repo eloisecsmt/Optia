@@ -1678,9 +1678,19 @@ export class DocumentController {
                     help: 'Signatures distinctes, lisibles, correspondant aux identités',
                     type: 'signature_clients'
                 }
-            }
-        ]
-    },
+            },
+             {
+                    text: 'Les mentions sont-elles présentes sur le document ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Mentions légales obligatoires en bas ou en annexe du document',
+                    qualityCheck: {
+                        text: 'Les mentions légales sont-elles correctement positionnées et lisibles ?',
+                        help: 'Texte complet, pas coupé, police suffisante pour être lu'
+                    }
+                }
+            ]
+        },
         18: {
             id: 18,
             name: 'Bon pour accord',
@@ -5500,6 +5510,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
