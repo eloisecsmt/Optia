@@ -45,7 +45,7 @@ export class ControlTypes {
                 name: 'Financement',
                 description: 'Contrôle des dossiers de financement et crédits',
                 frequency: 'Hebdomadaire',
-                sampleSize: 8,
+                sampleSize: 1,
                 priority: 'medium',
                 criteria: {
                     requiredDocuments: [
@@ -995,6 +995,7 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
 
 
 
