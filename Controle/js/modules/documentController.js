@@ -2871,21 +2871,21 @@ export class DocumentController {
         `;
         
             if (this.currentDocument === 22) {
-            const contextInfo = this.getUpdateContextInfo();
-            questionContainer.insertAdjacentHTML('afterbegin', `
-                <div class="update-context-info">
-                    <div class="context-header">Informations de mise à jour :</div>
-                    <div class="context-details">
-                        <span class="context-item ${contextInfo.dccStatus}">
-                            DCC : ${contextInfo.dccText}
-                        </span>
-                        <span class="context-item ${contextInfo.profilStatus}">
-                            Profil : ${contextInfo.profilText}
-                        </span>
+                const contextInfo = this.getUpdateContextInfo();
+                questionContainer.insertAdjacentHTML('afterbegin', `
+                    <div class="update-context-info">
+                        <div class="context-header">Informations de mise à jour :</div>
+                        <div class="context-details">
+                            <span class="context-item ${contextInfo.dccStatus}">
+                                DCC (${this.formatDisplayDate(this.currentDossier.dateDCC) || 'Date manquante'}) : ${contextInfo.dccText}
+                            </span>
+                            <span class="context-item ${contextInfo.profilStatus}">
+                                Profil (${this.formatDisplayDate(this.currentDossier.dateProfilInvestisseur) || 'Date manquante'}) : ${contextInfo.profilText}
+                            </span>
+                        </div>
                     </div>
-                </div>
-            `);
-        }
+                `);
+            }
 
         const questionData = this.documentsConfig[this.currentDocument].questions[this.currentQuestionIndex];
         if (questionData.type === 'checklist') {
@@ -5380,6 +5380,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
