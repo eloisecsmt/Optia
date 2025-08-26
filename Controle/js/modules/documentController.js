@@ -4066,7 +4066,8 @@ export class DocumentController {
             'Le client connaissait-il tous les produits proposés ?',
             'Le dossier client a-t-il été créé sous Harvest ?',
             'Est-ce qu\'il y a une FR ?',
-            'Est-ce qu\'il y a un profil investisseur ?'
+            'Est-ce qu\'il y a un profil investisseur ?',
+            'Les documents disponibles dans Zeendoc sont-ils suffisants pour ce type de contrôle ?'
         ];
 
         // Les checklists ne nécessitent jamais de justification
@@ -5449,6 +5450,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
