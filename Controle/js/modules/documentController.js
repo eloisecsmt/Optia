@@ -1483,6 +1483,32 @@ export class DocumentController {
                     }
                 },
                 {
+                    text: 'Quels éléments sont manquants ou incomplets dans le mandat ?',
+                    type: 'checklist',
+                    required: true,
+                    help: 'Cochez tous les éléments manquants ou incomplets dans le mandat de financement. Si TOUT est complet, ne cochez rien (checklist vide = aucun élément manquant).',
+                    showOnlyIf: {
+                        questionIndex: 2, // Question précédente (index 2)
+                        answer: 'Non'
+                    },
+                    options: [
+                        'Identité du ou des emprunteurs',
+                        'Date et lieu de naissance',
+                        'La situation familiale',
+                        'La profession',
+                        'L\'adresse',
+                        'Le mail et le téléphone',
+                        'La situation financière',
+                        'La connaissance des opérations de banque',
+                        'Le montant du financement envisagé',
+                        'Le type de prêt',
+                        'La durée',
+                        'Les honoraires',
+                        'L\'assurance emprunteur',
+                        'Liste des autres prêts'
+                    ]
+                },
+                {
                     text: 'La date est-elle présente sur le document ?',
                     type: 'boolean',
                     required: true,
@@ -5455,6 +5481,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé');
     }
 }
+
 
 
 
