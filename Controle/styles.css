@@ -5233,6 +5233,248 @@ body {
     outline: none;
 }
 
+/* Styles pour la section d'outils globaux */
+
+.global-tools-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+.global-tools-section .section-header {
+    text-align: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #17a2b8;
+}
+
+.global-tools-section .section-title {
+    color: #17a2b8;
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.global-tools-section .section-title::before {
+    content: "🔍";
+    font-size: 1.5rem;
+}
+
+.global-tools-section .section-subtitle {
+    color: #6c757d;
+    font-size: 1rem;
+    font-style: italic;
+    margin: 0;
+}
+
+.global-tools-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.global-tool-card {
+    background: white;
+    border: 2px solid #17a2b8;
+    border-radius: 12px;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 20px;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.15);
+}
+
+.global-tool-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(23, 162, 184, 0.25);
+    border-color: #138496;
+}
+
+.global-tool-card .tool-icon {
+    font-size: 3rem;
+    text-align: center;
+    min-width: 80px;
+    background: linear-gradient(135deg, #17a2b8, #20c997);
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+}
+
+.global-tool-card .tool-content {
+    flex: 1;
+}
+
+.global-tool-card .tool-content h4 {
+    color: #1a1a2e;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.global-tool-card .tool-description {
+    color: #495057;
+    font-size: 1rem;
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+}
+
+.tool-stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.stat-badge {
+    background: #e9ecef;
+    color: #495057;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.stat-badge.warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.stat-badge.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #b8daff;
+}
+
+.tool-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-analysis {
+    min-width: 140px;
+    font-weight: 600;
+    text-transform: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    transition: all 0.3s ease;
+    border: 2px solid #17a2b8;
+    background: transparent;
+    color: #17a2b8;
+}
+
+.btn-analysis:hover:not(:disabled) {
+    background: #17a2b8;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+}
+
+.btn-analysis:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Séparateur entre les sections */
+.section-separator {
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, #17a2b8 20%, #17a2b8 80%, transparent 100%);
+    margin: 32px 0;
+    border-radius: 2px;
+}
+
+/* Titre de la section des contrôles */
+.control-selection-title {
+    text-align: center;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 12px;
+    color: white;
+}
+
+.control-selection-title .section-title {
+    color: #d4af37;
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.control-selection-title .section-subtitle {
+    color: #adb5bd;
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+    .global-tool-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 16px;
+    }
+    
+    .global-tool-card .tool-icon {
+        margin: 0 auto;
+    }
+    
+    .global-tools-section {
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+    
+    .global-tools-section .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .tool-stats {
+        justify-content: center;
+    }
+}
+
+/* Animation de chargement pour le bouton */
+.btn-analysis.loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn-analysis.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid #17a2b8;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 
 
 
