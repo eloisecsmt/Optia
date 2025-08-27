@@ -916,7 +916,7 @@ export class HistoryInterface {
             </div>
         `;
     }
-}
+
 
     // Génération du résumé des anomalies
     generateAnomaliesResume(details) {
@@ -1928,6 +1928,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
