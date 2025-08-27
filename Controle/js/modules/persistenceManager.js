@@ -1609,10 +1609,20 @@ export class PersistenceManager {
         
         const c2rControls = this.controles.filter(c => c.completionType === 'C2R').length;
         
-        // NOUVEAU : Calculer les conformités par type
-        const c1Conformes = this.controles.filter(c => c.completionType === 'C1' && c.conformiteGlobale === 'CONFORME').length;
-        const c1sConformes = this.controles.filter(c => c.completionType === 'C1S' && c.conformiteGlobale === 'CONFORME').length;
-        const c2rConformes = this.controles.filter(c => c.completionType === 'C2R' && c.conformiteGlobale === 'CONFORME').length;
+        // NOUVEAU : Calculer les conformités par type avec fallback
+        const c1Conformes = this.controles.filter(c => {
+            const type = c.completionType || (c.wasSuspended ? 'C1S' : 'C1');
+            return type === 'C1' && c.conformiteGlobale === 'CONFORME';
+        }).length;
+        
+        const c1sConformes = this.controles.filter(c => {
+            const type = c.completionType || (c.wasSuspended ? 'C1S' : 'C1');
+            return type === 'C1S' && c.conformiteGlobale === 'CONFORME';
+        }).length;
+        
+        const c2rConformes = this.controles.filter(c => 
+            c.completionType === 'C2R' && c.conformiteGlobale === 'CONFORME'
+        ).length;
         
         // NOUVEAU : Calculer le taux de conformité révisé
         const revisedComplianceRate = this.calculateRevisedComplianceRate();
@@ -1664,7 +1674,7 @@ export class PersistenceManager {
             revisionsImprovedCompliance: this.countRevisionsImprovedCompliance()
         };
     }
-
+    
      calculateRevisedComplianceRate() {
         const uniqueDossiers = new Map();
         
@@ -3040,6 +3050,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
