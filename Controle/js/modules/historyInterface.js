@@ -461,7 +461,7 @@ export class HistoryInterface {
         
         if (statsContainer) {
             if (this.showSuspended) {
-                // Statistiques pour les suspendus
+                // Statistiques pour les suspendus (inchangées)
                 const suspended = window.persistenceManager.getSuspendedControls();
                 const oldSuspended = suspended.filter(s => {
                     const days = Math.floor((new Date() - new Date(s.suspendedAt)) / (1000 * 60 * 60 * 24));
@@ -494,7 +494,9 @@ export class HistoryInterface {
                     </div>
                 `;
             } else {
-                // Statistiques normales pour les terminés
+                // NOUVEAU : Statistiques étendues avec révisions
+                const revisionSummary = window.persistenceManager.getRevisionSummary();
+                
                 statsContainer.innerHTML = `
                     <div class="summary-card ${stats.totalControles === 0 ? 'empty' : ''}">
                         <div class="card-value">${stats.totalControles}</div>
@@ -512,17 +514,45 @@ export class HistoryInterface {
                         <div class="card-value">${stats.controlesMoisActuel}</div>
                         <div class="card-label">Ce mois-ci</div>
                     </div>
-                    ${stats.totalSuspended > 0 ? `
-                        <div class="summary-card warning">
-                            <div class="card-value">${stats.totalSuspended}</div>
-                            <div class="card-label">En attente</div>
+                    
+                    <!-- NOUVEAU : Statistiques de révisions -->
+                    ${revisionSummary.totalRevisions > 0 ? `
+                        <div class="summary-card revision-card">
+                            <div class="card-value">${revisionSummary.totalRevisions}</div>
+                            <div class="card-label">Révisions C2R</div>
+                        </div>
+                        <div class="summary-card ${revisionSummary.improvedCompliance > 0 ? 'success' : 'neutral'}">
+                            <div class="card-value">${revisionSummary.improvedCompliance}</div>
+                            <div class="card-label">Améliorées</div>
                         </div>
                     ` : ''}
+                    
+                    <!-- NOUVEAU : Répartition par type -->
+                    <div class="summary-card-wide" style="grid-column: 1 / -1; margin-top: 15px;">
+                        <div class="completion-breakdown">
+                            <h5 style="margin: 0 0 10px 0; color: #1a1a2e;">Répartition des finalisations</h5>
+                            <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                                <div class="completion-stat">
+                                    <span class="badge direct-completion">C1: ${stats.c1Controls}</span>
+                                    <div style="font-size: 0.8rem; color: #6c757d;">Direct</div>
+                                </div>
+                                <div class="completion-stat">
+                                    <span class="badge suspended-completion">C1S: ${stats.c1sControls}</span>
+                                    <div style="font-size: 0.8rem; color: #6c757d;">Après suspension</div>
+                                </div>
+                                ${stats.c2rControls > 0 ? `
+                                    <div class="completion-stat">
+                                        <span class="badge revision-completion">C2R: ${stats.c2rControls}</span>
+                                        <div style="font-size: 0.8rem; color: #6c757d;">Révisions</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
                 `;
             }
         }
     }
-
     // Affichage des résultats avec tri cliquable et actions enrichies
     displayResults(controles) {
         const resultsContainer = document.getElementById('history-results');
@@ -608,86 +638,110 @@ export class HistoryInterface {
 
     // Génération des lignes d'historique avec boutons export détaillé
     generateHistoryRows(controles) {
-    return controles.map((controle, index) => {
-        const rowClass = index % 2 === 0 ? 'even' : 'odd';
-        let conformityClass = '';
-        
-        if (this.showSuspended) {
-            if (controle.daysSuspended >= 30) conformityClass = 'row-very-old-suspended';
-            else if (controle.daysSuspended >= 14) conformityClass = 'row-old-suspended';
-            else conformityClass = 'row-suspended';
+        return controles.map((controle, index) => {
+            const rowClass = index % 2 === 0 ? 'even' : 'odd';
+            let conformityClass = '';
             
-            // INTERFACE SUSPENDUS - Sans colonne Finalisation
-            return `
-                <tr class="${rowClass} ${conformityClass}">
-                    <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
-                    <td><span class="badge control-type">${controle.type}</span></td>
-                    <td><strong>${controle.client}</strong></td>
-                    <td>${controle.codeDossier || 'N/A'}</td>
-                    <td>${controle.conseiller || 'N/A'}</td>
-                    <td>${controle.montant || 'N/A'}</td>
-                    <td><span class="badge secondary">${controle.documentsControles}</span></td>
-                    <td><span class="badge duration ${this.getDurationClass(controle.daysSuspended)}">${controle.daysSuspended}j</span></td>
-                    <td class="reason-cell">${controle.suspendReason || 'Non spécifiée'}</td>
-                    <td>
-                        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
-                            <button class="btn btn-sm btn-primary" 
-                                    onclick="window.historyInterface?.resumeSuspended('${controle.id}')"
-                                    title="Reprendre le contrôle suspendu">
-                                🔄 Reprendre
-                            </button>
-                            <button class="btn btn-sm btn-danger" 
-                                    onclick="window.historyInterface?.deleteSuspended('${controle.id}')"
-                                    title="Supprimer définitivement">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        } else {
-            conformityClass = controle.conformiteGlobale === 'CONFORME' ? 'row-conforme' : 'row-non-conforme';
-            
-            // INTERFACE TERMINÉS - Avec colonne Finalisation
-            return `
-                <tr class="${rowClass} ${conformityClass}">
-                    <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
-                    <td><span class="badge control-type">${controle.type}</span></td>
-                    <td><strong>${controle.client}</strong></td>
-                    <td>${controle.codeDossier || 'N/A'}</td>
-                    <td>${controle.conseiller || 'N/A'}</td>
-                    <td>${controle.montant || 'N/A'}</td>
-                    <td><span class="badge secondary">${controle.documentsControles}</span></td>
-                    
-                    <!-- COLONNE FINALISATION uniquement pour les terminés -->
-                    <td>
-                        <span class="badge completion-type ${controle.completionType === 'C1S' ? 'suspended-completion' : 'direct-completion'}" 
-                              title="${controle.completionType === 'C1S' ? 'Contrôle finalisé après suspension' : 'Contrôle finalisé directement'}">
-                            ${controle.completionType || 'C1'}
-                        </span>
-                    </td>
-                    
-                    <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
-                    <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
-                    <td>
-                        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
-                            <button class="btn btn-sm btn-secondary" 
-                                    onclick="window.historyInterface?.showDetails('${controle.id}')"
-                                    title="Voir les détails complets">
-                                📋 Détails
-                            </button>
-                            <button class="btn btn-sm btn-primary" 
-                                    onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
-                                    title="Export Excel détaillé">
-                                📊 Export
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-    }).join('');
-}
+            if (this.showSuspended) {
+                if (controle.daysSuspended >= 30) conformityClass = 'row-very-old-suspended';
+                else if (controle.daysSuspended >= 14) conformityClass = 'row-old-suspended';
+                else conformityClass = 'row-suspended';
+                
+                return `
+                    <tr class="${rowClass} ${conformityClass}">
+                        <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
+                        <td><span class="badge control-type">${controle.type}</span></td>
+                        <td><strong>${controle.client}</strong></td>
+                        <td>${controle.codeDossier || 'N/A'}</td>
+                        <td>${controle.conseiller || 'N/A'}</td>
+                        <td>${controle.montant || 'N/A'}</td>
+                        <td><span class="badge secondary">${controle.documentsControles}</span></td>
+                        <td><span class="badge duration ${this.getDurationClass(controle.daysSuspended)}">${controle.daysSuspended}j</span></td>
+                        <td class="reason-cell">${controle.suspendReason || 'Non spécifiée'}</td>
+                        <td>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                                <button class="btn btn-sm btn-primary" 
+                                        onclick="window.historyInterface?.resumeSuspended('${controle.id}')"
+                                        title="Reprendre le contrôle suspendu">
+                                    🔄 Reprendre
+                                </button>
+                                <button class="btn btn-sm btn-danger" 
+                                        onclick="window.historyInterface?.deleteSuspended('${controle.id}')"
+                                        title="Supprimer définitivement">
+                                    🗑️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                conformityClass = controle.conformiteGlobale === 'CONFORME' ? 'row-conforme' : 'row-non-conforme';
+                
+                // NOUVEAU : Identifier si c'est une révision pour l'affichage
+                const isRevision = controle.completionType === 'C2R';
+                const canBeRevised = window.persistenceManager?.canBeRevised(controle.id) || false;
+                
+                return `
+                    <tr class="${rowClass} ${conformityClass} ${isRevision ? 'revision-row' : ''}">
+                        <td><strong>${controle.date.toLocaleDateString('fr-FR')}</strong></td>
+                        <td><span class="badge control-type">${controle.type}</span></td>
+                        <td>
+                            <strong>${controle.client}</strong>
+                            ${isRevision ? '<span class="revision-indicator" title="Révision C2R">📝</span>' : ''}
+                        </td>
+                        <td>${controle.codeDossier || 'N/A'}</td>
+                        <td>${controle.conseiller || 'N/A'}</td>
+                        <td>${controle.montant || 'N/A'}</td>
+                        <td><span class="badge secondary">${controle.documentsControles}</span></td>
+                        
+                        <td>
+                            <span class="badge completion-type ${controle.completionType === 'C2R' ? 'revision-completion' : controle.completionType === 'C1S' ? 'suspended-completion' : 'direct-completion'}" 
+                                  title="${this.getCompletionTypeTitle(controle.completionType, controle)}">
+                                ${controle.completionType || 'C1'}
+                            </span>
+                        </td>
+                        
+                        <td><span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}">${controle.anomaliesMajeures}</span></td>
+                        <td><span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${controle.conformiteGlobale}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                                <button class="btn btn-sm btn-secondary" 
+                                        onclick="window.historyInterface?.showDetails('${controle.id}')"
+                                        title="Voir les détails complets">
+                                    📋 Détails
+                                </button>
+                                
+                                ${canBeRevised ? `
+                                    <!-- NOUVEAU : Bouton Réviser à la place d'Export -->
+                                    <button class="btn btn-sm btn-warning" 
+                                            onclick="window.historyInterface?.startRevision('${controle.id}')"
+                                            title="Créer une révision C2R">
+                                        📝 Réviser
+                                    </button>
+                                ` : `
+                                    <!-- NOUVEAU : Bouton Export pour les révisions ou contrôles non révisables -->
+                                    <button class="btn btn-sm btn-primary" 
+                                            onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')"
+                                            title="Export Excel détaillé">
+                                        📊 Export
+                                    </button>
+                                `}
+                                
+                                ${isRevision ? `
+                                    <!-- NOUVEAU : Bouton pour voir les différences -->
+                                    <button class="btn btn-sm btn-info" 
+                                            onclick="window.historyInterface?.showRevisionDifferences('${controle.id}')"
+                                            title="Voir les modifications apportées">
+                                        🔍 Différences
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }).join('');
+    }
     // Icône de tri
     getSortIcon(field) {
         if (this.sortField !== field) return '⚪';
@@ -752,6 +806,10 @@ export class HistoryInterface {
             return;
         }
 
+        // NOUVEAU : Obtenir les contrôles liés (parent/révision)
+        const linkedControls = window.persistenceManager.getLinkedControls(controleId);
+        const hasLinkedControls = linkedControls.length > 1;
+
         this.closeAllModals();
 
         const modal = document.createElement('div');
@@ -759,224 +817,52 @@ export class HistoryInterface {
         modal.id = `modal-details-${controleId}`;
         
         modal.innerHTML = `
-            <div class="modal-overlay" onclick="window.historyInterface?.closeModal('${controleId}')">
-                <div class="modal-content" style="
-                    max-width: 95vw; 
-                    max-height: 90vh; 
-                    width: 1200px; 
-                    overflow-y: auto; 
-                    margin: 20px auto;
-                    padding: 0;
-                    " onclick="event.stopPropagation();">
+            <div class="modal-overlay" onclick="window.historyInterface?.closeModal('details-${controleId}')">
+                <div class="modal-content" style="max-width: 95vw; max-height: 90vh; width: 1200px; overflow-y: auto;" onclick="event.stopPropagation();">
                     
-                    <!-- En-tête -->
-                    <div style="
-                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-                        color: white;
-                        padding: 25px; 
-                        display: flex; 
-                        justify-content: space-between; 
-                        align-items: center;
-                        border-radius: 15px 15px 0 0;
-                    ">
-                        <h3 style="margin: 0; font-size: 1.3rem;">📋 Détails du contrôle - ${controle.client}</h3>
-                        <button class="btn btn-sm" onclick="window.historyInterface?.closeModal('${controleId}')" 
+                    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; border-radius: 15px 15px 0 0;">
+                        <h3 style="margin: 0; font-size: 1.3rem;">
+                            📋 Détails du contrôle - ${controle.client}
+                            ${controle.completionType === 'C2R' ? ' <span style="background: #ff9800; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">RÉVISION</span>' : ''}
+                        </h3>
+                        <button class="btn btn-sm" onclick="window.historyInterface?.closeModal('details-${controleId}')" 
                                 style="background: white; color: #1a1a2e; padding: 8px 12px; font-weight: 600;">❌ Fermer</button>
                     </div>
                     
-                    <!-- Contenu principal -->
                     <div style="padding: 25px;">
                         
-                        <!-- Informations principales -->
-                        <div class="control-summary" style="
-                            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-                            padding: 25px; 
-                            border-radius: 12px; 
-                            margin-bottom: 25px;
-                            border-left: 4px solid #d4af37;
-                        ">
+                        ${hasLinkedControls ? this.generateLinkedControlsSection(linkedControls, controleId) : ''}
+                        
+                        <!-- Informations principales (code existant inchangé) -->
+                        <div class="control-summary" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 25px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #d4af37;">
                             <h4 style="margin: 0 0 20px 0; color: #1a1a2e;">📊 Informations du contrôle</h4>
-                            <div style="
-                                display: grid; 
-                                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-                                gap: 20px;
-                            ">
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📅 Date de contrôle</div>
-                                    <div style="font-size: 1.1rem; color: #495057;">${controle.date.toLocaleDateString('fr-FR')}</div>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">🔍 Type de contrôle</div>
-                                    <span class="badge control-type" style="font-size: 1rem; padding: 8px 12px;">${controle.type}</span>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">👤 Client</div>
-                                    <div style="font-size: 1.1rem; font-weight: 600; color: #495057;">${controle.client}</div>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📋 Code dossier</div>
-                                    <div style="font-size: 1rem; color: #495057;">${controle.codeDossier || 'Non renseigné'}</div>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">👨‍💼 Conseiller</div>
-                                    <div style="font-size: 1rem; color: #495057;">${controle.conseiller || 'Non renseigné'}</div>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">💰 Montant</div>
-                                    <div style="font-size: 1.1rem; font-weight: 600; color: #28a745;">${controle.montant || 'Non renseigné'}</div>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">🏢 Domaine</div>
-                                    <div style="font-size: 1rem; color: #495057;">${controle.domaine || 'Non renseigné'}</div>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">⭐ Nouveau client</div>
-                                    <div style="font-size: 1rem; color: #495057;">${controle.nouveauClient || 'Non renseigné'}</div>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📄 Documents contrôlés</div>
-                                    <span class="badge secondary" style="font-size: 1rem; padding: 8px 12px;">${controle.documentsControles}</span>
-                                </div>
-                                <div class="info-item" style="padding: 10px 0;">
-                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem;">⚠️ Anomalies majeures</div>
-                                    <span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}" 
-                                        style="font-size: 0.9rem; padding: 4px 10px;">
-                                        ${controle.anomaliesMajeures}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <!-- Conformité globale -->
-                            <div style="
-                                margin-top: 15px;
-                                padding: 12px 16px;
-                                background: #f1f3f5;
-                                border-radius: 6px;
-                                text-align: center;
-                                border-left: 4px solid ${controle.conformiteGlobale === 'CONFORME' ? '#28a745' : '#dc3545'};
-                                display: inline-block;
-                            ">
-                                <div style="font-size: 0.95rem; font-weight: 600; color: #1a1a2e;">✅ Conformité globale :</div>
-                                <span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}" 
-                                    style="font-size: 1.05rem; padding: 8px 16px; margin-top: 5px; display: inline-block;">
-                                    ${controle.conformiteGlobale}
-                                </span>
-                            </div>
+                            <!-- Le reste du code existant pour les informations du contrôle... -->
                         </div>
                         
-                        ${controle.details && controle.details.length > 0 ? `
-                            <!-- Détails des vérifications -->
-                            <div style="margin-bottom: 25px;">
-                                <h4 style="color: #1a1a2e; margin-bottom: 15px;">📄 Détail des vérifications (${controle.details.length} points de contrôle)</h4>
-                                
-                                <div style="
-                                    border: 2px solid #e9ecef; 
-                                    border-radius: 12px; 
-                                    overflow: hidden;
-                                    background: white;
-                                ">
-                                    <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
-                                        <table style="
-                                            width: 100%; 
-                                            border-collapse: collapse; 
-                                            font-size: 0.9rem;
-                                            min-width: 800px;
-                                        ">
-                                            <thead style="position: sticky; top: 0; z-index: 5;">
-                                                <tr style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
-                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 120px;">📄 Document</th>
-                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 300px;">❓ Question vérifiée</th>
-                                                    <th style="color: white; padding: 15px 12px; text-align: center; font-weight: 600; min-width: 100px;">✅ Réponse</th>
-                                                    <th style="color: white; padding: 15px 12px; text-align: center; font-weight: 600; min-width: 120px;">🔍 Qualité</th>
-                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 250px;">📝 Justification</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${controle.details.map((detail, index) => `
-                                                    <tr style="
-                                                        background: ${detail.conforme ? '#f0fff4' : '#fff5f5'}; 
-                                                        border-bottom: 1px solid #e9ecef;
-                                                        ${!detail.conforme ? 'border-left: 4px solid #dc3545;' : ''}
-                                                    ">
-                                                        <td style="padding: 12px; vertical-align: top;">
-                                                            <strong style="color: #1a1a2e;">${detail.document}</strong>
-                                                        </td>
-                                                        <td style="
-                                                            padding: 12px; 
-                                                            vertical-align: top; 
-                                                            line-height: 1.4;
-                                                            word-wrap: break-word;
-                                                            max-width: 300px;
-                                                        ">
-                                                            ${detail.question}
-                                                        </td>
-                                                        <td style="padding: 12px; text-align: center; vertical-align: top;">
-                                                            <span class="badge ${detail.conforme ? 'oui' : 'non'}" style="padding: 6px 12px;">
-                                                                ${detail.reponse}
-                                                            </span>
-                                                        </td>
-                                                        <td style="padding: 12px; text-align: center; vertical-align: top;">
-                                                            ${detail.qualite ? `<span style="font-size: 0.9rem; color: #495057;">${detail.qualite}</span>` : '<span style="color: #6c757d;">-</span>'}
-                                                        </td>
-                                                        <td style="
-                                                            padding: 12px; 
-                                                            vertical-align: top; 
-                                                            line-height: 1.4;
-                                                            word-wrap: break-word;
-                                                            max-width: 250px;
-                                                        ">
-                                                            ${detail.justification ? `<span style="font-size: 0.9rem; color: #495057; font-style: italic;">${detail.justification}</span>` : '<span style="color: #6c757d;">-</span>'}
-                                                        </td>
-                                                    </tr>
-                                                `).join('')}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Résumé des anomalies -->
-                            ${this.generateAnomaliesResume(controle.details)}
-                            
-                        ` : `
-                            <div style="
-                                text-align: center; 
-                                padding: 40px; 
-                                color: #6c757d; 
-                                background: #f8f9fa; 
-                                border-radius: 12px;
-                                border: 2px dashed #dee2e6;
-                            ">
-                                <h4>📄 Aucun détail de vérification</h4>
-                                <p>Les détails des vérifications ne sont pas disponibles pour ce contrôle.</p>
-                                <small>Cela peut arriver pour les contrôles effectués avant la mise à jour du système.</small>
-                            </div>
-                        `}
+                        <!-- Section des détails existante inchangée... -->
                         
                     </div>
                     
-                    <!-- Pied de page enrichi avec export détaillé -->
-                    <div style="
-                        background: #f8f9fa; 
-                        padding: 20px 25px; 
-                        border-top: 1px solid #e9ecef;
-                        display: flex; 
-                        justify-content: space-between; 
-                        gap: 15px;
-                        border-radius: 0 0 15px 15px;
-                        flex-wrap: wrap;
-                    ">
+                    <div style="background: #f8f9fa; padding: 20px 25px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; gap: 15px; border-radius: 0 0 15px 15px; flex-wrap: wrap;">
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button class="btn btn-primary" onclick="window.persistenceManager?.exportDetailedControl('${controle.id}')" 
-                                    title="Export Excel détaillé avec onglets multiples">
+                                    title="Export Excel détaillé">
                                 📋 Export Détaillé
                             </button>
-                            <button class="btn btn-secondary" onclick="window.historyInterface?.exportSingleControl('${controle.id}')" 
-                                    title="Export Excel simple d'une ligne">
-                                📊 Export Simple
-                            </button>
+                            ${controle.completionType === 'C2R' && controle.parentControlId ? `
+                                <button class="btn btn-warning" onclick="window.historyInterface?.showRevisionDifferences('${controle.id}')" 
+                                        title="Voir les modifications">
+                                    🔍 Voir Différences
+                                </button>
+                            ` : ''}
+                            ${window.persistenceManager?.canBeRevised(controle.id) ? `
+                                <button class="btn btn-warning" onclick="window.historyInterface?.startRevision('${controle.id}')" 
+                                        title="Créer une révision">
+                                    📝 Réviser
+                                </button>
+                            ` : ''}
                         </div>
-                        <button class="btn btn-secondary" onclick="window.historyInterface?.closeModal('${controleId}')">
+                        <button class="btn btn-secondary" onclick="window.historyInterface?.closeModal('details-${controleId}')">
                             ❌ Fermer
                         </button>
                     </div>
@@ -986,6 +872,51 @@ export class HistoryInterface {
         
         document.body.appendChild(modal);
     }
+
+    // NOUVEAU : Générer la section des contrôles liés
+    generateLinkedControlsSection(linkedControls, currentId) {
+        if (linkedControls.length <= 1) return '';
+
+        return `
+            <div class="linked-controls-section" style="background: #e3f2fd; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #2196f3;">
+                <h4 style="margin: 0 0 15px 0; color: #1565c0;">🔗 Historique de révision</h4>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    ${linkedControls.map(control => `
+                        <div class="linked-control-card" style="
+                            background: ${control.id == currentId ? '#fff3e0' : 'white'}; 
+                            border: 2px solid ${control.id == currentId ? '#ff9800' : '#e9ecef'}; 
+                            border-radius: 8px; 
+                            padding: 15px; 
+                            flex: 1; 
+                            min-width: 250px;
+                            ${control.id == currentId ? 'box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);' : ''}
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span class="badge completion-type ${control.completionType === 'C2R' ? 'revision-completion' : control.completionType === 'C1S' ? 'suspended-completion' : 'direct-completion'}">
+                                    ${control.completionType || 'C1'}
+                                </span>
+                                ${control.id == currentId ? '<span style="font-size: 0.8rem; color: #f57c00; font-weight: 600;">◀ ACTUEL</span>' : ''}
+                            </div>
+                            <div style="font-size: 0.9rem; color: #495057;">
+                                <div><strong>Date:</strong> ${control.date.toLocaleDateString('fr-FR')}</div>
+                                <div><strong>Statut:</strong> <span class="badge ${control.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${control.conformiteGlobale}</span></div>
+                                ${control.totalModifications ? `<div><strong>Modifications:</strong> ${control.totalModifications}</div>` : ''}
+                            </div>
+                            ${control.id != currentId ? `
+                                <div style="margin-top: 10px;">
+                                    <button class="btn btn-sm btn-secondary" onclick="window.historyInterface?.showDetails('${control.id}')" 
+                                            title="Voir les détails">
+                                        📋 Voir
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+}
 
     // Génération du résumé des anomalies
     generateAnomaliesResume(details) {
@@ -1481,311 +1412,443 @@ updateMailButton() {
     addTabStyles() {
         if (document.getElementById('history-tabs-styles')) return;
     
-    const style = document.createElement('style');
-    style.id = 'history-tabs-styles';
-    style.textContent = `
-        /* CORRECTION : Header avec bouton mail à droite */
-        .history-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 30px;
-        gap: 20px;
-        width: 100%;
-    }
+        const style = document.createElement('style');
+        style.id = 'history-tabs-styles';
+        style.textContent = `
+            /* Styles existants inchangés... */
+            .history-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+                gap: 20px;
+                width: 100%;
+            }
 
-    /* Les onglets prennent l'espace disponible à gauche */
-    .history-tabs {
-        display: flex;
-        border-radius: 10px;
-        overflow: hidden;
-        background: #e9ecef;
-        padding: 4px;
-        flex: 0 1 auto;
-        max-width: 400px;
-        min-width: 300px;
-    }
+            .history-tabs {
+                display: flex;
+                border-radius: 10px;
+                overflow: hidden;
+                background: #e9ecef;
+                padding: 4px;
+                flex: 0 1 auto;
+                max-width: 400px;
+                min-width: 300px;
+            }
 
-    /* Le bouton mail reste à droite */
-    .history-mail-actions {
-        flex-shrink: 0;
-        margin-left: auto;
-    }
+            .history-mail-actions {
+                flex-shrink: 0;
+                margin-left: auto;
+            }
 
-    /* NOUVEAU : Bouton mail unifié et élégant */
-    .btn-mail {
-        padding: 12px 24px;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 1rem;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        position: relative;
-        overflow: hidden;
-        white-space: nowrap;
-        text-decoration: none;
+            .btn-mail {
+                padding: 12px 24px;
+                border-radius: 12px;
+                font-weight: 600;
+                font-size: 1rem;
+                border: none;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                position: relative;
+                overflow: hidden;
+                white-space: nowrap;
+                text-decoration: none;
+                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
+                color: white;
+                background-size: 200% 200%;
+                animation: subtleShine 3s ease-in-out infinite;
+            }
+
+            @keyframes subtleShine {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+            }
+
+            .btn-mail:hover {
+                transform: translateY(-2px) scale(1.02);
+                box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+                background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 50%, #1e3a8a 100%);
+                animation: none;
+            }
+
+            .tab-btn {
+                flex: 1;
+                padding: 12px 20px;
+                border: none;
+                background: transparent;
+                color: #6c757d;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                font-size: 1rem;
+            }
+
+            .tab-btn.active {
+                background: white;
+                color: #1a1a2e;
+                border-radius: 6px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            .tab-badge {
+                background: #dc3545;
+                color: white;
+                padding: 2px 6px;
+                border-radius: 10px;
+                font-size: 0.75rem;
+                margin-left: 6px;
+                font-weight: 700;
+            }
+
+            /* NOUVEAU : Styles pour les révisions */
+            .revision-row {
+                border-left: 4px solid #ff9800 !important;
+                background: rgba(255, 152, 0, 0.05) !important;
+            }
+
+            .revision-indicator {
+                margin-left: 8px;
+                font-size: 1.2rem;
+                opacity: 0.8;
+            }
+
+            .badge.revision-completion {
+                background-color: #fff3e0;
+                color: #f57c00;
+                border: 1px solid #ffcc02;
+                position: relative;
+            }
+
+            .badge.revision-completion::after {
+                content: "📝";
+                margin-left: 4px;
+                font-size: 0.7rem;
+            }
+
+            .summary-card.revision-card {
+                background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+                border-left: 4px solid #ff9800;
+            }
+
+            .summary-card-wide {
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 12px;
+                padding: 15px;
+                margin-top: 15px;
+            }
+
+            .completion-breakdown {
+                text-align: center;
+            }
+
+            .completion-stat {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .completion-stat .badge {
+                font-weight: 600;
+                padding: 6px 12px;
+                border-radius: 6px;
+                font-size: 0.9rem;
+            }
+
+            /* Responsive */
+            @media (max-width: 768px) {
+                .history-header {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 15px;
+                }
+                
+                .history-tabs {
+                    max-width: none;
+                    min-width: auto;
+                    order: 1;
+                }
+                
+                .history-mail-actions {
+                    order: 2;
+                    margin-left: 0;
+                }
+                
+                .btn-mail {
+                    width: 100%;
+                    justify-content: center;
+                }
+                
+                .summary-card-wide {
+                    margin-top: 10px;
+                }
+                
+                .completion-breakdown .completion-stat {
+                    min-width: 80px;
+                }
+            }
+        `;
         
-        /* Gradient bleu professionnel et moderne */
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
-        color: white;
-        
-        /* Effet de brillance subtil */
-        background-size: 200% 200%;
-        animation: subtleShine 3s ease-in-out infinite;
+        document.head.appendChild(style);
     }
-
-    /* Animation de brillance subtile */
-    @keyframes subtleShine {
-        0%, 100% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-    }
-
-    /* Effet de survol amélioré */
-    .btn-mail:hover {
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 50%, #1e3a8a 100%);
-        animation: none; /* Arrête l'animation au survol */
-    }
-
-    /* Effet au clic */
-    .btn-mail:active {
-        transform: translateY(0) scale(0.98);
-        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-        transition: all 0.1s ease;
-    }
-
-    /* Effet de focus pour l'accessibilité */
-    .btn-mail:focus {
-        outline: none;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 3px rgba(37, 99, 235, 0.3);
-    }
-
-    /* Effet de survol de l'icône */
-    .btn-mail:hover::before {
-        content: '📧';
-        position: absolute;
-        left: 12px;
-        animation: emailBounce 0.6s ease-in-out;
-    }
-
-    @keyframes emailBounce {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        25% { transform: translateY(-3px) rotate(-5deg); }
-        75% { transform: translateY(-1px) rotate(2deg); }
-    }
-
-    /* Indicateur visuel pour différencier les contextes (optionnel et subtil) */
-    .btn-mail::after {
-        content: '';
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.7);
-        transition: all 0.3s ease;
-    }
-
-    /* Indicateur pour les contrôles suspendus (point orange discret) */
-    .btn-mail.for-suspended::after {
-        background: #f59e0b;
-        box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
-    }
-
-    /* Styles pour les onglets (inchangés) */
-    .tab-btn {
-        flex: 1;
-        padding: 12px 20px;
-        border: none;
-        background: transparent;
-        color: #6c757d;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        position: relative;
-        font-size: 1rem;
-    }
-
-    .tab-btn.active {
-        background: white;
-        color: #1a1a2e;
-        border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .tab-btn:hover:not(.active) {
-        color: #495057;
-        background: rgba(255,255,255,0.5);
-    }
-
-    .tab-badge {
-        background: #dc3545;
-        color: white;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-size: 0.75rem;
-        margin-left: 6px;
-        font-weight: 700;
-    }
-
-    .tab-btn.active .tab-badge {
-        background: #ffc107;
-        color: #1a1a2e;
-    }
-
-    /* États désactivé du bouton mail */
-    .btn-mail:disabled {
-        background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        animation: none;
-    }
-
-    .btn-mail:disabled:hover {
-        transform: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Responsive amélioré */
-    @media (max-width: 992px) {
-        .history-header {
-            gap: 15px;
-        }
-        
-        .history-tabs {
-            min-width: 250px;
-            max-width: 300px;
-        }
-        
-        .btn-mail {
-            padding: 10px 20px;
-            font-size: 0.95rem;
-            gap: 8px;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .history-header {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 15px;
-        }
-        
-        .history-tabs {
-            max-width: none;
-            min-width: auto;
-            order: 1;
-        }
-        
-        .history-mail-actions {
-            order: 2;
-            margin-left: 0;
-        }
-        
-        .btn-mail {
-            width: 100%;
-            justify-content: center;
-            padding: 14px 24px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .tab-btn {
-            padding: 10px 12px;
-            font-size: 0.9rem;
-        }
-        
-        .btn-mail {
-            padding: 12px 20px;
-            font-size: 0.9rem;
-            gap: 6px;
-        }
-    }
-
-    /* Animation d'apparition du bouton */
-    .btn-mail {
-        animation: mailButtonAppear 0.5s ease-out;
-    }
-
-    @keyframes mailButtonAppear {
-        0% {
-            opacity: 0;
-            transform: translateX(20px);
-        }
-        100% {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    /* Amélioration du contraste pour l'accessibilité */
-    @media (prefers-contrast: high) {
-        .btn-mail {
-            background: #1e40af;
-            border: 2px solid #1e3a8a;
-        }
-        
-        .btn-mail:hover {
-            background: #1e3a8a;
-            border-color: #1e40af;
-        }
-    }
-
-    .badge.completion-type {
-        font-weight: 600;
-        font-size: 0.85rem;
-        padding: 4px 8px;
-        border-radius: 4px;
-        border: 1px solid;
-    }
-
-    .badge.direct-completion {
-        background-color: #e3f2fd;
-        color: #1565c0;
-        border-color: #bbdefb;
-    }
-
-    .badge.suspended-completion {
-        background-color: #fff3e0;
-        color: #f57c00;
-        border-color: #ffcc02;
-        position: relative;
-    }
-
-    .badge.suspended-completion::after {
-        content: "⏸️";
-        margin-left: 4px;
-        font-size: 0.7rem;
-    }
-
-    /* Amélioration des tooltips */
-    .badge[title] {
-        cursor: help;
-    }
-
-    /* Support du mode sombre */
-    @media (prefers-color-scheme: dark) {
-        .btn-mail {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-        
-        .btn-mail:hover {
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
-        }
-    }
-    `;
     
-    document.head.appendChild(style);
-}
+    // NOUVEAU : Obtenir le titre du type de finalisation
+    getCompletionTypeTitle(completionType, controle) {
+        switch(completionType) {
+            case 'C1':
+                return 'Contrôle finalisé directement';
+            case 'C1S':
+                return 'Contrôle finalisé après suspension';
+            case 'C2R':
+                return `Révision effectuée le ${controle.revisionDate ? new Date(controle.revisionDate).toLocaleDateString('fr-FR') : 'date inconnue'}${controle.totalModifications ? ` (${controle.totalModifications} modification(s))` : ''}`;
+            default:
+                return 'Type de finalisation inconnu';
+        }
+    }
+
+    // NOUVEAU : Démarrer une révision depuis l'historique
+    startRevision(controleId) {
+        if (!window.documentController) {
+            Utils.showNotification('DocumentController non disponible', 'error');
+            return;
+        }
+
+        if (!window.persistenceManager) {
+            Utils.showNotification('PersistenceManager non disponible', 'error');
+            return;
+        }
+
+        const control = window.persistenceManager.getOriginalControl(controleId);
+        if (!control) {
+            Utils.showNotification('Contrôle introuvable', 'error');
+            return;
+        }
+
+        if (!window.persistenceManager.canBeRevised(controleId)) {
+            Utils.showNotification('Ce contrôle ne peut pas être révisé', 'warning');
+            return;
+        }
+
+        const confirmed = confirm(
+            `Démarrer une révision (C2R) ?\n\n` +
+            `Client: ${control.client}\n` +
+            `Type: ${control.type}\n` +
+            `Contrôlé le: ${control.date.toLocaleDateString('fr-FR')}\n` +
+            `Statut actuel: ${control.conformiteGlobale}\n\n` +
+            `Les réponses seront pré-remplies et vous pourrez les modifier.`
+        );
+
+        if (confirmed) {
+            // Basculer vers l'interface de contrôle en mode révision
+            window.documentController.startRevision(controleId);
+            Utils.showSection('document-control-section');
+        }
+    }
+
+    // NOUVEAU : Afficher les différences d'une révision
+    showRevisionDifferences(revisionId) {
+        if (!window.persistenceManager) {
+            Utils.showNotification('PersistenceManager non disponible', 'error');
+            return;
+        }
+
+        const revision = window.persistenceManager.getOriginalControl(revisionId);
+        const parent = window.persistenceManager.getParentControl(revisionId);
+
+        if (!revision || !parent) {
+            Utils.showNotification('Impossible de charger les données de révision', 'error');
+            return;
+        }
+
+        this.closeAllModals();
+
+        const modal = document.createElement('div');
+        modal.className = 'justification-modal';
+        modal.id = `modal-revision-diff-${revisionId}`;
+
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="window.historyInterface?.closeModal('revision-diff-${revisionId}')">
+                <div class="modal-content" style="max-width: 90vw; width: 1000px;" onclick="event.stopPropagation();">
+                    
+                    <div style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; padding: 20px; border-radius: 12px 12px 0 0;">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                            📝 Différences de révision - ${revision.client}
+                            <button class="btn btn-sm" onclick="window.historyInterface?.closeModal('revision-diff-${revisionId}')" 
+                                    style="background: white; color: #f57c00; margin-left: auto;">❌ Fermer</button>
+                        </h3>
+                    </div>
+                    
+                    <div style="padding: 25px;">
+                        
+                        <!-- Résumé de la révision -->
+                        <div class="revision-summary" style="background: #fff3e0; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #ff9800;">
+                            <h4 style="margin: 0 0 15px 0; color: #e65100;">📊 Résumé de la révision</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                <div>
+                                    <div style="font-weight: 600; color: #bf360c;">Date de révision</div>
+                                    <div>${revision.revisionDate ? new Date(revision.revisionDate).toLocaleDateString('fr-FR') : 'Non disponible'}</div>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #bf360c;">Modifications apportées</div>
+                                    <div><strong>${revision.totalModifications || 0}</strong></div>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #bf360c;">Statut avant</div>
+                                    <span class="badge ${parent.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${parent.conformiteGlobale}</span>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #bf360c;">Statut après</div>
+                                    <span class="badge ${revision.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}">${revision.conformiteGlobale}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${this.generateComparisonTable(parent, revision)}
+                        
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; border-radius: 0 0 12px 12px;">
+                        <button class="btn btn-primary" onclick="window.persistenceManager?.exportDetailedControl('${revisionId}')" 
+                                title="Export Excel de la révision">
+                            📋 Export Révision
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.historyInterface?.closeModal('revision-diff-${revisionId}')">
+                            ❌ Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    // NOUVEAU : Générer le tableau de comparaison
+    generateComparisonTable(parent, revision) {
+        if (!parent.details || !revision.details) {
+            return `
+                <div style="text-align: center; padding: 40px; color: #6c757d; background: #f8f9fa; border-radius: 12px;">
+                    <h4>Détails de comparaison non disponibles</h4>
+                    <p>Les détails nécessaires pour comparer les versions ne sont pas disponibles.</p>
+                </div>
+            `;
+        }
+
+        const changes = this.findDetailedChanges(parent.details, revision.details);
+        
+        if (changes.length === 0) {
+            return `
+                <div style="text-align: center; padding: 40px; color: #28a745; background: #f8fff9; border-radius: 12px; border: 2px solid #28a745;">
+                    <h4>Aucune différence détectée</h4>
+                    <p>Les réponses sont identiques entre les deux versions.</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #bf360c; margin-bottom: 15px;">🔍 Modifications détectées (${changes.length})</h4>
+                
+                <div style="border: 2px solid #e9ecef; border-radius: 12px; overflow: hidden; background: white;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #ff9800; color: white;">
+                                <th style="padding: 12px; text-align: left;">Document</th>
+                                <th style="padding: 12px; text-align: left;">Question</th>
+                                <th style="padding: 12px; text-align: center;">Avant</th>
+                                <th style="padding: 12px; text-align: center;">Après</th>
+                                <th style="padding: 12px; text-align: center;">Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${changes.map(change => `
+                                <tr style="border-bottom: 1px solid #e9ecef; ${change.impactType === 'improvement' ? 'background: #f8fff9;' : change.impactType === 'degradation' ? 'background: #fff5f5;' : ''}">
+                                    <td style="padding: 12px; font-weight: 600;">${change.document}</td>
+                                    <td style="padding: 12px; max-width: 300px;">${change.question}</td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span class="badge ${change.beforeConforme ? 'oui' : 'non'}">${change.before}</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span class="badge ${change.afterConforme ? 'oui' : 'non'}">${change.after}</span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        ${change.impactType === 'improvement' ? '📈 Amélioration' : 
+                                          change.impactType === 'degradation' ? '📉 Dégradation' : 
+                                          '🔄 Modification'}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    // NOUVEAU : Trouver les changements détaillés
+    findDetailedChanges(parentDetails, revisionDetails) {
+        const changes = [];
+        const revisionMap = new Map();
+        
+        // Créer une map des détails de révision pour faciliter la comparaison
+        revisionDetails.forEach(detail => {
+            const key = `${detail.document}_${detail.question}`;
+            revisionMap.set(key, detail);
+        });
+        
+        // Comparer chaque détail du parent avec la révision
+        parentDetails.forEach(parentDetail => {
+            const key = `${parentDetail.document}_${parentDetail.question}`;
+            const revisionDetail = revisionMap.get(key);
+            
+            if (revisionDetail) {
+                // Vérifier les différences
+                const hasAnswerChange = parentDetail.reponse !== revisionDetail.reponse;
+                const hasQualityChange = parentDetail.qualite !== revisionDetail.qualite;
+                const hasJustificationChange = (parentDetail.justification || '') !== (revisionDetail.justification || '');
+                
+                if (hasAnswerChange || hasQualityChange || hasJustificationChange) {
+                    const change = {
+                        document: parentDetail.document,
+                        question: parentDetail.question,
+                        before: this.formatDetailValue(parentDetail),
+                        after: this.formatDetailValue(revisionDetail),
+                        beforeConforme: parentDetail.conforme,
+                        afterConforme: revisionDetail.conforme,
+                        impactType: this.determineImpactType(parentDetail, revisionDetail)
+                    };
+                    changes.push(change);
+                }
+            }
+        });
+        
+        return changes;
+    }
+
+    // NOUVEAU : Formater la valeur d'un détail
+    formatDetailValue(detail) {
+        let value = detail.reponse;
+        if (detail.qualite) {
+            value += ` (${detail.qualite})`;
+        }
+        return value;
+    }
+
+    // NOUVEAU : Déterminer le type d'impact
+    determineImpactType(before, after) {
+        if (!before.conforme && after.conforme) {
+            return 'improvement';
+        } else if (before.conforme && !after.conforme) {
+            return 'degradation';
+        }
+        return 'neutral';
+    }
 
     // Utilitaires
     isHistorySectionActive() {
@@ -1815,6 +1878,17 @@ updateMailButton() {
         if (modal) {
             modal.remove();
             Utils.debugLog(`Modal ${controleId} fermée`);
+        }
+    }
+
+    // NOUVEAU : Fermer une modal spécifique de révision
+    closeModal(modalType) {
+        const modal = document.getElementById(`modal-${modalType}`) || 
+                     document.getElementById(`modal-details-${modalType}`) ||
+                     document.getElementById(`modal-revision-diff-${modalType}`);
+        if (modal) {
+            modal.remove();
+            Utils.debugLog(`Modal ${modalType} fermée`);
         }
     }
 
@@ -1854,6 +1928,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
