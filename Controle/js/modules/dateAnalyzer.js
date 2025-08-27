@@ -6,13 +6,21 @@ export class DateAnalyzer {
     constructor() {
         this.allData = [];
         this.companyColors = {
-            primary: '1A1A2E',
-            secondary: '6C757D', 
-            success: '28A745',
-            warning: 'FFC107',
-            danger: 'DC3545',
-            light: 'F8F9FA',
-            info: '17A2B8'
+            // Couleurs principales - tons neutres
+            primary: '495057',      // Gris foncé pour les en-têtes
+            secondary: '6C757D',    // Gris moyen
+            
+            // Couleurs de statut - SEULEMENT vert, rouge, gris
+            success: '28A745',      // Vert pour valide/récent/très récent
+            danger: 'DC3545',       // Rouge pour expiré
+            muted: '6C757D',        // Gris pour non renseigné/invalide
+            
+            // Couleurs de fond neutres
+            light: 'F8F9FA',        // Gris très clair
+            lighter: 'F1F3F4',      // Gris clair alternatif
+            
+            // Couleur d'accent sobre
+            accent: '343A40'        // Gris très foncé pour les titres principaux
         };
         this.init();
     }
@@ -280,21 +288,46 @@ export class DateAnalyzer {
 
                 // Titre principal
                 if (R === 0) {
+                ws[cell_address].s = {
+                    ...ws[cell_address].s,
+                    font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
+                    fill: {
+                        patternType: "solid",
+                        fgColor: { rgb: this.companyColors.accent } // Gris très foncé
+                    },
+                    alignment: { horizontal: 'center', vertical: 'center' }
+                };
+            }
+            // En-têtes de colonnes
+            else if (R === 5) {
+                ws[cell_address].s = {
+                    ...ws[cell_address].s,
+                    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                    fill: {
+                        patternType: "solid",
+                        fgColor: { rgb: this.companyColors.primary } // Gris foncé
+                    },
+                    alignment: { horizontal: 'center', vertical: 'center' }
+                };
+            }
+            
+            // Dans formatStatsSheet - Titres simplifiés
+            if (ws[cell_address].v && typeof ws[cell_address].v === 'string') {
+                if (ws[cell_address].v.includes('STATISTIQUES')) {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
                         fill: {
                             patternType: "solid",
-                            fgColor: { rgb: this.companyColors.info }
+                            fgColor: { rgb: this.companyColors.accent }
                         },
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
-                // En-têtes de données
-                else if (R === 5) {
+                else if (ws[cell_address].v.includes('RÉSUMÉ') || ws[cell_address].v.includes('RÉPARTITION')) {
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
                         fill: {
                             patternType: "solid",
                             fgColor: { rgb: this.companyColors.primary }
@@ -302,47 +335,118 @@ export class DateAnalyzer {
                         alignment: { horizontal: 'center', vertical: 'center' }
                     };
                 }
-                // Données
-                else if (R > 5) {
-                    // Alternance de couleurs
-                    const isEvenRow = (R - 6) % 2 === 0;
-                    ws[cell_address].s.fill = {
+            }
+            
+            // Dans formatConseillerSheet - En-têtes simplifiés
+            if (R === 0) {
+                ws[cell_address].s = {
+                    ...ws[cell_address].s,
+                    font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                    fill: {
                         patternType: "solid",
-                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light }
-                    };
+                        fgColor: { rgb: this.companyColors.accent }
+                    },
+                    alignment: { horizontal: 'center', vertical: 'center' }
+                };
+            } else if (R === 2) {
+                ws[cell_address].s = {
+                    ...ws[cell_address].s,
+                    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                    fill: {
+                        patternType: "solid",
+                        fgColor: { rgb: this.companyColors.primary }
+                    },
+                    alignment: { horizontal: 'center', vertical: 'center' }
+                };
+            }
 
                     // Coloration des statuts
                     if (C === 5 || C === 7) { // Colonnes statuts
-                        const statusValue = ws[cell_address].v;
-                        if (statusValue && typeof statusValue === 'string') {
-                            const lowerStatus = statusValue.toLowerCase();
-                            
-                            if (lowerStatus.includes('expiré') || lowerStatus.includes('expired')) {
-                                ws[cell_address].s.fill = {
-                                    patternType: "solid",
-                                    fgColor: { rgb: this.companyColors.danger }
-                                };
-                                ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
-                            }
-                            else if (lowerStatus.includes('valide') || lowerStatus.includes('récent')) {
-                                ws[cell_address].s.fill = {
-                                    patternType: "solid",
-                                    fgColor: { rgb: this.companyColors.success }
-                                };
-                                ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
-                            }
-                            else if (lowerStatus.includes('non renseignée') || lowerStatus.includes('invalide')) {
-                                ws[cell_address].s.fill = {
-                                    patternType: "solid",
-                                    fgColor: { rgb: this.companyColors.secondary }
-                                };
-                                ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: 'FFFFFF' } };
-                            }
+                    const statusValue = ws[cell_address].v;
+                    if (statusValue && typeof statusValue === 'string') {
+                        const lowerStatus = statusValue.toLowerCase();
+                        
+                        if (lowerStatus.includes('expiré') || lowerStatus.includes('expired')) {
+                            // ROUGE pour tout ce qui est expiré
+                            ws[cell_address].s.fill = {
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.danger }
+                            };
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                bold: true, 
+                                color: { rgb: 'FFFFFF' } 
+                            };
+                        }
+                        else if (lowerStatus.includes('valide') || lowerStatus.includes('récent') || lowerStatus.includes('très récent')) {
+                            // VERT pour tout ce qui est valide (récent, très récent, valide)
+                            ws[cell_address].s.fill = {
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.success }
+                            };
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                bold: true, 
+                                color: { rgb: 'FFFFFF' } 
+                            };
+                        }
+                        else {
+                            // GRIS pour tout le reste (non renseigné, invalide, etc.)
+                            ws[cell_address].s.fill = {
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.muted }
+                            };
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                color: { rgb: 'FFFFFF' } 
+                            };
                         }
                     }
                 }
-            }
-        }
+                
+                // Dans formatConseillerSheet - Même logique simplifiée
+                if (C === 2 || C === 3) {
+                    const statusValue = ws[cell_address].v;
+                    if (statusValue && typeof statusValue === 'string') {
+                        const lowerStatus = statusValue.toLowerCase();
+                        
+                        if (lowerStatus.includes('expiré')) {
+                            // ROUGE pour expiré
+                            ws[cell_address].s.fill = {
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.danger }
+                            };
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                bold: true, 
+                                color: { rgb: 'FFFFFF' } 
+                            };
+                        } 
+                        else if (lowerStatus.includes('valide') || lowerStatus.includes('récent')) {
+                            // VERT pour tout ce qui est valide
+                            ws[cell_address].s.fill = {
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.success }
+                            };
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                bold: true, 
+                                color: { rgb: 'FFFFFF' } 
+                            };
+                        }
+                        else {
+                            // GRIS pour le reste
+                            ws[cell_address].s.fill = {
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.muted }
+                            };
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                color: { rgb: 'FFFFFF' } 
+                            };
+                        }
+                    }
+                }
 
         // Fusionner le titre
         ws['!merges'] = [
