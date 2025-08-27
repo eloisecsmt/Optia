@@ -1421,12 +1421,192 @@ export class PersistenceManager {
         };
     }
 
-    getStatistics() {
-         const totalControles = this.controles.length;
+    // PersistenceManager.js - Modifications pour le système de révision C2R
+
+export class PersistenceManager {
+    // MODIFICATION : Méthode saveControl étendue pour les révisions
+    saveControl(controlData) {
+        try {
+            const now = Date.now();
+            if (now - this.lastSaveTime < 1000) {
+                Utils.debugLog('Doublon détecté - sauvegarde ignorée');
+                return null;
+            }
+            this.lastSaveTime = now;
+            
+            if (!controlData || !controlData.dossier) {
+                Utils.debugLog('Données de contrôle invalides');
+                return null;
+            }
+    
+            const dossierKey = this.generateDossierKey(controlData.dossier);
+            const controlType = controlData.control?.definition?.name || 'Type inconnu';
+            
+            // Récupérer les infos de suspension/révision
+            const wasSuspended = controlData.wasSuspended || false;
+            const suspensionInfo = controlData.suspensionInfo || null;
+            const isRevision = controlData.isRevision || false; // NOUVEAU
+            
+            Utils.debugLog(`Sauvegarde contrôle: ${controlData.dossier.client} - Type: ${controlType}${isRevision ? ' [RÉVISION]' : ''}`);
+            
+            // NOUVEAU : Déterminer le type de finalisation
+            let completionType = 'C1';
+            if (isRevision) {
+                completionType = 'C2R';
+            } else if (wasSuspended) {
+                completionType = 'C1S';
+            }
+            
+            const controle = {
+                id: Date.now(),
+                date: new Date(),
+                type: controlType,
+                client: controlData.dossier.client || 'Client inconnu',
+                codeDossier: controlData.dossier.codeDossier || '',
+                conseiller: controlData.dossier.conseiller || '',
+                montant: controlData.dossier.montant || '',
+                domaine: controlData.dossier.domaine || '',
+                typeActe: controlData.dossier.typeActe || '',
+                dateEnvoi: controlData.dossier.dateEnvoi || '',
+                nouveauClient: controlData.dossier.nouveauClient || '',
+                statut: 'Terminé',
+                
+                // Type de finalisation
+                completionType: completionType,
+                
+                // NOUVEAU : Informations spécifiques aux révisions
+                ...(isRevision && {
+                    parentControlId: controlData.parentControlId,
+                    revisionDate: controlData.revisionDate,
+                    modifiedFields: controlData.modifiedFields || [],
+                    totalModifications: controlData.totalModifications || 0
+                }),
+                
+                // Informations sur la suspension si applicable
+                ...(wasSuspended && suspensionInfo && {
+                    suspensionInfo: {
+                        suspendedAt: suspensionInfo.suspendedAt,
+                        suspendReason: suspensionInfo.suspendReason,
+                        suspensionDuration: Math.floor((new Date() - new Date(suspensionInfo.suspendedAt)) / (1000 * 60 * 60 * 24))
+                    }
+                }),
+                
+                anomaliesMajeures: controlData.obligatoryIssuesCount || 0,
+                documentsControles: controlData.documents ? 
+                    `${Object.values(controlData.documents).filter(d => d.status === 'completed').length}/${Object.keys(controlData.documents).length}` : 
+                    '0/0',
+                conformiteGlobale: (controlData.obligatoryIssuesCount || 0) === 0 ? 'CONFORME' : 'NON CONFORME',
+                details: controlData.responses ? this.extractDetails(controlData) : [],
+                
+                rawControlData: {
+                    dossier: controlData.dossier,
+                    control: controlData.control,
+                    documents: controlData.documents,
+                    responses: controlData.responses,
+                    obligatoryIssuesCount: controlData.obligatoryIssuesCount,
+                    completedAt: controlData.completedAt
+                }
+            };
+    
+            this.controles.push(controle);
+            this.saveToStorage();
+            this.markDossierAsControlled(dossierKey, controle.type);
+            
+            Utils.debugLog(`Contrôle sauvegardé avec succès:`);
+            Utils.debugLog(`- Client: ${controle.client}`);
+            Utils.debugLog(`- Type finalisation: ${controle.completionType}`);
+            Utils.debugLog(`- Conformité: ${controle.conformiteGlobale}`);
+            if (isRevision) {
+                Utils.debugLog(`- Parent ID: ${controle.parentControlId}`);
+                Utils.debugLog(`- Modifications: ${controle.totalModifications}`);
+            }
+            
+            return controle;
+    
+        } catch (error) {
+            Utils.debugLog('Erreur lors de la sauvegarde du contrôle: ' + error.message);
+            console.error('Erreur sauvegarde contrôle:', error);
+            return null;
+        }
+    }
+
+    // NOUVEAU : Obtenir le contrôle original par ID
+    getOriginalControl(controleId) {
+        return this.controles.find(c => c.id == controleId);
+    }
+
+    // NOUVEAU : Vérifier si un contrôle peut être révisé
+    canBeRevised(controleId) {
+        const control = this.getOriginalControl(controleId);
+        if (!control) return false;
+
+        // Un contrôle ne peut être révisé que s'il est C1 ou C1S
+        if (control.completionType === 'C2R') {
+            return false;
+        }
+
+        // Vérifier qu'il n'existe pas déjà une révision
+        const existingRevision = this.controles.find(c => c.parentControlId == controleId);
+        if (existingRevision) {
+            return false;
+        }
+
+        return true;
+    }
+
+    // NOUVEAU : Obtenir la révision d'un contrôle
+    getRevision(parentControlId) {
+        return this.controles.find(c => c.parentControlId == parentControlId);
+    }
+
+    // NOUVEAU : Obtenir le contrôle parent d'une révision
+    getParentControl(revisionId) {
+        const revision = this.controles.find(c => c.id == revisionId);
+        if (!revision || !revision.parentControlId) return null;
         
-        // NOUVEAU : Compter par type de finalisation
-        const c1Controls = this.controles.filter(c => c.completionType === 'C1').length;
-        const c1sControls = this.controles.filter(c => c.completionType === 'C1S').length;
+        return this.controles.find(c => c.id == revision.parentControlId);
+    }
+
+    // NOUVEAU : Obtenir tous les contrôles liés (parent + révision)
+    getLinkedControls(controleId) {
+        const control = this.getOriginalControl(controleId);
+        if (!control) return [];
+
+        const results = [control];
+        
+        // Si c'est un parent, chercher sa révision
+        if (control.completionType !== 'C2R') {
+            const revision = this.getRevision(controleId);
+            if (revision) {
+                results.push(revision);
+            }
+        }
+        // Si c'est une révision, chercher son parent
+        else if (control.parentControlId) {
+            const parent = this.getParentControl(controleId);
+            if (parent) {
+                results.unshift(parent); // Parent en premier
+            }
+        }
+
+        return results;
+    }
+
+    // MODIFICATION : Statistiques étendues avec les révisions
+    getStatistics() {
+        const totalControles = this.controles.length;
+        
+        // NOUVEAU : Compter par type de finalisation avec fallback pour anciens contrôles
+        const c1Controls = this.controles.filter(c => {
+            const type = c.completionType || (c.wasSuspended ? 'C1S' : 'C1'); // Fallback pour anciens contrôles
+            return type === 'C1';
+        }).length;
+        
+        const c1sControls = this.controles.filter(c => {
+            const type = c.completionType || (c.wasSuspended ? 'C1S' : 'C1'); // Fallback pour anciens contrôles
+            return type === 'C1S';
+        }).length;
+        
         const c2rControls = this.controles.filter(c => c.completionType === 'C2R').length;
         
         // NOUVEAU : Calculer les conformités par type
@@ -2860,6 +3040,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
