@@ -2838,67 +2838,6 @@ export class PersistenceManager {
                 Math.round((totalRevisions / this.controles.length) * 100) : 0
         };
     }
-}ter par type de finalisation
-        const c1Controls = this.controles.filter(c => c.completionType === 'C1').length;
-        const c1sControls = this.controles.filter(c => c.completionType === 'C1S').length;
-        const c2rControls = this.controles.filter(c => c.completionType === 'C2R').length;
-        
-        // NOUVEAU : Calculer les conformités par type
-        const c1Conformes = this.controles.filter(c => c.completionType === 'C1' && c.conformiteGlobale === 'CONFORME').length;
-        const c1sConformes = this.controles.filter(c => c.completionType === 'C1S' && c.conformiteGlobale === 'CONFORME').length;
-        const c2rConformes = this.controles.filter(c => c.completionType === 'C2R' && c.conformiteGlobale === 'CONFORME').length;
-        
-        // NOUVEAU : Calculer le taux de conformité révisé
-        const revisedComplianceRate = this.calculateRevisedComplianceRate();
-        
-        // Statistiques existantes
-        const conformes = this.controles.filter(c => c.conformiteGlobale === 'CONFORME').length;
-        const directCompletions = this.controles.filter(c => c.completionType === 'C1').length;
-        const suspendedCompletions = this.controles.filter(c => c.completionType === 'C1S').length;
-        const suspensionRate = totalControles > 0 ? Math.round((suspendedCompletions / totalControles) * 100) : 0;
-        
-        const thisMonth = new Date();
-        thisMonth.setDate(1);
-        const controlesMoisActuel = this.controles.filter(c => c.date >= thisMonth).length;
-        
-        const repartitionTypes = {};
-        this.controles.forEach(c => {
-            repartitionTypes[c.type] = (repartitionTypes[c.type] || 0) + 1;
-        });
-        
-        const typePlusFrequent = Object.entries(repartitionTypes)
-            .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Aucun';
-
-        const anomaliesMajeures = this.controles.reduce((sum, c) => sum + c.anomaliesMajeures, 0);
-        
-        return {
-            totalControles,
-            tauxConformite: totalControles > 0 ? Math.round((conformes / totalControles) * 100) : 0,
-            totalAnomaliesMajeures: anomaliesMajeures,
-            controlesMoisActuel,
-            typePlusFrequent,
-            repartitionTypes,
-            directCompletions,
-            suspendedCompletions,
-            suspensionRate,
-            averageSuspensionDays: this.calculateAverageSuspensionDays(),
-            
-            // NOUVEAU : Statistiques de révisions
-            totalRevisions: c2rControls,
-            revisionRate: totalControles > 0 ? Math.round((c2rControls / totalControles) * 100) : 0,
-            c1Controls,
-            c1sControls,
-            c2rControls,
-            c1Conformes,
-            c1sConformes,
-            c2rConformes,
-            revisedComplianceRate,
-            
-            // NOUVEAU : Analyse des améliorations par révision
-            revisionsImprovedCompliance: this.countRevisionsImprovedCompliance()
-        };
-    }
-    
 
     // NOUVEAU : Calculer le taux de conformité révisé
     calculateRevisedComplianceRate() {
@@ -2920,6 +2859,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
