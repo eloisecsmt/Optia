@@ -1421,9 +1421,6 @@ export class PersistenceManager {
         };
     }
 
-    // PersistenceManager.js - Modifications pour le système de révision C2R
-
-export class PersistenceManager {
     // MODIFICATION : Méthode saveControl étendue pour les révisions
     saveControl(controlData) {
         try {
@@ -3032,6 +3029,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
