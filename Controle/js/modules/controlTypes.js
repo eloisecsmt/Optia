@@ -1,12 +1,14 @@
 // controlTypes.js - Version modifiée avec boutons Remplacer et Régénérer échantillon
 
 import { Utils } from './utils.js';
+import { DateAnalyzer } from './dateAnalyzer.js';
 
 export class ControlTypes {
     constructor() {
         this.controlDefinitions = this.initializeControlDefinitions();
         this.currentControl = null;
         this.availableDossiers = []; // Pool des dossiers éligibles non encore sélectionnés
+        this.dateAnalyzer = new DateAnalyzer();
         this.setupEventListeners();
     }
 
@@ -290,6 +292,14 @@ export class ControlTypes {
         this.allDossiers = data.allDossiers;
         this.filteredDossiers = data.filteredDossiers;
         
+        // NOUVEAU : Passer les données au DateAnalyzer
+        if (this.dateAnalyzer) {
+            // Simuler l'événement dataProcessed pour le dateAnalyzer
+            window.dispatchEvent(new CustomEvent('dataProcessed', {
+                detail: { allDossiers: this.allDossiers }
+            }));
+        }
+        
         // Mettre à jour l'interface des contrôles automatiques
         this.updateControlInterface();
         Utils.debugLog('Interface de contrôle activée avec ' + this.allDossiers.length + ' dossiers');
@@ -298,11 +308,14 @@ export class ControlTypes {
     updateControlInterface() {
         const controlSection = document.getElementById('automatic-control-section');
         if (!controlSection) return;
-
+    
         const controlGrid = controlSection.querySelector('.control-types-grid');
         if (!controlGrid) return;
-
-        // Générer les cartes de contrôle
+    
+        // NOUVEAU : Ajouter la section d'outils globaux avant la grille des contrôles
+        this.addGlobalToolsSection(controlSection, controlGrid);
+    
+        // Générer les cartes de contrôle (existant)
         controlGrid.innerHTML = this.generateControlCards();
     }
 
@@ -356,6 +369,114 @@ export class ControlTypes {
                 </div>
             `;
         }).join('');
+    }
+
+    addGlobalToolsSection(controlSection, controlGrid) {
+        // Vérifier si la section existe déjà
+        let globalToolsSection = controlSection.querySelector('.global-tools-section');
+        
+        if (!globalToolsSection) {
+            // Créer la section d'outils globaux
+            globalToolsSection = document.createElement('div');
+            globalToolsSection.className = 'global-tools-section';
+            
+            // L'insérer avant la grille des contrôles
+            controlSection.insertBefore(globalToolsSection, controlGrid);
+        }
+    
+        // Obtenir les statistiques d'analyse
+        const analysisStats = this.dateAnalyzer.getAnalysisStats();
+        
+        // Contenu HTML de la section
+        globalToolsSection.innerHTML = `
+            <div class="section-header">
+                <h3 class="section-title">Outils d'analyse globale</h3>
+                <span class="section-subtitle">Analyses transversales sur l'ensemble des données</span>
+            </div>
+            
+            <div class="global-tools-grid">
+                <div class="global-tool-card">
+                    <div class="tool-icon">📊</div>
+                    <div class="tool-content">
+                        <h4>Analyse des dates documentaires</h4>
+                        <p class="tool-description">Export Excel avec statuts DCC et Profil Investisseur de toutes les opérations</p>
+                        <div class="tool-stats">
+                            <span class="stat-badge">${analysisStats.total} opérations</span>
+                            ${analysisStats.expired > 0 ? `<span class="stat-badge warning">${analysisStats.expired} expirées</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="tool-actions">
+                        <button class="btn btn-outline-info btn-analysis" 
+                                onclick="window.controlTypes?.executeGlobalAnalysis()"
+                                ${analysisStats.total === 0 ? 'disabled' : ''}>
+                            ${analysisStats.total === 0 ? 'Aucune donnée' : 'Générer l\'export'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section-separator"></div>
+        `;
+    
+        // Ajouter le titre de la section des contrôles
+        this.addControlSelectionTitle(controlGrid);
+    }
+
+    // 5. NOUVELLE MÉTHODE : Ajouter le titre de la section contrôles
+    addControlSelectionTitle(controlGrid) {
+        // Vérifier si le titre existe déjà
+        let controlTitle = controlGrid.parentNode.querySelector('.control-selection-title');
+        
+        if (!controlTitle) {
+            controlTitle = document.createElement('div');
+            controlTitle.className = 'control-selection-title';
+            controlTitle.innerHTML = `
+                <h3 class="section-title">Contrôles par échantillon</h3>
+                <p class="section-subtitle">Sélectionnez un type de contrôle pour générer un échantillon aléatoire</p>
+            `;
+            
+            // L'insérer juste avant la grille
+            controlGrid.parentNode.insertBefore(controlTitle, controlGrid);
+        }
+    }
+    
+    // 6. NOUVELLE MÉTHODE : Exécuter l'analyse globale
+    executeGlobalAnalysis() {
+        Utils.debugLog('=== LANCEMENT ANALYSE GLOBALE DES DATES ===');
+        
+        if (!this.dateAnalyzer) {
+            Utils.showNotification('Module d\'analyse non initialisé', 'error');
+            return;
+        }
+    
+        // Afficher une notification de traitement
+        Utils.showNotification('Génération de l\'analyse en cours...', 'info');
+        
+        // Exécuter l'analyse avec un petit délai pour l'UX
+        setTimeout(() => {
+            const success = this.dateAnalyzer.exportGlobalDateAnalysis();
+            
+            if (success) {
+                // Mettre à jour les statistiques dans l'interface
+                this.updateGlobalToolsStats();
+            }
+        }, 100);
+    }
+    
+    // 7. NOUVELLE MÉTHODE : Mettre à jour les statistiques dans l'interface
+    updateGlobalToolsStats() {
+        const statsElements = document.querySelectorAll('.tool-stats');
+        if (statsElements.length > 0) {
+            const analysisStats = this.dateAnalyzer.getAnalysisStats();
+            
+            statsElements.forEach(statsEl => {
+                statsEl.innerHTML = `
+                    <span class="stat-badge">${analysisStats.total} opérations</span>
+                    ${analysisStats.expired > 0 ? `<span class="stat-badge warning">${analysisStats.expired} expirées</span>` : ''}
+                    <span class="stat-badge info">Mis à jour</span>
+                `;
+            });
+        }
     }
 
     getPriorityColor(priority) {
@@ -1003,3 +1124,4 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
