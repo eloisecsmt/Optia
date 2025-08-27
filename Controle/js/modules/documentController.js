@@ -21,6 +21,11 @@ export class DocumentController {
         this.manualControlDefinition = null;
         this.currentControlId = null;
         this.isResumingControl = false;
+        this.isRevisionMode = false;
+        this.originalControlId = null;
+        this.originalResponses = {};
+        this.modifiedFields = new Set();
+        this.revisionStartTime = null;
     }
 
     startManualControl(selectedDossiers, controlType) {
@@ -2605,12 +2610,47 @@ export class DocumentController {
 
         const titleEl = section.querySelector('.section-title');
         if (titleEl) {
-            // Garder un titre simple sans détails de l'opération
-            titleEl.textContent = `Contrôle Documentaire - ${this.currentControl.definition.name}`;
+            const titleText = this.isRevisionMode ? 
+                `Révision Contrôle (C2R) - ${this.currentControl.definition.name}` :
+                `Contrôle Documentaire - ${this.currentControl.definition.name}`;
+            titleEl.textContent = titleText;
+        }
+
+        // NOUVEAU : Ajouter un indicateur de mode révision
+        if (this.isRevisionMode) {
+            const existingBanner = section.querySelector('.revision-banner');
+            if (!existingBanner) {
+                const revisionBanner = document.createElement('div');
+                revisionBanner.className = 'revision-banner';
+                revisionBanner.innerHTML = `
+                    <div style="
+                        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+                        border: 2px solid #ffc107;
+                        border-radius: 12px;
+                        padding: 15px;
+                        margin: 20px 0;
+                        text-align: center;
+                    ">
+                        <h4 style="margin: 0 0 10px 0; color: #856404;">
+                            🔄 MODE RÉVISION ACTIVÉ
+                        </h4>
+                        <p style="margin: 0; color: #856404;">
+                            Vous révisez un contrôle existant. Les réponses sont pré-remplies.
+                            <br><strong>Modifications détectées : <span id="modification-count">${this.modifiedFields.size}</span></strong>
+                        </p>
+                    </div>
+                `;
+                section.insertBefore(revisionBanner, section.querySelector('.dossier-info'));
+            } else {
+                // Mettre à jour le compteur de modifications
+                const countSpan = existingBanner.querySelector('#modification-count');
+                if (countSpan) {
+                    countSpan.textContent = this.modifiedFields.size;
+                }
+            }
         }
 
         this.updateDossierInfo();
-
         this.updateDocumentsGrid();
         this.updateControlButtons();
     }
@@ -3052,14 +3092,19 @@ export class DocumentController {
         const questionContainer = document.getElementById('question-container');
         if (!questionContainer) return;
 
+        // Interface de base (existante)
         questionContainer.innerHTML = `
             <div class="question-header">
                 <h3>${docConfig.fullName}</h3>
                 <div class="question-progress">
                     Question ${this.currentQuestionIndex + 1} sur ${questions.length}
                     ${this.isResumingControl ? '<span class="resume-badge">🔄 Reprise</span>' : ''}
+                    ${this.isRevisionMode ? '<span class="revision-badge">📝 Révision</span>' : ''}
                 </div>
             </div>
+            
+            <!-- NOUVEAU : Indicateur de réponse originale en mode révision -->
+            ${this.isRevisionMode ? this.generateOriginalResponseIndicator() : ''}
             
             <div class="question-content">
                 <div class="question-text">
@@ -3092,35 +3137,104 @@ export class DocumentController {
                 </div>
             </div>
         `;
-        
-            if (this.currentDocument === 22) {
-                const contextInfo = this.getUpdateContextInfo();
-                questionContainer.insertAdjacentHTML('afterbegin', `
-                    <div class="update-context-info">
-                        <div class="context-header">Informations de mise à jour :</div>
-                        <div class="context-details">
-                            <span class="context-item ${contextInfo.dccStatus}">
-                                DCC (${this.formatDisplayDate(this.currentDossier.dateDCC) || 'Date manquante'}) : ${contextInfo.dccText}
-                            </span>
-                            <span class="context-item ${contextInfo.profilStatus}">
-                                Profil (${this.formatDisplayDate(this.currentDossier.dateProfilInvestisseur) || 'Date manquante'}) : ${contextInfo.profilText}
-                            </span>
-                        </div>
-                    </div>
-                `);
-            }
 
-        const questionData = this.documentsConfig[this.currentDocument].questions[this.currentQuestionIndex];
-        if (questionData.type === 'checklist') {
-            this.addChecklistStyles();
-        }
-
-        // Pré-remplir les réponses existantes si on reprend un contrôle
-        if (this.isResumingControl) {
+        // Pré-remplir les réponses existantes
+        if (this.isRevisionMode || this.isResumingControl) {
             this.prefillExistingResponses();
         }
 
+        // Ajouter les styles
+        if (currentQuestionData.type === 'checklist') {
+            this.addChecklistStyles();
+        }
         this.addHelpBubbleStyles();
+        this.addRevisionStyles();
+    }
+
+    generateOriginalResponseIndicator() {
+        if (!this.isRevisionMode) return '';
+
+        const originalResponse = this.originalResponses[this.currentDocument]?.[this.currentQuestionIndex];
+        if (!originalResponse) return '';
+
+        return `
+            <div class="original-response-indicator">
+                <div style="
+                    background: #e3f2fd;
+                    border-left: 4px solid #2196f3;
+                    padding: 12px 15px;
+                    margin: 15px 0;
+                    border-radius: 0 8px 8px 0;
+                ">
+                    <div style="font-weight: 600; color: #1976d2; margin-bottom: 5px;">
+                        📋 Réponse originale :
+                    </div>
+                    <div style="color: #424242;">
+                        <strong>Réponse :</strong> ${originalResponse.answer}<br>
+                        ${originalResponse.quality ? `<strong>Qualité :</strong> ${originalResponse.quality}<br>` : ''}
+                        ${originalResponse.justification ? `<strong>Justification :</strong> ${originalResponse.justification}` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // NOUVEAU : Ajouter les styles pour le mode révision
+    addRevisionStyles() {
+        if (document.getElementById('revision-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'revision-styles';
+        style.textContent = `
+            .revision-badge {
+                background: #ffc107;
+                color: #212529;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                margin-left: 8px;
+            }
+            
+            .original-response-indicator {
+                animation: fadeIn 0.3s ease-in-out;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            .revision-banner {
+                animation: slideIn 0.5s ease-out;
+            }
+            
+            @keyframes slideIn {
+                from { opacity: 0; transform: translateX(-20px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+            
+            .modified-field {
+                border: 2px solid #ffc107;
+                background: rgba(255, 193, 7, 0.1);
+                border-radius: 4px;
+            }
+            
+            .modified-field::after {
+                content: "✏️ Modifié";
+                position: absolute;
+                top: -8px;
+                right: 8px;
+                background: #ffc107;
+                color: #212529;
+                font-size: 0.7rem;
+                padding: 2px 6px;
+                border-radius: 10px;
+                font-weight: 600;
+            }
+        `;
+        
+        document.head.appendChild(style);
     }
 
     formatDisplayDate(dateString) {
@@ -4253,7 +4367,7 @@ export class DocumentController {
             return true;
         }
 
-        // NOUVEAU : Cas spécial pour ESG "Partiellement" 
+        // Cas spécial pour ESG "Partiellement" 
         if (questionData.type === 'esg_respect' && response.answer === 'Partiellement') {
             return true;
         }
@@ -4293,17 +4407,163 @@ export class DocumentController {
         return false;
     }
 
+     startRevision(controleId) {
+        if (!window.persistenceManager) {
+            Utils.showNotification('Gestionnaire d\'historique non disponible', 'error');
+            return;
+        }
+
+        const originalControl = window.persistenceManager.getHistoryData().controles.find(c => c.id == controleId);
+        if (!originalControl) {
+            Utils.showNotification('Contrôle original introuvable', 'error');
+            return;
+        }
+
+        // Vérifier si le contrôle peut être révisé
+        if (!this.canControlBeRevised(originalControl)) {
+            Utils.showNotification('Ce contrôle ne peut plus être révisé', 'warning');
+            return;
+        }
+
+        Utils.debugLog(`=== DÉBUT RÉVISION CONTRÔLE ${controleId} ===`);
+        Utils.debugLog(`Client: ${originalControl.client}, Type: ${originalControl.type}`);
+
+        // Initialiser le mode révision
+        this.isRevisionMode = true;
+        this.originalControlId = controleId;
+        this.originalResponses = originalControl.rawControlData?.responses || {};
+        this.modifiedFields = new Set();
+        this.revisionStartTime = new Date();
+
+        // Restaurer le contexte du contrôle original
+        this.currentDossier = originalControl.rawControlData?.dossier || {
+            client: originalControl.client,
+            codeDossier: originalControl.codeDossier,
+            conseiller: originalControl.conseiller,
+            montant: originalControl.montant,
+            domaine: originalControl.domaine
+        };
+
+        this.currentControl = originalControl.rawControlData?.control || {
+            type: originalControl.type,
+            definition: { name: originalControl.type }
+        };
+
+        // Initialiser les documents avec les réponses originales
+        this.initializeDocumentsForControl(this.currentControl.type);
+        this.loadOriginalResponsesIntoState();
+
+        // Afficher l'interface de contrôle en mode révision
+        this.showDocumentControlInterface();
+        Utils.showNotification('Mode révision activé - Réponses pré-remplies', 'info');
+    }
+
+    // NOUVEAU : Vérifier si un contrôle peut être révisé
+    canControlBeRevised(control) {
+        // Un contrôle peut être révisé s'il est de type C1 ou C1S (pas C2R)
+        if (control.completionType === 'C2R') {
+            return false;
+        }
+
+        // Vérifier qu'il n'existe pas déjà une révision
+        if (window.persistenceManager) {
+            const existingRevision = window.persistenceManager.getHistoryData().controles
+                .find(c => c.parentControlId == control.id);
+            if (existingRevision) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // NOUVEAU : Charger les réponses originales dans l'état actuel
+    loadOriginalResponsesIntoState() {
+        if (!this.originalResponses) return;
+
+        // Copier les réponses originales dans documentResponses
+        Object.keys(this.originalResponses).forEach(docId => {
+            if (!this.documentResponses[docId]) {
+                this.documentResponses[docId] = {};
+            }
+            
+            Object.keys(this.originalResponses[docId] || {}).forEach(questionIndex => {
+                this.documentResponses[docId][questionIndex] = {
+                    ...this.originalResponses[docId][questionIndex]
+                };
+            });
+        });
+
+        // Mettre à jour l'état des documents comme terminés
+        Object.keys(this.documentsState).forEach(docId => {
+            if (this.originalResponses[docId] && Object.keys(this.originalResponses[docId]).length > 0) {
+                this.documentsState[docId].status = 'completed';
+                this.documentsState[docId].completedQuestions = Object.keys(this.originalResponses[docId]).length;
+            }
+        });
+
+        Utils.debugLog(`Réponses originales chargées pour ${Object.keys(this.originalResponses).length} documents`);
+    }
+
     saveResponse(response) {
         if (!this.documentResponses[response.documentId]) {
             this.documentResponses[response.documentId] = {};
         }
         
-        // AJOUTER : Calculer la conformité ici
+        // NOUVEAU : En mode révision, comparer avec la réponse originale
+        if (this.isRevisionMode) {
+            const originalResponse = this.originalResponses[response.documentId]?.[response.questionIndex];
+            if (originalResponse) {
+                const hasChanged = this.hasResponseChanged(originalResponse, response);
+                if (hasChanged) {
+                    const fieldKey = `${response.documentId}_${response.questionIndex}`;
+                    this.modifiedFields.add(fieldKey);
+                    response.wasModified = true;
+                    response.originalAnswer = originalResponse.answer;
+                    response.originalQuality = originalResponse.quality;
+                    
+                    Utils.debugLog(`Modification détectée: Doc ${response.documentId}, Q ${response.questionIndex}`);
+                } else {
+                    response.wasModified = false;
+                }
+            }
+        }
+        
+        // Calculer la conformité
         response.conforme = this.isResponseConforme(response);
         
         this.documentResponses[response.documentId][response.questionIndex] = response;
         
-        Utils.debugLog(`Réponse sauvegardée: Doc ${response.documentId}, Q ${response.questionIndex}, Réponse: ${response.answer}, Conforme: ${response.conforme}`);
+        Utils.debugLog(`Réponse sauvegardée: Doc ${response.documentId}, Q ${response.questionIndex}, Conforme: ${response.conforme}${response.wasModified ? ' [MODIFIÉE]' : ''}`);
+    }
+
+    // NOUVEAU : Comparer deux réponses pour détecter les changements
+    hasResponseChanged(originalResponse, newResponse) {
+        // Comparer les réponses principales
+        if (originalResponse.answer !== newResponse.answer) {
+            return true;
+        }
+
+        // Comparer la qualité si présente
+        if (originalResponse.quality !== newResponse.quality) {
+            return true;
+        }
+
+        // Comparer les justifications
+        if ((originalResponse.justification || '') !== (newResponse.justification || '')) {
+            return true;
+        }
+
+        // Comparer les éléments manquants pour les checklists
+        if (originalResponse.missingElements && newResponse.missingElements) {
+            const originalMissing = JSON.stringify(originalResponse.missingElements.sort());
+            const newMissing = JSON.stringify(newResponse.missingElements.sort());
+            if (originalMissing !== newMissing) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Méthode corrigée pour isResponseConforme
@@ -4678,22 +4938,33 @@ generateManualResultsTable(results) {
             responses: this.documentResponses,
             completedAt: new Date(),
             obligatoryIssuesCount: this.countObligatoryIssues(),
-            // NOUVEAU : Ajouter les infos de suspension
             wasSuspended: wasSuspended,
             suspensionInfo: suspendedControl ? {
                 suspendedAt: suspendedControl.suspendedAt,
                 suspendReason: suspendedControl.suspendReason
             } : null
         };
-    
+
+        // NOUVEAU : Informations spécifiques aux révisions
+        if (this.isRevisionMode) {
+            summary.isRevision = true;
+            summary.parentControlId = this.originalControlId;
+            summary.revisionDate = new Date();
+            summary.modifiedFields = Array.from(this.modifiedFields);
+            summary.totalModifications = this.modifiedFields.size;
+            
+            Utils.debugLog(`Révision terminée: ${summary.totalModifications} modification(s) apportée(s)`);
+        }
+
         // Notifier l'historique
         window.dispatchEvent(new CustomEvent('controlCompleted', {
             detail: summary
         }));
-    
+
         window.persistenceManager?.saveControl(summary);
         
         Utils.showSection('automatic-control-section');
+        return summary;
     }
 
     countObligatoryIssues() {
@@ -5623,9 +5894,17 @@ generateManualResultsTable(results) {
         this.documentResponses = {};
         this.currentJustificationResponse = null;
         
-        Utils.debugLog('DocumentController réinitialisé');
+        // NOUVEAU : Réinitialiser les propriétés de révision
+        this.isRevisionMode = false;
+        this.originalControlId = null;
+        this.originalResponses = {};
+        this.modifiedFields = new Set();
+        this.revisionStartTime = null;
+        
+        Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
