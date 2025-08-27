@@ -1596,33 +1596,15 @@ export class PersistenceManager {
     getStatistics() {
         const totalControles = this.controles.length;
         
-        // NOUVEAU : Compter par type de finalisation avec fallback pour anciens contrôles
-        const c1Controls = this.controles.filter(c => {
-            const type = c.completionType || (c.wasSuspended ? 'C1S' : 'C1'); // Fallback pour anciens contrôles
-            return type === 'C1';
-        }).length;
-        
-        const c1sControls = this.controles.filter(c => {
-            const type = c.completionType || (c.wasSuspended ? 'C1S' : 'C1'); // Fallback pour anciens contrôles
-            return type === 'C1S';
-        }).length;
-        
+        // NOUVEAU : Compter par type de finalisation
+        const c1Controls = this.controles.filter(c => c.completionType === 'C1').length;
+        const c1sControls = this.controles.filter(c => c.completionType === 'C1S').length;
         const c2rControls = this.controles.filter(c => c.completionType === 'C2R').length;
         
-        // NOUVEAU : Calculer les conformités par type avec fallback
-        const c1Conformes = this.controles.filter(c => {
-            const type = c.completionType || (c.wasSuspended ? 'C1S' : 'C1');
-            return type === 'C1' && c.conformiteGlobale === 'CONFORME';
-        }).length;
-        
-        const c1sConformes = this.controles.filter(c => {
-            const type = c.completionType || (c.wasSuspended ? 'C1S' : 'C1');
-            return type === 'C1S' && c.conformiteGlobale === 'CONFORME';
-        }).length;
-        
-        const c2rConformes = this.controles.filter(c => 
-            c.completionType === 'C2R' && c.conformiteGlobale === 'CONFORME'
-        ).length;
+        // NOUVEAU : Calculer les conformités par type
+        const c1Conformes = this.controles.filter(c => c.completionType === 'C1' && c.conformiteGlobale === 'CONFORME').length;
+        const c1sConformes = this.controles.filter(c => c.completionType === 'C1S' && c.conformiteGlobale === 'CONFORME').length;
+        const c2rConformes = this.controles.filter(c => c.completionType === 'C2R' && c.conformiteGlobale === 'CONFORME').length;
         
         // NOUVEAU : Calculer le taux de conformité révisé
         const revisedComplianceRate = this.calculateRevisedComplianceRate();
@@ -3050,6 +3032,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
