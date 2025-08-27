@@ -833,13 +833,171 @@ export class HistoryInterface {
                         
                         ${hasLinkedControls ? this.generateLinkedControlsSection(linkedControls, controleId) : ''}
                         
-                        <!-- Informations principales (code existant inchangé) -->
-                        <div class="control-summary" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 25px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #d4af37;">
+                        <!-- Informations principales -->
+                        <div class="control-summary" style="
+                            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                            padding: 25px; 
+                            border-radius: 12px; 
+                            margin-bottom: 25px;
+                            border-left: 4px solid #d4af37;
+                        ">
                             <h4 style="margin: 0 0 20px 0; color: #1a1a2e;">📊 Informations du contrôle</h4>
-                            <!-- Le reste du code existant pour les informations du contrôle... -->
+                            <div style="
+                                display: grid; 
+                                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+                                gap: 20px;
+                            ">
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📅 Date de contrôle</div>
+                                    <div style="font-size: 1.1rem; color: #495057;">${controle.date.toLocaleDateString('fr-FR')}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">🔍 Type de contrôle</div>
+                                    <span class="badge control-type" style="font-size: 1rem; padding: 8px 12px;">${controle.type}</span>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">👤 Client</div>
+                                    <div style="font-size: 1.1rem; font-weight: 600; color: #495057;">${controle.client}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📋 Code dossier</div>
+                                    <div style="font-size: 1rem; color: #495057;">${controle.codeDossier || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">👨‍💼 Conseiller</div>
+                                    <div style="font-size: 1rem; color: #495057;">${controle.conseiller || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">💰 Montant</div>
+                                    <div style="font-size: 1.1rem; font-weight: 600; color: #28a745;">${controle.montant || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">🏢 Domaine</div>
+                                    <div style="font-size: 1rem; color: #495057;">${controle.domaine || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">⭐ Nouveau client</div>
+                                    <div style="font-size: 1rem; color: #495057;">${controle.nouveauClient || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px;">📄 Documents contrôlés</div>
+                                    <span class="badge secondary" style="font-size: 1rem; padding: 8px 12px;">${controle.documentsControles}</span>
+                                </div>
+                                <div class="info-item" style="padding: 10px 0;">
+                                    <div style="color: #1a1a2e; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem;">⚠️ Anomalies majeures</div>
+                                    <span class="badge ${controle.anomaliesMajeures > 0 ? 'non' : 'oui'}" 
+                                        style="font-size: 0.9rem; padding: 4px 10px;">
+                                        ${controle.anomaliesMajeures}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Conformité globale -->
+                            <div style="
+                                margin-top: 15px;
+                                padding: 12px 16px;
+                                background: #f1f3f5;
+                                border-radius: 6px;
+                                text-align: center;
+                                border-left: 4px solid ${controle.conformiteGlobale === 'CONFORME' ? '#28a745' : '#dc3545'};
+                                display: inline-block;
+                            ">
+                                <div style="font-size: 0.95rem; font-weight: 600; color: #1a1a2e;">✅ Conformité globale :</div>
+                                <span class="badge ${controle.conformiteGlobale === 'CONFORME' ? 'oui' : 'non'}" 
+                                    style="font-size: 1.05rem; padding: 8px 16px; margin-top: 5px; display: inline-block;">
+                                    ${controle.conformiteGlobale}
+                                </span>
+                            </div>
                         </div>
                         
-                        <!-- Section des détails existante inchangée... -->
+                        ${controle.details && controle.details.length > 0 ? `
+                            <!-- Détails des vérifications -->
+                            <div style="margin-bottom: 25px;">
+                                <h4 style="color: #1a1a2e; margin-bottom: 15px;">📄 Détail des vérifications (${controle.details.length} points de contrôle)</h4>
+                                
+                                <div style="
+                                    border: 2px solid #e9ecef; 
+                                    border-radius: 12px; 
+                                    overflow: hidden;
+                                    background: white;
+                                ">
+                                    <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                                        <table style="
+                                            width: 100%; 
+                                            border-collapse: collapse; 
+                                            font-size: 0.9rem;
+                                            min-width: 800px;
+                                        ">
+                                            <thead style="position: sticky; top: 0; z-index: 5;">
+                                                <tr style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 120px;">📄 Document</th>
+                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 300px;">❓ Question vérifiée</th>
+                                                    <th style="color: white; padding: 15px 12px; text-align: center; font-weight: 600; min-width: 100px;">✅ Réponse</th>
+                                                    <th style="color: white; padding: 15px 12px; text-align: center; font-weight: 600; min-width: 120px;">🔍 Qualité</th>
+                                                    <th style="color: white; padding: 15px 12px; text-align: left; font-weight: 600; min-width: 250px;">📝 Justification</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${controle.details.map((detail, index) => `
+                                                    <tr style="
+                                                        background: ${detail.conforme ? '#f0fff4' : '#fff5f5'}; 
+                                                        border-bottom: 1px solid #e9ecef;
+                                                        ${!detail.conforme ? 'border-left: 4px solid #dc3545;' : ''}
+                                                    ">
+                                                        <td style="padding: 12px; vertical-align: top;">
+                                                            <strong style="color: #1a1a2e;">${detail.document}</strong>
+                                                        </td>
+                                                        <td style="
+                                                            padding: 12px; 
+                                                            vertical-align: top; 
+                                                            line-height: 1.4;
+                                                            word-wrap: break-word;
+                                                            max-width: 300px;
+                                                        ">
+                                                            ${detail.question}
+                                                        </td>
+                                                        <td style="padding: 12px; text-align: center; vertical-align: top;">
+                                                            <span class="badge ${detail.conforme ? 'oui' : 'non'}" style="padding: 6px 12px;">
+                                                                ${detail.reponse}
+                                                            </span>
+                                                        </td>
+                                                        <td style="padding: 12px; text-align: center; vertical-align: top;">
+                                                            ${detail.qualite ? `<span style="font-size: 0.9rem; color: #495057;">${detail.qualite}</span>` : '<span style="color: #6c757d;">-</span>'}
+                                                        </td>
+                                                        <td style="
+                                                            padding: 12px; 
+                                                            vertical-align: top; 
+                                                            line-height: 1.4;
+                                                            word-wrap: break-word;
+                                                            max-width: 250px;
+                                                        ">
+                                                            ${detail.justification ? `<span style="font-size: 0.9rem; color: #495057; font-style: italic;">${detail.justification}</span>` : '<span style="color: #6c757d;">-</span>'}
+                                                        </td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Résumé des anomalies -->
+                            ${this.generateAnomaliesResume(controle.details)}
+                            
+                        ` : `
+                            <div style="
+                                text-align: center; 
+                                padding: 40px; 
+                                color: #6c757d; 
+                                background: #f8f9fa; 
+                                border-radius: 12px;
+                                border: 2px dashed #dee2e6;
+                            ">
+                                <h4>📄 Aucun détail de vérification</h4>
+                                <p>Les détails des vérifications ne sont pas disponibles pour ce contrôle.</p>
+                                <small>Cela peut arriver pour les contrôles effectués avant la mise à jour du système.</small>
+                            </div>
+                        `}
                         
                     </div>
                     
@@ -1928,6 +2086,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
