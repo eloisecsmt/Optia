@@ -45,13 +45,21 @@ export class PersistenceManager {
             const dossierKey = this.generateDossierKey(controlData.dossier);
             const controlType = controlData.control?.definition?.name || 'Type inconnu';
             
-            // UTILISER les infos transmises par documentController
+            // Récupérer les infos de suspension/révision
             const wasSuspended = controlData.wasSuspended || false;
             const suspensionInfo = controlData.suspensionInfo || null;
+            const isRevision = controlData.isRevision || false; // NOUVEAU
             
-            Utils.debugLog(`Sauvegarde contrôle: ${controlData.dossier.client} - Type: ${controlType}`);
-            Utils.debugLog(`Était suspendu: ${wasSuspended}`);
-    
+            Utils.debugLog(`Sauvegarde contrôle: ${controlData.dossier.client} - Type: ${controlType}${isRevision ? ' [RÉVISION]' : ''}`);
+            
+            // NOUVEAU : Déterminer le type de finalisation
+            let completionType = 'C1';
+            if (isRevision) {
+                completionType = 'C2R';
+            } else if (wasSuspended) {
+                completionType = 'C1S';
+            }
+            
             const controle = {
                 id: Date.now(),
                 date: new Date(),
@@ -66,8 +74,16 @@ export class PersistenceManager {
                 nouveauClient: controlData.dossier.nouveauClient || '',
                 statut: 'Terminé',
                 
-                // Type de finalisation basé sur les infos transmises
-                completionType: wasSuspended ? 'C1S' : 'C1',
+                // Type de finalisation
+                completionType: completionType,
+                
+                // NOUVEAU : Informations spécifiques aux révisions
+                ...(isRevision && {
+                    parentControlId: controlData.parentControlId,
+                    revisionDate: controlData.revisionDate,
+                    modifiedFields: controlData.modifiedFields || [],
+                    totalModifications: controlData.totalModifications || 0
+                }),
                 
                 // Informations sur la suspension si applicable
                 ...(wasSuspended && suspensionInfo && {
@@ -103,8 +119,9 @@ export class PersistenceManager {
             Utils.debugLog(`- Client: ${controle.client}`);
             Utils.debugLog(`- Type finalisation: ${controle.completionType}`);
             Utils.debugLog(`- Conformité: ${controle.conformiteGlobale}`);
-            if (wasSuspended) {
-                Utils.debugLog(`- Était suspendu depuis: ${controle.suspensionInfo?.suspensionDuration || 'durée inconnue'} jour(s)`);
+            if (isRevision) {
+                Utils.debugLog(`- Parent ID: ${controle.parentControlId}`);
+                Utils.debugLog(`- Modifications: ${controle.totalModifications}`);
             }
             
             return controle;
@@ -114,6 +131,68 @@ export class PersistenceManager {
             console.error('Erreur sauvegarde contrôle:', error);
             return null;
         }
+    }
+
+    // NOUVEAU : Obtenir le contrôle original par ID
+    getOriginalControl(controleId) {
+        return this.controles.find(c => c.id == controleId);
+    }
+
+    // NOUVEAU : Vérifier si un contrôle peut être révisé
+    canBeRevised(controleId) {
+        const control = this.getOriginalControl(controleId);
+        if (!control) return false;
+
+        // Un contrôle ne peut être révisé que s'il est C1 ou C1S
+        if (control.completionType === 'C2R') {
+            return false;
+        }
+
+        // Vérifier qu'il n'existe pas déjà une révision
+        const existingRevision = this.controles.find(c => c.parentControlId == controleId);
+        if (existingRevision) {
+            return false;
+        }
+
+        return true;
+    }
+
+    // NOUVEAU : Obtenir la révision d'un contrôle
+    getRevision(parentControlId) {
+        return this.controles.find(c => c.parentControlId == parentControlId);
+    }
+
+    // NOUVEAU : Obtenir le contrôle parent d'une révision
+    getParentControl(revisionId) {
+        const revision = this.controles.find(c => c.id == revisionId);
+        if (!revision || !revision.parentControlId) return null;
+        
+        return this.controles.find(c => c.id == revision.parentControlId);
+    }
+
+    // NOUVEAU : Obtenir tous les contrôles liés (parent + révision)
+    getLinkedControls(controleId) {
+        const control = this.getOriginalControl(controleId);
+        if (!control) return [];
+
+        const results = [control];
+        
+        // Si c'est un parent, chercher sa révision
+        if (control.completionType !== 'C2R') {
+            const revision = this.getRevision(controleId);
+            if (revision) {
+                results.push(revision);
+            }
+        }
+        // Si c'est une révision, chercher son parent
+        else if (control.parentControlId) {
+            const parent = this.getParentControl(controleId);
+            if (parent) {
+                results.unshift(parent); // Parent en premier
+            }
+        }
+
+        return results;
     }
 
     // NOUVELLE MÉTHODE : Export Excel détaillé d'un contrôle spécifique
@@ -1343,12 +1422,26 @@ export class PersistenceManager {
     }
 
     getStatistics() {
-        const totalControles = this.controles.length;
+         const totalControles = this.controles.length;
+        
+        // NOUVEAU : Compter par type de finalisation
+        const c1Controls = this.controles.filter(c => c.completionType === 'C1').length;
+        const c1sControls = this.controles.filter(c => c.completionType === 'C1S').length;
+        const c2rControls = this.controles.filter(c => c.completionType === 'C2R').length;
+        
+        // NOUVEAU : Calculer les conformités par type
+        const c1Conformes = this.controles.filter(c => c.completionType === 'C1' && c.conformiteGlobale === 'CONFORME').length;
+        const c1sConformes = this.controles.filter(c => c.completionType === 'C1S' && c.conformiteGlobale === 'CONFORME').length;
+        const c2rConformes = this.controles.filter(c => c.completionType === 'C2R' && c.conformiteGlobale === 'CONFORME').length;
+        
+        // NOUVEAU : Calculer le taux de conformité révisé
+        const revisedComplianceRate = this.calculateRevisedComplianceRate();
+        
+        // Statistiques existantes
         const conformes = this.controles.filter(c => c.conformiteGlobale === 'CONFORME').length;
         const directCompletions = this.controles.filter(c => c.completionType === 'C1').length;
         const suspendedCompletions = this.controles.filter(c => c.completionType === 'C1S').length;
         const suspensionRate = totalControles > 0 ? Math.round((suspendedCompletions / totalControles) * 100) : 0;
-        
         
         const thisMonth = new Date();
         thisMonth.setDate(1);
@@ -1374,10 +1467,63 @@ export class PersistenceManager {
             directCompletions,
             suspendedCompletions,
             suspensionRate,
-            averageSuspensionDays: this.calculateAverageSuspensionDays()
+            averageSuspensionDays: this.calculateAverageSuspensionDays(),
+            
+            // NOUVEAU : Statistiques de révisions
+            totalRevisions: c2rControls,
+            revisionRate: totalControles > 0 ? Math.round((c2rControls / totalControles) * 100) : 0,
+            c1Controls,
+            c1sControls,
+            c2rControls,
+            c1Conformes,
+            c1sConformes,
+            c2rConformes,
+            revisedComplianceRate,
+            
+            // NOUVEAU : Analyse des améliorations par révision
+            revisionsImprovedCompliance: this.countRevisionsImprovedCompliance()
         };
     }
 
+     calculateRevisedComplianceRate() {
+        const uniqueDossiers = new Map();
+        
+        // Pour chaque contrôle, garder le plus récent pour chaque dossier
+        this.controles.forEach(control => {
+            const dossierKey = `${control.codeDossier}_${control.client}_${control.type}`;
+            const existing = uniqueDossiers.get(dossierKey);
+            
+            if (!existing || control.date > existing.date) {
+                uniqueDossiers.set(dossierKey, control);
+            }
+        });
+        
+        const latestControls = Array.from(uniqueDossiers.values());
+        const conformes = latestControls.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        
+        return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
+    }
+    
+    // NOUVEAU : Compter les révisions qui ont amélioré la conformité
+    countRevisionsImprovedCompliance() {
+        let count = 0;
+        
+        this.controles
+            .filter(c => c.completionType === 'C2R')
+            .forEach(revision => {
+                if (revision.parentControlId) {
+                    const parent = this.getOriginalControl(revision.parentControlId);
+                    if (parent && 
+                        parent.conformiteGlobale === 'NON CONFORME' && 
+                        revision.conformiteGlobale === 'CONFORME') {
+                        count++;
+                    }
+                }
+            });
+            
+        return count;
+    }
+    
     calculateAverageSuspensionDays() {
         const suspendedCompletions = this.controles.filter(c => c.suspensionInfo);
         if (suspendedCompletions.length === 0) return 0;
@@ -1463,54 +1609,57 @@ export class PersistenceManager {
 
     // NOUVELLE MÉTHODE : Export de sauvegarde JSON pour backup
     exportBackupJSON() {
-        const backupData = {
-        version: "1.1", // Augmenter la version pour inclure les suspendus
-        exportDate: new Date().toISOString(),
-        totalControles: this.controles.length,
-        totalSuspended: this.suspendedControls.length, // NOUVEAU
-        controles: this.controles.map(c => ({
-            ...c,
-            date: c.date.toISOString() // Sérialiser les dates
-        })),
-        // NOUVEAU : Inclure les contrôles suspendus
-        suspendedControles: this.suspendedControls.map(sc => ({
-            ...sc,
-            suspendedAt: sc.suspendedAt.toISOString() // Sérialiser les dates
-        })),
-        // NOUVEAU : Inclure les dossiers contrôlés
-        controlledDossiers: Array.from(this.controlledDossiers.entries()).map(([key, value]) => ({
-            key,
-            ...value,
-            controlledAt: value.controlledAt.toISOString()
-        }))
-    };
+       const backupData = {
+            version: "1.2", // NOUVEAU : Version mise à jour pour les révisions
+            exportDate: new Date().toISOString(),
+            totalControles: this.controles.length,
+            totalSuspended: this.suspendedControls.length,
+            totalRevisions: this.controles.filter(c => c.completionType === 'C2R').length, // NOUVEAU
+            controles: this.controles.map(c => ({
+                ...c,
+                date: c.date.toISOString(),
+                // NOUVEAU : Champs de révision
+                parentControlId: c.parentControlId || null,
+                revisionDate: c.revisionDate ? c.revisionDate.toISOString() : null,
+                modifiedFields: c.modifiedFields || null,
+                totalModifications: c.totalModifications || null
+            })),
+            suspendedControles: this.suspendedControls.map(sc => ({
+                ...sc,
+                suspendedAt: sc.suspendedAt.toISOString()
+            })),
+            controlledDossiers: Array.from(this.controlledDossiers.entries()).map(([key, value]) => ({
+                key,
+                ...value,
+                controlledAt: value.controlledAt.toISOString()
+            }))
+        };
 
-    try {
-        const dataStr = JSON.stringify(backupData, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Backup_Complet_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        Utils.showNotification(
-            `Sauvegarde complète créée: ${this.controles.length} terminés + ${this.suspendedControls.length} suspendus`, 
-            'success'
-        );
-        return true;
-        
-    } catch (error) {
-        console.error('Erreur export JSON:', error);
-        Utils.showNotification('Erreur lors de la création de la sauvegarde JSON', 'error');
-        return false;
+        try {
+            const dataStr = JSON.stringify(backupData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Backup_Complet_avec_Revisions_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            Utils.showNotification(
+                `Sauvegarde complète créée: ${this.controles.length} contrôles (${backupData.totalRevisions} révisions)`, 
+                'success'
+            );
+            return true;
+            
+        } catch (error) {
+            console.error('Erreur export JSON:', error);
+            Utils.showNotification('Erreur lors de la création de la sauvegarde JSON', 'error');
+            return false;
+        }
     }
-}
-
     // NOUVEAU : Sauvegarder un contrôle suspendu
     saveSuspendedControl(suspendedControl) {
         try {
@@ -2549,16 +2698,19 @@ export class PersistenceManager {
                     throw new Error('Format de sauvegarde invalide');
                 }
                 
-                // Détecter la version de la sauvegarde
-                const hasExtendedData = backupData.version >= "1.1" || backupData.suspendedControles;
+                const hasExtendedData = backupData.version >= "1.1";
+                const hasRevisions = backupData.version >= "1.2"; // NOUVEAU
                 const suspendedCount = backupData.suspendedControles ? backupData.suspendedControles.length : 0;
                 const controlledCount = backupData.controlledDossiers ? backupData.controlledDossiers.length : 0;
+                const revisionCount = backupData.totalRevisions || 0; // NOUVEAU
                 
-                // Message de confirmation enrichi
                 let confirmMessage = `Importer ${backupData.controles.length} contrôle(s) terminé(s)`;
                 if (hasExtendedData) {
                     confirmMessage += `\n+ ${suspendedCount} contrôle(s) suspendu(s)`;
                     confirmMessage += `\n+ ${controlledCount} dossier(s) marqué(s) comme contrôlé(s)`;
+                }
+                if (hasRevisions && revisionCount > 0) {
+                    confirmMessage += `\n+ ${revisionCount} révision(s) C2R`; // NOUVEAU
                 }
                 confirmMessage += `\n\nDate de sauvegarde: ${new Date(backupData.exportDate).toLocaleDateString('fr-FR')}`;
                 confirmMessage += `\n\nACTUEL:`;
@@ -2573,24 +2725,28 @@ export class PersistenceManager {
                     return;
                 }
                 
-                // Restaurer les contrôles terminés (dates)
+                // Restaurer les contrôles avec les nouveaux champs de révision
                 this.controles = backupData.controles.map(c => ({
                     ...c,
-                    date: new Date(c.date)
+                    date: new Date(c.date),
+                    // NOUVEAU : Restaurer les champs de révision
+                    parentControlId: c.parentControlId || null,
+                    revisionDate: c.revisionDate ? new Date(c.revisionDate) : null,
+                    modifiedFields: c.modifiedFields || null,
+                    totalModifications: c.totalModifications || null
                 }));
                 
-                // NOUVEAU : Restaurer les contrôles suspendus
+                // Restaurer les contrôles suspendus
                 if (backupData.suspendedControles && Array.isArray(backupData.suspendedControles)) {
                     this.suspendedControls = backupData.suspendedControles.map(sc => ({
                         ...sc,
                         suspendedAt: new Date(sc.suspendedAt)
                     }));
                 } else {
-                    // Si pas de données suspendues dans la sauvegarde, vider la liste
                     this.suspendedControls = [];
                 }
                 
-                // NOUVEAU : Restaurer les dossiers contrôlés
+                // Restaurer les dossiers contrôlés
                 if (backupData.controlledDossiers && Array.isArray(backupData.controlledDossiers)) {
                     this.controlledDossiers = new Map();
                     backupData.controlledDossiers.forEach(item => {
@@ -2602,30 +2758,31 @@ export class PersistenceManager {
                         });
                     });
                 } else {
-                    // Si pas de données de dossiers contrôlés, vider la Map
                     this.controlledDossiers = new Map();
                 }
                 
-                // Sauvegarder tout dans localStorage
+                // Sauvegarder tout
                 this.saveToStorage();
                 this.saveSuspendedToStorage();
                 this.saveControlledDossiersToStorage();
                 
-                // Message de succès détaillé
+                // Message de succès détaillé avec révisions
                 let successMessage = `Historique importé avec succès:`;
                 successMessage += `\n• ${this.controles.length} contrôle(s) terminé(s)`;
                 successMessage += `\n• ${this.suspendedControls.length} contrôle(s) suspendu(s)`;
                 successMessage += `\n• ${this.controlledDossiers.size} dossier(s) marqué(s)`;
+                if (hasRevisions && revisionCount > 0) {
+                    successMessage += `\n• ${revisionCount} révision(s) C2R importée(s)`; // NOUVEAU
+                }
                 
                 Utils.showNotification(successMessage, 'success');
                 
-                // Rafraîchir l'interface historique si visible
+                // Rafraîchir l'interface
                 if (window.historyInterface && window.historyInterface.isHistorySectionActive()) {
                     window.historyInterface.refresh();
                 }
                 
-                // Log détaillé
-                Utils.debugLog(`Import réussi: ${this.controles.length} terminés, ${this.suspendedControls.length} suspendus, ${this.controlledDossiers.size} dossiers`);
+                Utils.debugLog(`Import réussi avec révisions: ${this.controles.length} terminés, ${revisionCount} révisions`);
                 
             } catch (error) {
                 console.error('Erreur import JSON:', error);
@@ -2639,7 +2796,130 @@ export class PersistenceManager {
         
         reader.readAsText(file);
     }
+
+    // NOUVEAU : Obtenir les statistiques d'un dossier spécifique (original + révisions)
+    getDossierHistory(dossierKey, controlType) {
+        const controls = this.controles.filter(c => {
+            const cDossierKey = this.generateDossierKey({
+                codeDossier: c.codeDossier,
+                client: c.client,
+                montant: c.montant
+            });
+            return cDossierKey === dossierKey && c.type === controlType;
+        }).sort((a, b) => a.date - b.date);
+
+        return {
+            totalControls: controls.length,
+            hasRevision: controls.some(c => c.completionType === 'C2R'),
+            originalControl: controls.find(c => c.completionType !== 'C2R'),
+            revision: controls.find(c => c.completionType === 'C2R'),
+            currentStatus: controls.length > 0 ? controls[controls.length - 1].conformiteGlobale : 'UNKNOWN',
+            controls: controls
+        };
+    }
+
+    // NOUVEAU : Obtenir le résumé des révisions pour l'interface
+    getRevisionSummary() {
+        const totalRevisions = this.controles.filter(c => c.completionType === 'C2R').length;
+        const improved = this.countRevisionsImprovedCompliance();
+        const totalModifications = this.controles
+            .filter(c => c.completionType === 'C2R')
+            .reduce((sum, c) => sum + (c.totalModifications || 0), 0);
+        
+        const avgModifications = totalRevisions > 0 ? 
+            Math.round(totalModifications / totalRevisions) : 0;
+
+        return {
+            totalRevisions,
+            improvedCompliance: improved,
+            totalModifications,
+            avgModifications,
+            revisionRate: this.controles.length > 0 ? 
+                Math.round((totalRevisions / this.controles.length) * 100) : 0
+        };
+    }
+ter par type de finalisation
+        const c1Controls = this.controles.filter(c => c.completionType === 'C1').length;
+        const c1sControls = this.controles.filter(c => c.completionType === 'C1S').length;
+        const c2rControls = this.controles.filter(c => c.completionType === 'C2R').length;
+        
+        // NOUVEAU : Calculer les conformités par type
+        const c1Conformes = this.controles.filter(c => c.completionType === 'C1' && c.conformiteGlobale === 'CONFORME').length;
+        const c1sConformes = this.controles.filter(c => c.completionType === 'C1S' && c.conformiteGlobale === 'CONFORME').length;
+        const c2rConformes = this.controles.filter(c => c.completionType === 'C2R' && c.conformiteGlobale === 'CONFORME').length;
+        
+        // NOUVEAU : Calculer le taux de conformité révisé
+        const revisedComplianceRate = this.calculateRevisedComplianceRate();
+        
+        // Statistiques existantes
+        const conformes = this.controles.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        const directCompletions = this.controles.filter(c => c.completionType === 'C1').length;
+        const suspendedCompletions = this.controles.filter(c => c.completionType === 'C1S').length;
+        const suspensionRate = totalControles > 0 ? Math.round((suspendedCompletions / totalControles) * 100) : 0;
+        
+        const thisMonth = new Date();
+        thisMonth.setDate(1);
+        const controlesMoisActuel = this.controles.filter(c => c.date >= thisMonth).length;
+        
+        const repartitionTypes = {};
+        this.controles.forEach(c => {
+            repartitionTypes[c.type] = (repartitionTypes[c.type] || 0) + 1;
+        });
+        
+        const typePlusFrequent = Object.entries(repartitionTypes)
+            .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Aucun';
+
+        const anomaliesMajeures = this.controles.reduce((sum, c) => sum + c.anomaliesMajeures, 0);
+        
+        return {
+            totalControles,
+            tauxConformite: totalControles > 0 ? Math.round((conformes / totalControles) * 100) : 0,
+            totalAnomaliesMajeures: anomaliesMajeures,
+            controlesMoisActuel,
+            typePlusFrequent,
+            repartitionTypes,
+            directCompletions,
+            suspendedCompletions,
+            suspensionRate,
+            averageSuspensionDays: this.calculateAverageSuspensionDays(),
+            
+            // NOUVEAU : Statistiques de révisions
+            totalRevisions: c2rControls,
+            revisionRate: totalControles > 0 ? Math.round((c2rControls / totalControles) * 100) : 0,
+            c1Controls,
+            c1sControls,
+            c2rControls,
+            c1Conformes,
+            c1sConformes,
+            c2rConformes,
+            revisedComplianceRate,
+            
+            // NOUVEAU : Analyse des améliorations par révision
+            revisionsImprovedCompliance: this.countRevisionsImprovedCompliance()
+        };
+    
+
+    // NOUVEAU : Calculer le taux de conformité révisé
+    calculateRevisedComplianceRate() {
+        const uniqueDossiers = new Map();
+        
+        // Pour chaque contrôle, garder le plus récent pour chaque dossier
+        this.controles.forEach(control => {
+            const dossierKey = `${control.codeDossier}_${control.client}_${control.type}`;
+            const existing = uniqueDossiers.get(dossierKey);
+            
+            if (!existing || control.date > existing.date) {
+                uniqueDossiers.set(dossierKey, control);
+            }
+        });
+        
+        const latestControls = Array.from(uniqueDossiers.values());
+        const conformes = latestControls.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        
+        return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
+    }
 }
+
 
 
 
