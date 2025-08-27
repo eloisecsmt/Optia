@@ -2838,7 +2838,7 @@ export class PersistenceManager {
                 Math.round((totalRevisions / this.controles.length) * 100) : 0
         };
     }
-ter par type de finalisation
+}ter par type de finalisation
         const c1Controls = this.controles.filter(c => c.completionType === 'C1').length;
         const c1sControls = this.controles.filter(c => c.completionType === 'C1S').length;
         const c2rControls = this.controles.filter(c => c.completionType === 'C2R').length;
@@ -2897,6 +2897,7 @@ ter par type de finalisation
             // NOUVEAU : Analyse des améliorations par révision
             revisionsImprovedCompliance: this.countRevisionsImprovedCompliance()
         };
+    }
     
 
     // NOUVEAU : Calculer le taux de conformité révisé
@@ -2919,6 +2920,7 @@ ter par type de finalisation
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
