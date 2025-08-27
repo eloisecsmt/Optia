@@ -1609,7 +1609,7 @@ export class PersistenceManager {
 
     // NOUVELLE MÉTHODE : Export de sauvegarde JSON pour backup
     exportBackupJSON() {
-       const backupData = {
+        const backupData = {
             version: "1.2", // NOUVEAU : Version mise à jour pour les révisions
             exportDate: new Date().toISOString(),
             totalControles: this.controles.length,
@@ -1618,9 +1618,9 @@ export class PersistenceManager {
             controles: this.controles.map(c => ({
                 ...c,
                 date: c.date.toISOString(),
-                // NOUVEAU : Champs de révision
+                // NOUVEAU : Champs de révision avec vérification de type
                 parentControlId: c.parentControlId || null,
-                revisionDate: c.revisionDate ? c.revisionDate.toISOString() : null,
+                revisionDate: (c.revisionDate && c.revisionDate instanceof Date) ? c.revisionDate.toISOString() : null,
                 modifiedFields: c.modifiedFields || null,
                 totalModifications: c.totalModifications || null
             })),
@@ -1660,6 +1660,7 @@ export class PersistenceManager {
             return false;
         }
     }
+
     // NOUVEAU : Sauvegarder un contrôle suspendu
     saveSuspendedControl(suspendedControl) {
         try {
@@ -2859,6 +2860,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
