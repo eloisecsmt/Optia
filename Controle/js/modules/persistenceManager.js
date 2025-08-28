@@ -55,6 +55,13 @@ export class PersistenceManager {
             // Vérifier s'il y a vraiment eu une suspension
             const hadSuspension = suspensionInfo !== null || 
                                  this.getSuspendedControl(dossierKey, controlType) !== null;
+
+            Utils.debugLog(`Debug completion type pour ${controlData.dossier.client}:`);
+            Utils.debugLog(`- isRevision: ${isRevision}`);
+            Utils.debugLog(`- wasSuspended: ${wasSuspended}`);
+            Utils.debugLog(`- suspensionInfo:`, suspensionInfo);
+            Utils.debugLog(`- controlData.wasSuspended:`, controlData.wasSuspended);
+
             
             let completionType = 'C1';
             if (isRevision) {
@@ -3032,6 +3039,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
