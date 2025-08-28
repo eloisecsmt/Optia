@@ -247,10 +247,10 @@ export class DocumentController {
             'FINANCEMENT': [4, 5, 13, 15, 16, 17, 18, 99], // Carto Client, Carto Opé, FIL, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
             'CARTO_CLIENT': [4 ,7, 8, 99], // Carto Client, CNI, Justif, Zeendoc
             'OPERATION': [22, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
-            'NOUVEAU_CLIENT': [1, 2, 4, 5, 6, 7, 8, 9, 10, 21, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'NOUVEAU_CLIENT': [1, 2, 4, 5, 6, 7, 8, 9, 10, 21, 23, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
-            'MIS_A_JOUR': [1, 2, 4, 5, 6, 7, 8, 9, 10,11, 21, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'MIS_A_JOUR': [1, 2, 4, 5, 6, 7, 8, 9, 10,11, 21, 23, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'ADEQUATION': [19, 99], // Déclaration d'adéquation, Zeendoc
             'ARBITRAGE': [22, 6, 11, 19, 20, 99] //
         };
@@ -6015,6 +6015,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
