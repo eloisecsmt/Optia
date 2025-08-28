@@ -2376,6 +2376,47 @@ export class DocumentController {
                 }
             ]
         },
+            23: {
+            id: 23,
+            name: 'Carton de signature',
+            fullName: 'Carton de signature client',
+            questions: [
+                {
+                    text: 'Est-ce que le document est présent ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si le Carton de signature est présent dans le dossier client (document optionnel)',
+                    skipIfNo: true,
+                    skipIfNC: true
+                },
+                {
+                    text: 'Les signatures de référence sont-elles présentes ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que les signatures de référence du client sont bien apposées sur le carton',
+                    qualityCheck: {
+                        text: 'Les signatures de référence sont-elles lisibles et exploitables ?',
+                        help: 'Signatures nettes, complètes, suffisamment contrastées pour servir de référence'
+                    }
+                },
+                {
+                    text: 'Le carton correspond-il au(x) titulaire(s) du dossier ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez que l\'identité mentionnée correspond aux clients du dossier en cours'
+                },
+                {
+                    text: 'Y a-t-il une date sur le carton de signature ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Présence d\'une date de création ou de mise à jour du carton',
+                    qualityCheck: {
+                        text: 'La date est-elle cohérente avec l\'ouverture du dossier ?',
+                        help: 'Date logique par rapport à la chronologie du dossier client'
+                    }
+                }
+            ]
+        },
             99: {
                 id: 99,
                 name: 'Zeendoc',
@@ -5974,6 +6015,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
