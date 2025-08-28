@@ -4696,7 +4696,9 @@ export class DocumentController {
                     'si montant > 150 000€, une diligence renforcée',
                     'en cas de doute, une déclaration de soupçon',
                     'si compte tiers, y a-t-il une procuration',
-                    'l\'opération concerne-t-elle un produit cif'
+                    'l\'opération concerne-t-elle un produit cif',
+                    'par rapport à l\'ancien document, les informations ont-elles évolué',
+                    'par rapport à l\'ancien profil, les informations ont-elles évolué'
                 ];
                 
                 // Vérifier si la question fait partie des cas où "Non" est acceptable
@@ -5972,6 +5974,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
