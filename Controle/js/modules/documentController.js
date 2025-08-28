@@ -4746,7 +4746,6 @@ export class DocumentController {
         const dossierKey = this.generateDossierKey(this.currentDossier);
         const controlType = this.currentControl.type;
         const suspendedControl = window.persistenceManager?.getSuspendedControl(dossierKey, controlType);
-        const wasSuspended = suspendedControl !== null;
     
         const wasSuspended = this.isResumingControl && this.currentControlId;
         const suspendedInfo = wasSuspended ? {
@@ -5914,6 +5913,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
