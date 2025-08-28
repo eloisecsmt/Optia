@@ -155,7 +155,7 @@ export class ControlTypes {
                 ]
             },
             'MIS_A_JOUR': {
-                name: 'Mis à jour',
+                name: 'Mise à jour',
                 description: 'Contrôle de mise à jour documentaire pour clients existants',
                 frequency: 'Mensuel',
                 sampleSize: 15,
@@ -1110,5 +1110,6 @@ export class ControlTypes {
         return this.controlDefinitions;
     }
 }
+
 
 
