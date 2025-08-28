@@ -1,4 +1,5 @@
 // documentController.js - listes des questions pour chaque contrôle
+// pourquoi ça fonctionne pas et ça redeploy pas mon code
 
 import { Utils } from './utils.js';
 
@@ -6148,6 +6149,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
