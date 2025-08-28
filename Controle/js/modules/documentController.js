@@ -341,7 +341,7 @@ export class DocumentController {
                         type: 'protection_status',
                         required: true,
                         showOnlyFor: ['NOUVEAU_CLIENT', 'MIS_A_JOUR'],
-                        help: 'Vérifiez le statut juridique du client : mineur, tutelle, curatelle, mandat de protection future ou autre situation',
+                        help: 'Vérifiez le statut juridique du client',
                         options: [
                             'Non (majeur capable)',
                             'Mineur',
@@ -359,7 +359,7 @@ export class DocumentController {
                         showOnlyFor: ['NOUVEAU_CLIENT', 'MIS_A_JOUR'],
                         help: 'Détaillez le statut de protection particulier',
                         showOnlyIf: {
-                            questionIndex: -1, // Question précédente
+                            questionIndex: -1,
                             answer: 'Autre'
                         }
                     },
@@ -370,12 +370,12 @@ export class DocumentController {
                         showOnlyFor: ['NOUVEAU_CLIENT', 'MIS_A_JOUR'],
                         help: 'Cochez les documents manquants. Si tous sont présents, ne cochez rien.',
                         showOnlyIf: {
-                            questionIndex: -2, // Deux questions avant
-                            answerNot: 'Non (majeur capable)'
+                            questionIndex: -2,
+                            answerIn: ['Mineur', 'Tutelle', 'Curatelle', 'Mandat de protection future (activé)', 'Mandat de protection future (non activé)', 'Autre']
                         },
                         options: [
                             'Habilitation/Jugement de protection manquant',
-                            'Pièce d\'identité du/des tuteurs manquante',
+                            'Pièce d\'identité du/des tuteurs manquante', 
                             'Justificatif de domicile du/des tuteurs manquant',
                             'Carton de signature du/des tuteurs manquant'
                         ]
@@ -2597,23 +2597,22 @@ export class DocumentController {
 
     // NOUVELLE méthode pour vérifier si une question conditionnelle doit être affichée
     shouldShowConditionalQuestion(condition) {
-        const { questionIndex, answer } = condition;
-        const targetResponse = this.documentResponses[this.currentDocument][questionIndex];
+        const { questionIndex, answer, answerIn } = condition;
+        const targetResponse = this.documentResponses[this.currentDocument][this.currentQuestionIndex + questionIndex];
         
-        if (!targetResponse) {
-            return false; // Si pas de réponse à la question de référence, ne pas afficher
+        if (!targetResponse) return false;
+    
+        if (answerIn) {
+            return answerIn.includes(targetResponse.answer);
         }
-
+        
         if (answer === 'has_selection') {
-            if (targetResponse.missingElements && targetResponse.missingElements.length > 0) {
-                return true;
-            }
-            return false;
+            return targetResponse.missingElements && targetResponse.missingElements.length > 0;
         }
         
         return targetResponse.answer === answer;
     }
-
+    
     // Méthode utilitaire pour récupérer les informations des documents (mise à jour avec Harvest)
     getDocumentName(docId) {
         const documentNames = {
@@ -5973,6 +5972,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
