@@ -247,10 +247,10 @@ export class DocumentController {
             'FINANCEMENT': [4, 5, 13, 15, 16, 17, 18, 99], // Carto Client, Carto Opé, FIL, Mandat de fi, Synthèse + Adéq. Fiche conseil, Bon pour accord, Zeendoc  
             'CARTO_CLIENT': [4 ,7, 8, 99], // Carto Client, CNI, Justif, Zeendoc
             'OPERATION': [22, 4, 6, 10, 11, 13, 19, 20, 99], // FR, Profil Risques, Carto Client, LM Entrée en Relation, Convention RTO, RIB, Carto Opération, Zeendoc
-            'NOUVEAU_CLIENT': [1, 2, 4, 5, 6, 7, 8, 9, 10, 21, 23, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'NOUVEAU_CLIENT': [1, 2, 4, 5, 7, 8, 9, 10, 21, 23, 24, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'CONTROLE_PPE': [1, 2, 7, 8, 9, 99], // FR, Profil Risques, CNI, Justificatif Domicile, Etude, Zeendoc
             'AUDIT_CIF': [2, 6, 11, 99], // Profil Risques, LM Entrée en Relation, Convention RTO, Zeendoc
-            'MIS_A_JOUR': [1, 2, 4, 5, 6, 7, 8, 9, 10,11, 21, 23, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
+            'MIS_A_JOUR': [1, 2, 4, 5, 7, 8, 9, 10,11, 21, 23, 24, 99], // FR, Profil Risques, Carto Client, FIL, LM Entrée en Relation, CNI, Justificatif Domicile, RIB, Zeendoc
             'ADEQUATION': [19, 99], // Déclaration d'adéquation, Zeendoc
             'ARBITRAGE': [22, 6, 11, 19, 20, 99] //
         };
@@ -493,6 +493,21 @@ export class DocumentController {
                         qualityCheck: {
                             text: 'Toutes les sections du questionnaire sont-elles cohérentes avec le profil client ?',
                             help: 'Réponses logiques entre expérience, objectifs et horizon'
+                        }
+                    },
+                    {
+                        text: 'L\'ancien profil de risques a-t-il été archivé ?',
+                        type: 'boolean',
+                        required: true,
+                        showOnlyFor: ['MIS_A_JOUR'],
+                        help: 'Vérifiez si l\'ancien profil de risques a été correctement sauvegardé/archivé avant la mise à jour',
+                        showOnlyIf: {
+                            questionIndex: -1, // Se réfère à la question précédente sur l'évolution
+                            answer: 'Oui'
+                        },
+                        qualityCheck: {
+                            text: 'L\'archivage de l\'ancien profil de risques est-il complet et traçable ?',
+                            help: 'Vérifiez que l\'historique des profils de risques est conservé de manière exploitable'
                         }
                     },
                     {
@@ -2447,6 +2462,90 @@ export class DocumentController {
                 }
             ]
         },
+            24: {
+            id: 24,
+            name: 'LM Entrée en Relation',
+            fullName: 'Lettre de Mission d\'Entrée en Relation',
+            questions: [
+                {
+                    text: 'Est-ce que le document est présent ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Vérifiez si la Lettre de Mission d\'Entrée en Relation est présente dans le dossier client',
+                    skipIfNo: true
+                },
+                {
+                    text: 'Quel est le type de document ?',
+                    type: 'document_type',
+                    required: true,
+                    help: 'Lettre de mission papier signée ou accord électronique',
+                    options: ['Electronique', 'Papier']
+                },
+                {
+                    text: 'Est-ce que le document est entièrement complété ?',
+                    type: 'boolean',
+                    required: true,
+                    excludeFor: ['MIS_A_JOUR'],
+                    help: 'Toutes les sections renseignées : services, modalités, conditions d\'entrée en relation',
+                    qualityCheck: {
+                        text: 'Les modalités d\'entrée en relation sont-elles clairement définies ?',
+                        help: 'Services détaillés, conditions précisées, modalités de contact établies'
+                    }
+                },
+                {
+                    text: 'La date est-elle présente sur le document ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Date d\'entrée en relation et de prise d\'effet de la lettre de mission',
+                    qualityCheck: {
+                        text: 'La date de la lettre de mission est-elle cohérente avec le dossier ?',
+                        help: 'Date de signature postérieure à l\'ouverture de compte et aux premiers échanges'
+                    }
+                },
+                {
+                    text: 'Le document a-t-il été régularisé lors de la mise à jour ?',
+                    type: 'boolean',
+                    required: true,
+                    showOnlyFor: ['MIS_A_JOUR'],
+                    help: 'Vérifiez si la lettre de mission d\'entrée en relation a été mise à jour/régularisée dans le cadre de la mise à jour du dossier client',
+                    followUp: {
+                        condition: 'Non',
+                        question: {
+                            text: 'Cette absence de régularisation pose-t-elle un problème pour le dossier ?',
+                            type: 'boolean',
+                            required: true,
+                            help: 'Évaluer l\'impact de l\'absence de régularisation sur la conformité du dossier',
+                            qualityCheck: {
+                                text: 'L\'absence de régularisation constitue-t-elle une anomalie réglementaire ?',
+                                help: 'Considérer l\'évolution du profil client et les obligations de mise à jour'
+                            }
+                        }
+                    }
+                },
+                {
+                    text: 'La signature du conseiller est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Engagement du conseiller sur les services d\'entrée en relation proposés',
+                    qualityCheck: {
+                        text: 'Le conseiller atteste-t-il de sa capacité à accompagner l\'entrée en relation ?',
+                        help: 'Signature avec confirmation des compétences et habilitations',
+                        type: 'signature_conseiller'
+                    }
+                },
+                {
+                    text: 'La signature de tous les clients est-elle présente ?',
+                    type: 'boolean',
+                    required: true,
+                    help: 'Acceptation formelle de l\'entrée en relation par le client',
+                    qualityCheck: {
+                        text: 'Le client confirme-t-il son acceptation des conditions d\'entrée en relation ?',
+                        help: 'Signature avec acceptation explicite des modalités et de l\'accompagnement',
+                        type: 'signature_clients'
+                    }
+                }
+            ]
+        },
             99: {
                 id: 99,
                 name: 'Zeendoc',
@@ -2709,6 +2808,7 @@ export class DocumentController {
             21: 'Harvest',
             22: 'FR + Profil Risques (opération)' ,
             23: 'Carton de signature',
+            24: 'LM Entrée en Relation',
             99: 'Zeendoc'
         };
         return documentNames[docId] || `Document ${docId}`;
@@ -6048,6 +6148,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
