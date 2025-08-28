@@ -2025,95 +2025,118 @@ export class PersistenceManager {
                 const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
                 if (!ws[cell_address]) continue;
     
+                // Style de base pour toutes les cellules
                 ws[cell_address].s = {
                     alignment: { vertical: 'center', wrapText: true },
                     font: { name: 'Calibri', sz: 10 },
                     border: {
-                        top: { style: 'thin', color: { rgb: '000000' } },
-                        bottom: { style: 'thin', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
+                        top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                        bottom: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                        left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                        right: { style: 'thin', color: { rgb: 'D1D5DB' } }
                     }
                 };
     
-                // Formatage spécial selon le contenu
                 const cellValue = ws[cell_address].v;
+                
+                // Formatage spécifique selon le type de contenu
                 if (cellValue && typeof cellValue === 'string') {
-                    // Titres de sections
-                    if (cellValue.includes('STATISTIQUES') || 
-                        cellValue.includes('RÉSUMÉ') || 
-                        cellValue.includes('ÉVOLUTION') ||
-                        cellValue.includes('FINALISATION') ||
-                        cellValue.includes('ANOMALIES') ||
-                        cellValue.includes('RÉPARTITION')) {
-                        
-                        ws[cell_address].s = {
-                            ...ws[cell_address].s,
-                            font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-                            fill: { 
-                                patternType: "solid",
-                                fgColor: { rgb: this.companyColors.primary } 
-                            },
-                            alignment: { horizontal: 'center', vertical: 'center' }
-                        };
-                    }
-                    // En-têtes de colonnes
-                    else if ((cellValue === 'Mois' && C === 0) ||
-                             (cellValue === 'Type' && C === 0) ||
-                             (cellValue === 'Anomalie' && C === 0)) {
-                        ws[cell_address].s = {
-                            ...ws[cell_address].s,
-                            font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-                            fill: { 
-                                patternType: "solid",
-                                fgColor: { rgb: this.companyColors.secondary } 
-                            },
-                            alignment: { horizontal: 'center', vertical: 'center' }
-                        };
-                    }
-                    // Coloration des types de finalisation
-                    else if (cellValue.includes('C1 (') || cellValue.includes('C1S (') || cellValue.includes('C2R (')) {
-                        let color = this.companyColors.info;
-                        if (cellValue.includes('C1S')) color = this.companyColors.warning;
-                        if (cellValue.includes('C2R')) color = this.companyColors.success;
-                        
+                    
+                    // TITRES PRINCIPAUX - Simple et élégant
+                    if (cellValue.includes('STATISTIQUES DÉTAILLÉES')) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 14, bold: true, color: { rgb: '1F2937' } };
                         ws[cell_address].s.fill = { 
                             patternType: "solid",
-                            fgColor: { rgb: color } 
+                            fgColor: { rgb: 'F3F4F6' } 
                         };
-                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        ws[cell_address].s.alignment = { horizontal: 'center', vertical: 'center' };
                     }
-                    // Coloration des taux de conformité
+                    
+                    // SOUS-TITRES - Fond gris léger
+                    else if (cellValue.includes('RÉSUMÉ') || 
+                             cellValue.includes('ÉVOLUTION') ||
+                             cellValue.includes('FINALISATION') ||
+                             cellValue.includes('ANOMALIES') ||
+                             cellValue.includes('RÉPARTITION')) {
+                        
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 11, bold: true, color: { rgb: '374151' } };
+                        ws[cell_address].s.fill = { 
+                            patternType: "solid",
+                            fgColor: { rgb: 'E5E7EB' } 
+                        };
+                        ws[cell_address].s.alignment = { horizontal: 'left', vertical: 'center' };
+                    }
+                    
+                    // EN-TÊTES DE COLONNES - Gris moyen
+                    else if ((cellValue === 'Mois' && C === 0) ||
+                             (cellValue === 'Type' && C === 0) ||
+                             (cellValue === 'Anomalie' && C === 0) ||
+                             (cellValue === 'Type de contrôle' && C === 0)) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1F2937' } };
+                        ws[cell_address].s.fill = { 
+                            patternType: "solid",
+                            fgColor: { rgb: 'F9FAFB' } 
+                        };
+                        ws[cell_address].s.alignment = { horizontal: 'center', vertical: 'center' };
+                    }
+                    
+                    // TYPES DE FINALISATION - Couleurs subtiles
+                    else if (cellValue.includes('C1 (Finalisations directes)')) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1E40AF' } };
+                    }
+                    else if (cellValue.includes('C1S (Après suspension)')) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'B45309' } };
+                    }
+                    else if (cellValue.includes('C2R (Révisions)')) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: '059669' } };
+                    }
+                    
+                    // TAUX DE CONFORMITÉ - Couleur selon performance
                     else if (cellValue.includes('%') && C === 3) {
                         const rate = parseInt(cellValue);
                         if (rate >= 90) {
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.success }, bold: true };
+                            ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: '059669' } }; // Vert
                         } else if (rate >= 70) {
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.warning }, bold: true };
+                            ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'D97706' } }; // Orange
                         } else {
-                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.danger }, bold: true };
+                            ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'DC2626' } }; // Rouge
                         }
                     }
                 }
                 
-                // Coloration pour les anomalies obligatoires
+                // ANOMALIES OBLIGATOIRES - Rouge discret
                 if (cellValue === 'OUI' && C === 2) {
+                    ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'DC2626' } };
                     ws[cell_address].s.fill = { 
                         patternType: "solid",
-                        fgColor: { rgb: this.companyColors.danger } 
+                        fgColor: { rgb: 'FEE2E2' } 
                     };
-                    ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                }
+                
+                // ALTERNANCE DE LIGNES SUBTILE pour les données
+                if (R > 2 && !cellValue?.toString().includes('ÉVOLUTION') && 
+                    !cellValue?.toString().includes('FINALISATION') && 
+                    !cellValue?.toString().includes('ANOMALIES') && 
+                    !cellValue?.toString().includes('RÉPARTITION')) {
+                    
+                    const isEvenRow = R % 2 === 0;
+                    if (!ws[cell_address].s.fill) {
+                        ws[cell_address].s.fill = { 
+                            patternType: "solid",
+                            fgColor: { rgb: isEvenRow ? 'FFFFFF' : 'FAFAFA' } 
+                        };
+                    }
                 }
             }
         }
     
-        // Fusionner les titres de sections
+        // Fusionner les titres de sections de manière propre
         const merges = [
             { s: { c: 0, r: 0 }, e: { c: 5, r: 0 } },  // Titre principal
             { s: { c: 0, r: 2 }, e: { c: 5, r: 2 } },  // Résumé global
         ];
         
-        // Trouver les autres lignes de titre à fusionner dynamiquement
+        // Trouver les autres lignes de titre à fusionner
         for (let R = 0; R < rowCount; ++R) {
             const cell = ws[XLSX.utils.encode_cell({ c: 0, r: R })];
             if (cell && cell.v && typeof cell.v === 'string' && 
@@ -3406,6 +3429,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
