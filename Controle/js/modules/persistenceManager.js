@@ -1599,6 +1599,194 @@ export class PersistenceManager {
         return results;
     }
 
+    // NOUVELLE MÉTHODE : Calculer les contrôles par mois
+    getControlsByMonth() {
+        const monthlyData = {};
+        
+        this.controles.forEach(controle => {
+            const monthKey = controle.date.toLocaleDateString('fr-FR', { 
+                year: 'numeric', 
+                month: 'long' 
+            });
+            
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = 0;
+            }
+            monthlyData[monthKey]++;
+        });
+        
+        // Trier par ordre chronologique
+        const sortedEntries = Object.entries(monthlyData).sort((a, b) => {
+            const [monthA] = a[0].split(' ');
+            const [monthB] = b[0].split(' ');
+            const dateA = new Date(`01 ${a[0]}`);
+            const dateB = new Date(`01 ${b[0]}`);
+            return dateA - dateB;
+        });
+        
+        return sortedEntries;
+    }
+    
+    // NOUVELLE MÉTHODE : Analyser les anomalies récurrentes
+    getRecurringAnomalies(limit = 10) {
+        const anomaliesMap = new Map();
+        
+        this.controles.forEach(controle => {
+            if (controle.details && controle.details.length > 0) {
+                controle.details
+                    .filter(detail => !detail.conforme) // Seulement les anomalies
+                    .forEach(anomalie => {
+                        let anomalieKey;
+                        
+                        // Créer une clé basée sur le document et la question
+                        if (anomalie.reponse === 'Non') {
+                            anomalieKey = `${anomalie.document} - Document manquant`;
+                        } else {
+                            anomalieKey = `${anomalie.document} - ${anomalie.question}`;
+                        }
+                        
+                        // Simplifier certaines clés communes
+                        anomalieKey = anomalieKey
+                            .replace('Est-ce que le document est présent ?', 'Document manquant')
+                            .replace(/\?$/, '')
+                            .trim();
+                        
+                        if (!anomaliesMap.has(anomalieKey)) {
+                            anomaliesMap.set(anomalieKey, {
+                                description: anomalieKey,
+                                count: 0,
+                                obligatoire: anomalie.obligatoire,
+                                lastSeen: controle.date
+                            });
+                        }
+                        
+                        const anomalieData = anomaliesMap.get(anomalieKey);
+                        anomalieData.count++;
+                        if (controle.date > anomalieData.lastSeen) {
+                            anomalieData.lastSeen = controle.date;
+                        }
+                    });
+            }
+        });
+        
+        // Trier par fréquence et retourner les top N
+        return Array.from(anomaliesMap.values())
+            .sort((a, b) => b.count - a.count)
+            .slice(0, limit);
+    }
+    
+    // NOUVELLE MÉTHODE : Statistiques par type de finalisation
+    getCompletionTypeStats() {
+        const c1Controls = this.controles.filter(c => c.completionType === 'C1');
+        const c1sControls = this.controles.filter(c => c.completionType === 'C1S');
+        const c2rControls = this.controles.filter(c => c.completionType === 'C2R');
+        
+        // Calculer les conformités
+        const c1Conformes = c1Controls.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        const c1sConformes = c1sControls.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        const c2rConformes = c2rControls.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        
+        // Calculer la durée moyenne de suspension pour C1S
+        const avgSuspensionDays = c1sControls.length > 0 ? 
+            c1sControls
+                .filter(c => c.suspensionInfo && c.suspensionInfo.suspensionDuration)
+                .reduce((sum, c) => sum + c.suspensionInfo.suspensionDuration, 0) / c1sControls.length 
+            : 0;
+        
+        // Calculer les améliorations grâce aux révisions
+        const improvedByRevision = c2rControls.filter(revision => {
+            if (revision.parentControlId) {
+                const parent = this.getOriginalControl(revision.parentControlId);
+                return parent && 
+                       parent.conformiteGlobale === 'NON CONFORME' && 
+                       revision.conformiteGlobale === 'CONFORME';
+            }
+            return false;
+        }).length;
+        
+        return {
+            c1: {
+                total: c1Controls.length,
+                conformes: c1Conformes,
+                tauxConformite: c1Controls.length > 0 ? Math.round((c1Conformes / c1Controls.length) * 100) : 0
+            },
+            c1s: {
+                total: c1sControls.length,
+                conformes: c1sConformes,
+                tauxConformite: c1sControls.length > 0 ? Math.round((c1sConformes / c1sControls.length) * 100) : 0,
+                avgSuspensionDays: Math.round(avgSuspensionDays)
+            },
+            c2r: {
+                total: c2rControls.length,
+                conformes: c2rConformes,
+                tauxConformite: c2rControls.length > 0 ? Math.round((c2rConformes / c2rControls.length) * 100) : 0,
+                improvedCompliance: improvedByRevision
+            }
+        };
+    }
+    
+    // NOUVELLE MÉTHODE : Taux de conformité global sans doublons
+    getGlobalComplianceRate() {
+        const uniqueDossiers = new Map();
+        
+        // Pour chaque contrôle, garder le plus récent pour chaque dossier unique
+        this.controles.forEach(controle => {
+            const dossierKey = `${controle.codeDossier}_${controle.client}_${controle.type}`;
+            const existing = uniqueDossiers.get(dossierKey);
+            
+            if (!existing || controle.date > existing.date) {
+                uniqueDossiers.set(dossierKey, controle);
+            }
+        });
+        
+        const uniqueControls = Array.from(uniqueDossiers.values());
+        const conformes = uniqueControls.filter(c => c.conformiteGlobale === 'CONFORME').length;
+        
+        return {
+            totalUnique: uniqueControls.length,
+            conformes: conformes,
+            tauxConformite: uniqueControls.length > 0 ? Math.round((conformes / uniqueControls.length) * 100) : 0
+        };
+    }
+
+    getEnhancedStatistics() {
+        const totalControles = this.controles.length;
+        const monthlyControls = this.getControlsByMonth();
+        const recurringAnomalies = this.getRecurringAnomalies(10);
+        const completionStats = this.getCompletionTypeStats();
+        const globalCompliance = this.getGlobalComplianceRate();
+        
+        const thisMonth = new Date();
+        thisMonth.setDate(1);
+        const controlesMoisActuel = this.controles.filter(c => c.date >= thisMonth).length;
+        
+        const repartitionTypes = {};
+        this.controles.forEach(c => {
+            repartitionTypes[c.type] = (repartitionTypes[c.type] || 0) + 1;
+        });
+        
+        const typePlusFrequent = Object.entries(repartitionTypes)
+            .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Aucun';
+        
+        return {
+            // Métriques de base
+            totalControles,
+            controlesMoisActuel,
+            typePlusFrequent,
+            repartitionTypes,
+            
+            // Nouvelles métriques
+            monthlyControls,
+            recurringAnomalies,
+            completionStats,
+            globalCompliance,
+            
+            // Métriques supplémentaires
+            totalSuspended: this.suspendedControls?.length || 0,
+            totalRevisions: completionStats.c2r.total
+        };
+    }
+
     // MODIFICATION : Statistiques étendues avec les révisions
     getStatistics() {
         const totalControles = this.controles.length;
@@ -1712,6 +1900,229 @@ export class PersistenceManager {
         }, 0);
         
         return Math.round(totalDays / suspendedCompletions.length);
+    }
+
+    createEnhancedStatsSheet(wb) {
+        const stats = this.getEnhancedStatistics();
+        
+        const statsData = [
+            ['STATISTIQUES DÉTAILLÉES', '', '', '', '', ''],
+            ['', '', '', '', '', ''],
+            ['RÉSUMÉ GLOBAL', '', '', '', '', ''],
+            ['Total contrôles (tous types)', stats.totalControles, '', '', '', ''],
+            ['Contrôles uniques (sans doublons C1/C2R)', stats.globalCompliance.totalUnique, '', '', '', ''],
+            ['Taux de conformité global', `${stats.globalCompliance.tauxConformite}%`, '', '', '', ''],
+            ['Contrôles ce mois-ci', stats.controlesMoisActuel, '', '', '', ''],
+            ['Type le plus fréquent', stats.typePlusFrequent, '', '', '', ''],
+            ['', '', '', '', '', ''],
+            
+            // Section des contrôles par mois
+            ['ÉVOLUTION MENSUELLE', '', '', '', '', ''],
+            ['Mois', 'Nombre de contrôles', '', '', '', '']
+        ];
+        
+        // Ajouter les données mensuelles
+        stats.monthlyControls.forEach(([month, count]) => {
+            statsData.push([month, count, '', '', '', '']);
+        });
+        
+        statsData.push(['', '', '', '', '', '']);
+        
+        // Section des statistiques par type de finalisation
+        statsData.push(['STATISTIQUES PAR TYPE DE FINALISATION', '', '', '', '', '']);
+        statsData.push(['Type', 'Total', 'Conformes', 'Taux conformité', 'Info supplémentaire', '']);
+        
+        statsData.push([
+            'C1 (Finalisations directes)', 
+            stats.completionStats.c1.total,
+            stats.completionStats.c1.conformes,
+            `${stats.completionStats.c1.tauxConformite}%`,
+            '',
+            ''
+        ]);
+        
+        statsData.push([
+            'C1S (Après suspension)', 
+            stats.completionStats.c1s.total,
+            stats.completionStats.c1s.conformes,
+            `${stats.completionStats.c1s.tauxConformite}%`,
+            `${stats.completionStats.c1s.avgSuspensionDays} jours moy.`,
+            ''
+        ]);
+        
+        statsData.push([
+            'C2R (Révisions)', 
+            stats.completionStats.c2r.total,
+            stats.completionStats.c2r.conformes,
+            `${stats.completionStats.c2r.tauxConformite}%`,
+            `${stats.completionStats.c2r.improvedCompliance} améliorées`,
+            ''
+        ]);
+        
+        statsData.push(['', '', '', '', '', '']);
+        
+        // Section des anomalies récurrentes
+        statsData.push(['TOP 10 ANOMALIES RÉCURRENTES', '', '', '', '', '']);
+        statsData.push(['Anomalie', 'Occurrences', 'Obligatoire', 'Dernière occurrence', '', '']);
+        
+        stats.recurringAnomalies.forEach(anomalie => {
+            statsData.push([
+                anomalie.description,
+                anomalie.count,
+                anomalie.obligatoire ? 'OUI' : 'NON',
+                anomalie.lastSeen.toLocaleDateString('fr-FR'),
+                '',
+                ''
+            ]);
+        });
+        
+        statsData.push(['', '', '', '', '', '']);
+        
+        // Section répartition par type (existante)
+        statsData.push(['RÉPARTITION PAR TYPE DE CONTRÔLE', '', '', '', '', '']);
+        statsData.push(['Type de contrôle', 'Nombre', 'Pourcentage', 'Conformes', 'Non conformes', '']);
+        
+        Object.entries(stats.repartitionTypes).forEach(([type, count]) => {
+            const controlesType = this.controles.filter(c => c.type === type);
+            const conformes = controlesType.filter(c => c.conformiteGlobale === 'CONFORME').length;
+            const nonConformes = count - conformes;
+            const pourcentage = stats.totalControles > 0 ? Math.round((count / stats.totalControles) * 100) : 0;
+            
+            statsData.push([
+                type,
+                count,
+                `${pourcentage}%`,
+                conformes,
+                nonConformes,
+                ''
+            ]);
+        });
+    
+        const ws = XLSX.utils.aoa_to_sheet(statsData);
+        this.formatEnhancedStatsSheet(ws, statsData.length);
+        XLSX.utils.book_append_sheet(wb, ws, "Statistiques");
+    }
+    
+    // NOUVELLE MÉTHODE : Formatage de l'onglet statistiques enrichi
+    formatEnhancedStatsSheet(ws, rowCount) {
+        if (!ws['!ref']) return;
+    
+        // Largeurs de colonnes optimisées
+        ws['!cols'] = [
+            { width: 35 },  // Description/Type
+            { width: 15 },  // Valeur/Nombre
+            { width: 15 },  // Conformes/Pourcentage
+            { width: 18 },  // Taux/Date
+            { width: 20 },  // Info supplémentaire
+            { width: 10 }   // Colonne vide pour espacement
+        ];
+    
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+    
+                ws[cell_address].s = {
+                    alignment: { vertical: 'center', wrapText: true },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+    
+                // Formatage spécial selon le contenu
+                const cellValue = ws[cell_address].v;
+                if (cellValue && typeof cellValue === 'string') {
+                    // Titres de sections
+                    if (cellValue.includes('STATISTIQUES') || 
+                        cellValue.includes('RÉSUMÉ') || 
+                        cellValue.includes('ÉVOLUTION') ||
+                        cellValue.includes('FINALISATION') ||
+                        cellValue.includes('ANOMALIES') ||
+                        cellValue.includes('RÉPARTITION')) {
+                        
+                        ws[cell_address].s = {
+                            ...ws[cell_address].s,
+                            font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+                            fill: { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.primary } 
+                            },
+                            alignment: { horizontal: 'center', vertical: 'center' }
+                        };
+                    }
+                    // En-têtes de colonnes
+                    else if ((cellValue === 'Mois' && C === 0) ||
+                             (cellValue === 'Type' && C === 0) ||
+                             (cellValue === 'Anomalie' && C === 0)) {
+                        ws[cell_address].s = {
+                            ...ws[cell_address].s,
+                            font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                            fill: { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.secondary } 
+                            },
+                            alignment: { horizontal: 'center', vertical: 'center' }
+                        };
+                    }
+                    // Coloration des types de finalisation
+                    else if (cellValue.includes('C1 (') || cellValue.includes('C1S (') || cellValue.includes('C2R (')) {
+                        let color = this.companyColors.info;
+                        if (cellValue.includes('C1S')) color = this.companyColors.warning;
+                        if (cellValue.includes('C2R')) color = this.companyColors.success;
+                        
+                        ws[cell_address].s.fill = { 
+                            patternType: "solid",
+                            fgColor: { rgb: color } 
+                        };
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                    }
+                    // Coloration des taux de conformité
+                    else if (cellValue.includes('%') && C === 3) {
+                        const rate = parseInt(cellValue);
+                        if (rate >= 90) {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.success }, bold: true };
+                        } else if (rate >= 70) {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.warning }, bold: true };
+                        } else {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: this.companyColors.danger }, bold: true };
+                        }
+                    }
+                }
+                
+                // Coloration pour les anomalies obligatoires
+                if (cellValue === 'OUI' && C === 2) {
+                    ws[cell_address].s.fill = { 
+                        patternType: "solid",
+                        fgColor: { rgb: this.companyColors.danger } 
+                    };
+                    ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                }
+            }
+        }
+    
+        // Fusionner les titres de sections
+        const merges = [
+            { s: { c: 0, r: 0 }, e: { c: 5, r: 0 } },  // Titre principal
+            { s: { c: 0, r: 2 }, e: { c: 5, r: 2 } },  // Résumé global
+        ];
+        
+        // Trouver les autres lignes de titre à fusionner dynamiquement
+        for (let R = 0; R < rowCount; ++R) {
+            const cell = ws[XLSX.utils.encode_cell({ c: 0, r: R })];
+            if (cell && cell.v && typeof cell.v === 'string' && 
+                (cell.v.includes('ÉVOLUTION') || cell.v.includes('FINALISATION') || 
+                 cell.v.includes('ANOMALIES') || cell.v.includes('RÉPARTITION'))) {
+                merges.push({ s: { c: 0, r: R }, e: { c: 5, r: R } });
+            }
+        }
+        
+        ws['!merges'] = merges;
     }
 
     searchControls(criteria) {
@@ -2001,51 +2412,6 @@ export class PersistenceManager {
         return results;
     }
 
-    // NOUVEAU : Statistiques incluant les contrôles suspendus
-    getStatistics() {
-        const totalControles = this.controles.length;
-        const totalSuspended = this.suspendedControls.length;
-        const conformes = this.controles.filter(c => c.conformiteGlobale === 'CONFORME').length;
-        
-        const thisMonth = new Date();
-        thisMonth.setDate(1);
-        const controlesMoisActuel = this.controles.filter(c => c.date >= thisMonth).length;
-        const suspendedMoisActuel = this.suspendedControls.filter(c => new Date(c.suspendedAt) >= thisMonth).length;
-        
-        const repartitionTypes = {};
-        this.controles.forEach(c => {
-            repartitionTypes[c.type] = (repartitionTypes[c.type] || 0) + 1;
-        });
-        
-        // Ajouter les suspendus dans les statistiques
-        this.suspendedControls.forEach(c => {
-            const key = `${c.type} (Suspendus)`;
-            repartitionTypes[key] = (repartitionTypes[key] || 0) + 1;
-        });
-        
-        const typePlusFrequent = Object.entries(repartitionTypes)
-            .sort(([,a], [,b]) => b - a)[0]?.[0] || 'Aucun';
-
-        const anomaliesMajeures = this.controles.reduce((sum, c) => sum + c.anomaliesMajeures, 0);
-        
-        // Alertes pour les contrôles suspendus depuis longtemps
-        const oldSuspended = this.suspendedControls.filter(c => {
-            const daysSuspended = Math.floor((new Date() - new Date(c.suspendedAt)) / (1000 * 60 * 60 * 24));
-            return daysSuspended >= 14;
-        }).length;
-        
-        return {
-            totalControles,
-            totalSuspended,
-            oldSuspended,
-            tauxConformite: totalControles > 0 ? Math.round((conformes / totalControles) * 100) : 0,
-            totalAnomaliesMajeures: anomaliesMajeures,
-            controlesMoisActuel,
-            suspendedMoisActuel,
-            typePlusFrequent,
-            repartitionTypes
-        };
-    }
 
     // NOUVEAU : Sauvegarder les contrôles suspendus dans localStorage
     saveSuspendedToStorage() {
@@ -3039,6 +3405,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
