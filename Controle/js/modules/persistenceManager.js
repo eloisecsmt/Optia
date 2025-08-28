@@ -52,12 +52,15 @@ export class PersistenceManager {
             
             Utils.debugLog(`Sauvegarde contrôle: ${controlData.dossier.client} - Type: ${controlType}${isRevision ? ' [RÉVISION]' : ''}`);
             
-            // NOUVEAU : Déterminer le type de finalisation
+            // Vérifier s'il y a vraiment eu une suspension
+            const dossierKey = this.generateDossierKey(controlData.dossier);
+            const hadSuspension = suspensionInfo !== null || 
+                                 this.getSuspendedControl(dossierKey, controlType) !== null;
+            
             let completionType = 'C1';
             if (isRevision) {
                 completionType = 'C2R';
-            } else if (suspensionInfo && suspensionInfo.suspendedAt) {
-                // Seulement C1S s'il y a vraiment des infos de suspension
+            } else if (hadSuspension && suspensionInfo) {
                 completionType = 'C1S';
             }
             
@@ -3030,6 +3033,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
