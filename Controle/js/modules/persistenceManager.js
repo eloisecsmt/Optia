@@ -1,5 +1,5 @@
 // persistenceManager.js - Version enrichie avec export Excel détaillé
-// prends les modifications
+
 
 import { Utils } from './utils.js';
 
@@ -824,7 +824,7 @@ export class PersistenceManager {
             this.createAllQuestionsSheet(wb);
             
             // 3. Onglet Statistiques (inchangé)
-            this.createStatsSheet(wb);
+            this.createEnhancedStatsSheet(wb);
             
             // 4. NOUVEAU : Onglets par type de contrôle
             this.createControlTypeSheets(wb);
@@ -3406,6 +3406,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
