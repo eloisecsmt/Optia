@@ -337,6 +337,50 @@ export class DocumentController {
                         }
                     },
                     {
+                        text: 'Le client est-il mineur ou sous protection juridique ?',
+                        type: 'protection_status',
+                        required: true,
+                        showOnlyFor: ['NOUVEAU_CLIENT', 'MIS_A_JOUR'],
+                        help: 'Vérifiez si le client est mineur, sous tutelle, curatelle, mandat de protection future ou autre situation particulière',
+                        options: [
+                            'Non (majeur capable)',
+                            'Mineur',
+                            'Tutelle',
+                            'Curatelle', 
+                            'Mandat de protection future (activé)',
+                            'Mandat de protection future (non activé)',
+                            'Autre'
+                        ],
+                        followUp: {
+                            condition: ['Mineur', 'Tutelle', 'Curatelle', 'Mandat de protection future (activé)', 'Mandat de protection future (non activé)', 'Autre'],
+                            question: {
+                                text: 'Si autre statut de protection, précisez :',
+                                type: 'text',
+                                required: true,
+                                showOnlyIf: {
+                                    parentAnswer: 'Autre'
+                                }
+                            }
+                        }
+                    },
+                    {
+                        text: 'Les documents de protection juridique sont-ils présents et complets ?',
+                        type: 'checklist',
+                        required: true,
+                        showOnlyFor: ['NOUVEAU_CLIENT', 'MIS_A_JOUR'],
+                        help: 'Vérifiez la présence des documents requis selon le statut de protection',
+                        showOnlyIf: {
+                            // S'affiche seulement si protection juridique détectée
+                            previousQuestionNot: 'Non (majeur capable)'
+                        },
+                        options: [
+                            'Habilitation/Jugement de protection',
+                            'Pièce d\'identité du/des tuteurs/curateurs',
+                            'Justificatif de domicile du/des tuteurs/curateurs',
+                            'Carton de signature du/des tuteurs/curateurs'
+                        ]
+                    },
+                    {
                         text: 'Par rapport à l\'ancien document, les informations ont-elles bien évolué ?',
                         type: 'boolean',
                         required: true,
@@ -5913,6 +5957,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
