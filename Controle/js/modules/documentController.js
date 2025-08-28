@@ -2677,6 +2677,8 @@ export class DocumentController {
             19: 'Déclaration d\'adéquation',
             20: 'Bulletin de souscription',
             21: 'Harvest',
+            22: 'FR + Profil Risques (opération)' ,
+            23: 'Carton de signature',
             99: 'Zeendoc'
         };
         return documentNames[docId] || `Document ${docId}`;
@@ -6015,6 +6017,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
