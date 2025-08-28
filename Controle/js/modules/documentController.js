@@ -4748,10 +4748,20 @@ export class DocumentController {
         const suspendedControl = window.persistenceManager?.getSuspendedControl(dossierKey, controlType);
         const wasSuspended = suspendedControl !== null;
     
-        // Supprimer le contrôle suspendu s'il existait (avant saveControl)
-        if (this.isResumingControl && this.currentControlId && wasSuspended) {
+        const wasSuspended = this.isResumingControl && this.currentControlId;
+        const suspendedInfo = wasSuspended ? {
+            suspendedAt: new Date(), // ou récupérer la vraie date
+            suspendReason: "Contrôle repris après suspension"
+        } : null;
+        
+        // Supprimer le contrôle suspendu s'il existait
+        if (wasSuspended) {
+            const dossierKey = this.generateDossierKey(this.currentDossier);
+            const controlType = this.currentControl.type;
             window.persistenceManager?.removeSuspendedControl(dossierKey, controlType);
         }
+        
+        const summary = this.generateControlSummary(wasSuspended, suspendedInfo);
     
         if (this.manualControlMode) {
             this.completeCurrentManualDossier();
@@ -5904,6 +5914,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
