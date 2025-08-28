@@ -99,7 +99,7 @@ export class DocumentController {
                 description: 'Cartographie et classification des clients'
             },
             'MIS_A_JOUR': {
-                name: 'Mis à jour',
+                name: 'Mise à jour',
                 description: 'Contrôle de mise à jour documentaire pour clients existants'
             },
             'ADEQUATION': {
@@ -5913,6 +5913,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
