@@ -53,7 +53,6 @@ export class PersistenceManager {
             Utils.debugLog(`Sauvegarde contrôle: ${controlData.dossier.client} - Type: ${controlType}${isRevision ? ' [RÉVISION]' : ''}`);
             
             // Vérifier s'il y a vraiment eu une suspension
-            const dossierKey = this.generateDossierKey(controlData.dossier);
             const hadSuspension = suspensionInfo !== null || 
                                  this.getSuspendedControl(dossierKey, controlType) !== null;
             
@@ -3033,6 +3032,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
