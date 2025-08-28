@@ -1202,6 +1202,16 @@ export class DocumentController {
                         }
                     },
                     {
+                        text: 'La date est-elle présente sur le document ?',
+                        type: 'boolean',
+                        required: true,
+                        help: 'Date de signature de la convention RTO',
+                        qualityCheck: {
+                            text: 'La date indiquée est-elle cohérente avec le dossier ?',
+                            help: 'Date postérieure à l\'ouverture de compte et aux premiers échanges'
+                        }
+                    },
+                    {
                         text: 'Est-ce que le document est entièrement complété ?',
                         type: 'boolean',
                         required: true,
@@ -1209,6 +1219,26 @@ export class DocumentController {
                         qualityCheck: {
                             text: 'Les modalités d\'exécution et de transmission sont-elles clairement définies ?',
                             help: 'Périmètre d\'intervention, procédures, délais et conditions précisés'
+                        }
+                    },
+                    {
+                        text: 'Le document a-t-il été régularisé lors de la mise à jour ?',
+                        type: 'boolean',
+                        required: true,
+                        showOnlyFor: ['MIS_A_JOUR'],
+                        help: 'Vérifiez si la convention RTO a été mise à jour/régularisée dans le cadre de la mise à jour du dossier client',
+                        followUp: {
+                            condition: 'Non',
+                            question: {
+                                text: 'Cette absence de régularisation pose-t-elle un problème pour le dossier ?',
+                                type: 'boolean',
+                                required: true,
+                                help: 'Évaluer l\'impact de l\'absence de régularisation sur la conformité du dossier',
+                                qualityCheck: {
+                                    text: 'L\'absence de régularisation constitue-t-elle une anomalie réglementaire ?',
+                                    help: 'Considérer l\'évolution du profil client, les nouvelles réglementations, et les obligations de mise à jour'
+                                }
+                            }
                         }
                     },
                     {
@@ -4741,7 +4771,8 @@ export class DocumentController {
                     'si compte tiers, y a-t-il une procuration',
                     'l\'opération concerne-t-elle un produit cif',
                     'par rapport à l\'ancien document, les informations ont-elles évolué',
-                    'par rapport à l\'ancien profil, les informations ont-elles évolué'
+                    'par rapport à l\'ancien profil, les informations ont-elles évolué',
+                    'Le document a-t-il été régularisé lors de la mise à jour ?'
                 ];
                 
                 // Vérifier si la question fait partie des cas où "Non" est acceptable
@@ -6017,6 +6048,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
