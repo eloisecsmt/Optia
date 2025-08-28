@@ -845,7 +845,7 @@ export class PersistenceManager {
         const overviewData = [
             ['HISTORIQUE COMPLET DES CONTRÔLES DOCUMENTAIRES', '', '', '', '', '', '', '', '', ''],
             ['', '', '', '', '', '', '', '', '', ''],
-            ['Date', 'Type', 'Client', 'Code Dossier', 'Conseiller', 'Montant', 'Domaine', 'Type d\'acte', 'Date d\'envoi', 'Documents', 'Conformité']
+            ['Date', 'Type de contrôle', 'Client', 'Code Dossier', 'Conseiller', 'Montant', 'Domaine', 'Type d\'acte', 'Date d\'envoi', 'Documents', 'Conformité']
         ];
 
         // Ajouter tous les contrôles
@@ -3039,6 +3039,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
