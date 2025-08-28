@@ -496,7 +496,7 @@ export class DocumentController {
                         }
                     },
                     {
-                        text: 'Par rapport à l\'ancien profil, les informations ont-elles bien évolué ?',
+                        text: 'Par rapport à l\'ancien profil, les informations ont-elles évolué ?',
                         type: 'boolean',
                         required: true,
                         showOnlyFor: ['MIS_A_JOUR'],
@@ -5972,6 +5972,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
