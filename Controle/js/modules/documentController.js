@@ -341,7 +341,7 @@ export class DocumentController {
                         type: 'protection_status',
                         required: true,
                         showOnlyFor: ['NOUVEAU_CLIENT', 'MIS_A_JOUR'],
-                        help: 'Vérifiez si le client est mineur, sous tutelle, curatelle, mandat de protection future ou autre situation particulière',
+                        help: 'Vérifiez le statut juridique du client : mineur, tutelle, curatelle, mandat de protection future ou autre situation',
                         options: [
                             'Non (majeur capable)',
                             'Mineur',
@@ -350,34 +350,34 @@ export class DocumentController {
                             'Mandat de protection future (activé)',
                             'Mandat de protection future (non activé)',
                             'Autre'
-                        ],
-                        followUp: {
-                            condition: ['Mineur', 'Tutelle', 'Curatelle', 'Mandat de protection future (activé)', 'Mandat de protection future (non activé)', 'Autre'],
-                            question: {
-                                text: 'Si autre statut de protection, précisez :',
-                                type: 'text',
-                                required: true,
-                                showOnlyIf: {
-                                    parentAnswer: 'Autre'
-                                }
-                            }
+                        ]
+                    },
+                    {
+                        text: 'Si autre statut, précisez :',
+                        type: 'text',
+                        required: true,
+                        showOnlyFor: ['NOUVEAU_CLIENT', 'MIS_A_JOUR'],
+                        help: 'Détaillez le statut de protection particulier',
+                        showOnlyIf: {
+                            questionIndex: -1, // Question précédente
+                            answer: 'Autre'
                         }
                     },
                     {
-                        text: 'Les documents de protection juridique sont-ils présents et complets ?',
+                        text: 'Les documents de protection juridique requis sont-ils présents ?',
                         type: 'checklist',
                         required: true,
                         showOnlyFor: ['NOUVEAU_CLIENT', 'MIS_A_JOUR'],
-                        help: 'Vérifiez la présence des documents requis selon le statut de protection',
+                        help: 'Cochez les documents manquants. Si tous sont présents, ne cochez rien.',
                         showOnlyIf: {
-                            // S'affiche seulement si protection juridique détectée
-                            previousQuestionNot: 'Non (majeur capable)'
+                            questionIndex: -2, // Deux questions avant
+                            answerNot: 'Non (majeur capable)'
                         },
                         options: [
-                            'Habilitation/Jugement de protection',
-                            'Pièce d\'identité du/des tuteurs/curateurs',
-                            'Justificatif de domicile du/des tuteurs/curateurs',
-                            'Carton de signature du/des tuteurs/curateurs'
+                            'Habilitation/Jugement de protection manquant',
+                            'Pièce d\'identité du/des tuteurs manquante',
+                            'Justificatif de domicile du/des tuteurs manquant',
+                            'Carton de signature du/des tuteurs manquant'
                         ]
                     },
                     {
@@ -3519,6 +3519,22 @@ export class DocumentController {
         `;
     }
 
+        if (questionData.type === 'protection_status') {
+            return `
+                <div class="response-group protection-status-group">
+                    <label>Statut juridique du client :</label>
+                    <div class="radio-group">
+                        ${questionData.options.map(option => `
+                            <label class="radio-option">
+                                <input type="radio" name="response" value="${option}">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
     // NOUVEAU : Gestion du type checklist
     if (questionData.type === 'checklist') {
         return `
@@ -5957,6 +5973,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
