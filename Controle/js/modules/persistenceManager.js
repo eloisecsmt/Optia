@@ -1678,9 +1678,57 @@ export class PersistenceManager {
     
     // NOUVELLE MÉTHODE : Statistiques par type de finalisation
     getCompletionTypeStats() {
-        const c1Controls = this.controles.filter(c => c.completionType === 'C1');
-        const c1sControls = this.controles.filter(c => c.completionType === 'C1S');
-        const c2rControls = this.controles.filter(c => c.completionType === 'C2R');
+        // Debug : Vérifier les types de finalisation existants
+        console.log('=== DEBUG COMPLETION TYPES ===');
+        const completionTypes = {};
+        this.controles.forEach((c, index) => {
+            const type = c.completionType || 'undefined';
+            completionTypes[type] = (completionTypes[type] || 0) + 1;
+            if (index < 5) { // Afficher les 5 premiers pour debug
+                console.log(`Contrôle ${index}: completionType = "${c.completionType}", client = "${c.client}"`);
+            }
+        });
+        console.log('Répartition des completionType:', completionTypes);
+        
+        // Filtrage avec fallback pour les anciens contrôles
+        const c1Controls = this.controles.filter(c => {
+            // Si completionType n'existe pas, on considère que c'est C1 par défaut
+            // sauf s'il y a des infos de suspension ou de révision
+            const type = c.completionType;
+            if (type === 'C1') return true;
+            if (type === undefined || type === null) {
+                // Fallback: si pas de completionType défini
+                const hasRevision = c.parentControlId !== undefined && c.parentControlId !== null;
+                const hasSuspension = c.suspensionInfo !== undefined && c.suspensionInfo !== null;
+                return !hasRevision && !hasSuspension; // C1 par défaut
+            }
+            return false;
+        });
+        
+        const c1sControls = this.controles.filter(c => {
+            const type = c.completionType;
+            if (type === 'C1S') return true;
+            if (type === undefined || type === null) {
+                // Fallback: contrôle avec suspension mais pas de révision
+                const hasRevision = c.parentControlId !== undefined && c.parentControlId !== null;
+                const hasSuspension = c.suspensionInfo !== undefined && c.suspensionInfo !== null;
+                return hasSuspension && !hasRevision;
+            }
+            return false;
+        });
+        
+        const c2rControls = this.controles.filter(c => {
+            const type = c.completionType;
+            if (type === 'C2R') return true;
+            if (type === undefined || type === null) {
+                // Fallback: contrôle avec parentControlId
+                return c.parentControlId !== undefined && c.parentControlId !== null;
+            }
+            return false;
+        });
+        
+        console.log(`Après filtrage: C1=${c1Controls.length}, C1S=${c1sControls.length}, C2R=${c2rControls.length}`);
+        console.log(`Total filtré: ${c1Controls.length + c1sControls.length + c2rControls.length}, Total original: ${this.controles.length}`);
         
         // Calculer les conformités
         const c1Conformes = c1Controls.filter(c => c.conformiteGlobale === 'CONFORME').length;
@@ -2043,11 +2091,11 @@ export class PersistenceManager {
                 if (cellValue && typeof cellValue === 'string') {
                     
                     // TITRES PRINCIPAUX - Simple et élégant
-                    if (cellValue.includes('STATISTIQUES DÉTAILLÉES')) {
-                        ws[cell_address].s.font = { name: 'Calibri', sz: 14, bold: true, color: { rgb: '1F2937' } };
+                        if (cellValue.includes('STATISTIQUES DÉTAILLÉES')) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } };
                         ws[cell_address].s.fill = { 
                             patternType: "solid",
-                            fgColor: { rgb: 'F3F4F6' } 
+                            fgColor: { rgb: this.companyColors.primary } 
                         };
                         ws[cell_address].s.alignment = { horizontal: 'center', vertical: 'center' };
                     }
@@ -3429,6 +3477,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
