@@ -1,4 +1,5 @@
 // persistenceManager.js - Version enrichie avec export Excel détaillé
+// prends les modifications
 
 import { Utils } from './utils.js';
 
@@ -3405,6 +3406,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
