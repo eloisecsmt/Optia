@@ -1549,9 +1549,10 @@ export class PersistenceManager {
                 
                 ws[cell_address].s = {
                     alignment: { 
-                        vertical: 'top', 
+                        horizontal: 'center', 
+                        vertical: 'center', 
                         wrapText: true,
-                        horizontal: 'left'
+                        textRotation: isQuestionColumn ? 90 : 0 
                     },
                     font: { name: 'Calibri', sz: 10 },
                     border: {
@@ -1697,7 +1698,7 @@ export class PersistenceManager {
             }
         }
         
-        ws['!rows'] = [{ hpt: 40 }];
+        ws['!rows'] = [{ hpt: 120 }];
         ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
     }
     
@@ -4629,9 +4630,10 @@ export class PersistenceManager {
                 
                 ws[cell_address].s = {
                     alignment: { 
-                        vertical: 'top', 
+                        horizontal: 'center', 
+                        vertical: 'center', 
                         wrapText: true,
-                        horizontal: 'left'
+                        textRotation: isQuestionColumn ? 90 : 0
                     },
                     font: { name: 'Calibri', sz: 10 },
                     border: {
@@ -4762,7 +4764,7 @@ export class PersistenceManager {
             }
         }
         
-        ws['!rows'] = [{ hpt: 40 }];
+        ws['!rows'] = [{ hpt: 120 }];
         ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
     }
     
@@ -5019,6 +5021,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
