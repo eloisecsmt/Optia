@@ -245,6 +245,17 @@ export class HistoryInterface {
                         </button>
                     `}
                 </div>
+
+                <!-- NOUVEAU BOUTON ICI -->
+                    <button class="btn btn-info" onclick="window.persistenceManager?.showQuickObjectivesConfig()">
+                        ⚙️ Objectifs
+                    </button>
+                    
+                    <!-- NOUVEAU BOUTON STATS CGP ICI -->
+                    <button class="btn btn-success" onclick="window.historyInterface?.showCGPStatistics()">
+                        👥 Stats CGP
+                    </button>
+                </div>
                 
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="showAutomaticControls()">
@@ -2086,6 +2097,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
