@@ -2256,33 +2256,114 @@ export class PersistenceManager {
 
     createEnhancedStatsSheet(wb) {
         const stats = this.getEnhancedStatistics();
+        const statsByCGP = this.getStatisticsByCGP();
+        const objectives = this.getObjectives();
+        
+        // Calculs préparatoires pour les CGP
+        const cgpEntries = Object.entries(statsByCGP)
+            .sort(([,a], [,b]) => b.tauxConformite - a.tauxConformite);
+        
+        const totalCGP = cgpEntries.length;
+        const cgpEligibles = cgpEntries.filter(([,stats]) => stats.eligibleCommission).length;
+        const moyennePonderee = totalCGP > 0 ? 
+            Math.round(cgpEntries.reduce((sum, [,stats]) => sum + stats.tauxConformite, 0) / totalCGP) : 0;
+        
+        const totauxCouleurs = cgpEntries.reduce((acc, [,stats]) => {
+            acc.green += stats.repartition.green || 0;
+            acc.orange += stats.repartition.orange || 0;
+            acc.red += stats.repartition.red || 0;
+            acc.black += stats.repartition.black || 0;
+            return acc;
+        }, { green: 0, orange: 0, red: 0, black: 0 });
+        
+        const totalControlesCGP = Object.values(totauxCouleurs).reduce((sum, val) => sum + val, 0);
         
         const statsData = [
-            ['STATISTIQUES DÉTAILLÉES', '', '', '', '', ''],
-            ['', '', '', '', '', ''],
-            ['RÉSUMÉ GLOBAL', '', '', '', '', ''],
-            ['Total contrôles (tous types)', stats.totalControles, '', '', '', ''],
-            ['Contrôles uniques (sans doublons C1/C2R)', stats.globalCompliance.totalUnique, '', '', '', ''],
-            ['Taux de conformité global', `${stats.globalCompliance.tauxConformite}%`, '', '', '', ''],
-            ['Contrôles ce mois-ci', stats.controlesMoisActuel, '', '', '', ''],
-            ['Type le plus fréquent', stats.typePlusFrequent, '', '', '', ''],
-            ['', '', '', '', '', ''],
+            // EN-TÊTE PRINCIPAL
+            ['RAPPORT STATISTIQUES COMPLET - CONTRÔLES DOCUMENTAIRES', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
             
-            // Section des contrôles par mois
-            ['ÉVOLUTION MENSUELLE', '', '', '', '', ''],
-            ['Mois', 'Nombre de contrôles', '', '', '', '']
+            // SECTION 1 : RÉSUMÉ GLOBAL
+            ['1. RÉSUMÉ GLOBAL', '', '', '', '', '', '', ''],
+            ['Total contrôles (base de données)', stats.totalControles, '', '', '', '', '', ''],
+            ['Contrôles uniques (sans doublons révisions)', stats.globalCompliance.totalUnique, '', '', '', '', '', ''],
+            ['Taux de conformité global standard', `${stats.globalCompliance.tauxConformite}%`, '', '', '', '', '', ''],
+            ['Contrôles ce mois-ci', stats.controlesMoisActuel, '', '', '', '', '', ''],
+            ['Type de contrôle le plus fréquent', stats.typePlusFrequent, '', '', '', '', '', ''],
+            ['Total révisions C2R', stats.totalRevisions, '', '', '', '', '', ''],
+            ['Total contrôles suspendus', stats.totalSuspended, '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            
+            // SECTION 2 : MÉTHODE DE PONDÉRATION CGP
+            ['2. MÉTHODE DE PONDÉRATION POUR LES CGP', '', '', '', '', '', '', ''],
+            ['Principe : Chaque contrôle reçoit un coefficient selon sa qualité', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['Couleur', 'Critère', 'Coefficient', 'Points obtenus', '', '', '', ''],
+            ['VERT', 'Aucune anomalie détectée', '100%', '100/100', '', '', '', ''],
+            ['ORANGE', 'Anomalies optionnelles uniquement', '75%', '75/100', '', '', '', ''],
+            ['ROUGE', 'Au moins une anomalie obligatoire', '25%', '25/100', '', '', '', ''],
+            ['NOIR', 'Document absent (contrôle impossible)', '0%', '0/100', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['Seuil commission CGP', `${objectives.cgpCommissionThreshold}%`, '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            
+            // SECTION 3 : SYNTHÈSE PERFORMANCES CGP
+            ['3. SYNTHÈSE PERFORMANCES CGP', '', '', '', '', '', '', ''],
+            ['Total CGP actifs', totalCGP, '', '', '', '', '', ''],
+            ['CGP éligibles commission', cgpEligibles, `${totalCGP > 0 ? Math.round((cgpEligibles/totalCGP)*100) : 0}%`, '', '', '', '', ''],
+            ['Taux moyen pondéré CGP', `${moyennePonderee}%`, '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            
+            // SECTION 4 : RÉPARTITION GLOBALE DES COULEURS
+            ['4. RÉPARTITION GLOBALE DES COULEURS', '', '', '', '', '', '', ''],
+            ['Total contrôles analysés', totalControlesCGP, '', '', '', '', '', ''],
         ];
         
-        // Ajouter les données mensuelles
-        stats.monthlyControls.forEach(([month, count]) => {
-            statsData.push([month, count, '', '', '', '']);
+        // Ajouter les pourcentages de couleurs si on a des données
+        if (totalControlesCGP > 0) {
+            statsData.push(['VERT (parfait)', totauxCouleurs.green, `${Math.round((totauxCouleurs.green/totalControlesCGP)*100)}%`, '', '', '', '', '']);
+            statsData.push(['ORANGE (réserves mineures)', totauxCouleurs.orange, `${Math.round((totauxCouleurs.orange/totalControlesCGP)*100)}%`, '', '', '', '', '']);
+            statsData.push(['ROUGE (anomalies majeures)', totauxCouleurs.red, `${Math.round((totauxCouleurs.red/totalControlesCGP)*100)}%`, '', '', '', '', '']);
+            statsData.push(['NOIR (impossible)', totauxCouleurs.black, `${Math.round((totauxCouleurs.black/totalControlesCGP)*100)}%`, '', '', '', '', '']);
+        } else {
+            statsData.push(['Aucune donnée de couleur disponible', '', '', '', '', '', '', '']);
+        }
+        
+        statsData.push(['', '', '', '', '', '', '', '']);
+        
+        // SECTION 5 : DÉTAIL PAR CGP
+        statsData.push(['5. DÉTAIL PAR CGP (TRIÉ PAR PERFORMANCE)', '', '', '', '', '', '', '']);
+        statsData.push(['CGP / Conseiller', 'Nb Contrôles', 'Taux Pondéré', 'Vert', 'Orange', 'Rouge', 'Noir', 'Commission']);
+        
+        // Ajouter chaque CGP
+        cgpEntries.forEach(([cgp, cgpStats]) => {
+            statsData.push([
+                cgp,
+                cgpStats.totalControles,
+                `${cgpStats.tauxConformite}%`,
+                cgpStats.repartition.green || 0,
+                cgpStats.repartition.orange || 0,
+                cgpStats.repartition.red || 0,
+                cgpStats.repartition.black || 0,
+                cgpStats.eligibleCommission ? 'ÉLIGIBLE' : 'NON ÉLIGIBLE'
+            ]);
         });
         
-        statsData.push(['', '', '', '', '', '']);
+        statsData.push(['', '', '', '', '', '', '', '']);
         
-        // Section des statistiques par type de finalisation
-        statsData.push(['STATISTIQUES PAR TYPE DE FINALISATION', '', '', '', '', '']);
-        statsData.push(['Type', 'Total', 'Conformes', 'Taux conformité', 'Info supplémentaire', '']);
+        // SECTION 6 : ÉVOLUTION MENSUELLE
+        statsData.push(['6. ÉVOLUTION MENSUELLE', '', '', '', '', '', '', '']);
+        statsData.push(['Mois', 'Nombre de contrôles', '', '', '', '', '', '']);
+        
+        stats.monthlyControls.forEach(([month, count]) => {
+            statsData.push([month, count, '', '', '', '', '', '']);
+        });
+        
+        statsData.push(['', '', '', '', '', '', '', '']);
+        
+        // SECTION 7 : STATISTIQUES PAR TYPE DE FINALISATION
+        statsData.push(['7. STATISTIQUES PAR TYPE DE FINALISATION', '', '', '', '', '', '', '']);
+        statsData.push(['Type', 'Total', 'Conformes', 'Taux conformité', 'Info supplémentaire', '', '', '']);
         
         statsData.push([
             'C1 (Finalisations directes)', 
@@ -2290,7 +2371,7 @@ export class PersistenceManager {
             stats.completionStats.c1.conformes,
             `${stats.completionStats.c1.tauxConformite}%`,
             '',
-            ''
+            '', '', ''
         ]);
         
         statsData.push([
@@ -2299,7 +2380,7 @@ export class PersistenceManager {
             stats.completionStats.c1s.conformes,
             `${stats.completionStats.c1s.tauxConformite}%`,
             `${stats.completionStats.c1s.avgSuspensionDays} jours moy.`,
-            ''
+            '', '', ''
         ]);
         
         statsData.push([
@@ -2308,14 +2389,14 @@ export class PersistenceManager {
             stats.completionStats.c2r.conformes,
             `${stats.completionStats.c2r.tauxConformite}%`,
             `${stats.completionStats.c2r.improvedCompliance} améliorées`,
-            ''
+            '', '', ''
         ]);
         
-        statsData.push(['', '', '', '', '', '']);
+        statsData.push(['', '', '', '', '', '', '', '']);
         
-        // Section des anomalies récurrentes
-        statsData.push(['TOP 10 ANOMALIES RÉCURRENTES', '', '', '', '', '']);
-        statsData.push(['Anomalie', 'Occurrences', 'Obligatoire', 'Dernière occurrence', '', '']);
+        // SECTION 8 : TOP 10 ANOMALIES RÉCURRENTES
+        statsData.push(['8. TOP 10 ANOMALIES RÉCURRENTES', '', '', '', '', '', '', '']);
+        statsData.push(['Anomalie', 'Occurrences', 'Obligatoire', 'Dernière occurrence', '', '', '', '']);
         
         stats.recurringAnomalies.forEach(anomalie => {
             statsData.push([
@@ -2323,16 +2404,15 @@ export class PersistenceManager {
                 anomalie.count,
                 anomalie.obligatoire ? 'OUI' : 'NON',
                 anomalie.lastSeen.toLocaleDateString('fr-FR'),
-                '',
-                ''
+                '', '', '', ''
             ]);
         });
         
-        statsData.push(['', '', '', '', '', '']);
+        statsData.push(['', '', '', '', '', '', '', '']);
         
-        // Section répartition par type (existante)
-        statsData.push(['RÉPARTITION PAR TYPE DE CONTRÔLE', '', '', '', '', '']);
-        statsData.push(['Type de contrôle', 'Nombre', 'Pourcentage', 'Conformes', 'Non conformes', '']);
+        // SECTION 9 : RÉPARTITION PAR TYPE DE CONTRÔLE
+        statsData.push(['9. RÉPARTITION PAR TYPE DE CONTRÔLE', '', '', '', '', '', '', '']);
+        statsData.push(['Type de contrôle', 'Nombre', 'Pourcentage', 'Conformes', 'Non conformes', '', '', '']);
         
         Object.entries(stats.repartitionTypes).forEach(([type, count]) => {
             const controlesType = this.controles.filter(c => c.type === type);
@@ -2346,13 +2426,166 @@ export class PersistenceManager {
                 `${pourcentage}%`,
                 conformes,
                 nonConformes,
-                ''
+                '', '', ''
             ]);
         });
     
         const ws = XLSX.utils.aoa_to_sheet(statsData);
-        this.formatEnhancedStatsSheet(ws, statsData.length);
+        this.formatEnhancedStatsSheetWithCGP(ws, statsData.length, cgpEntries.length);
         XLSX.utils.book_append_sheet(wb, ws, "Statistiques");
+    }
+
+    formatEnhancedStatsSheetWithCGP(ws, rowCount, cgpCount) {
+        if (!ws['!ref']) return;
+    
+        // Largeurs de colonnes optimisées pour inclure les CGP
+        ws['!cols'] = [
+            { width: 35 },  // CGP/Description
+            { width: 12 },  // Contrôles/Valeur
+            { width: 15 },  // Taux/Pourcentage
+            { width: 8 },   // Vert
+            { width: 8 },   // Orange
+            { width: 8 },   // Rouge
+            { width: 8 },   // Noir
+            { width: 12 }   // Commission
+        ];
+    
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+    
+                // Style de base
+                ws[cell_address].s = {
+                    alignment: { vertical: 'center', wrapText: true },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                        bottom: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                        left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                        right: { style: 'thin', color: { rgb: 'D1D5DB' } }
+                    }
+                };
+    
+                const cellValue = ws[cell_address].v;
+                
+                if (cellValue && typeof cellValue === 'string') {
+                    // TITRE PRINCIPAL
+                    if (cellValue.includes('STATISTIQUES DÉTAILLÉES')) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } };
+                        ws[cell_address].s.fill = { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.primary } 
+                        };
+                        ws[cell_address].s.alignment = { horizontal: 'center', vertical: 'center' };
+                    }
+                    
+                    // SECTIONS CGP
+                    else if (cellValue.includes('STATISTIQUES PAR CGP') || 
+                             cellValue.includes('SYNTHÈSE CGP') ||
+                             cellValue.includes('RÉPARTITION GLOBALE')) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } };
+                        ws[cell_address].s.fill = { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.info } 
+                        };
+                        ws[cell_address].s.alignment = { horizontal: 'left', vertical: 'center' };
+                    }
+                    
+                    // EN-TÊTES COLONNES CGP
+                    else if (cellValue === 'CGP' && C === 0) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
+                        ws[cell_address].s.fill = { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.secondary } 
+                        };
+                        ws[cell_address].s.alignment = { horizontal: 'center', vertical: 'center' };
+                    }
+                    
+                    // EXPLICATION PONDÉRATION
+                    else if (cellValue.includes('VERT :') || cellValue.includes('ORANGE :') || 
+                             cellValue.includes('ROUGE :') || cellValue.includes('NOIR :')) {
+                        if (cellValue.includes('VERT')) {
+                            ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.success } };
+                        } else if (cellValue.includes('ORANGE')) {
+                            ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.warning } };
+                        } else if (cellValue.includes('ROUGE')) {
+                            ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.danger } };
+                        } else if (cellValue.includes('NOIR')) {
+                            ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: '343A40' } };
+                        }
+                    }
+                }
+                
+                // COLORATION SPÉCIALE
+                
+                // Taux de conformité pondérés (colonne C)
+                if (cellValue && typeof cellValue === 'string' && cellValue.includes('%') && C === 2) {
+                    const rate = parseInt(cellValue);
+                    if (rate >= 90) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.success } };
+                    } else if (rate >= 75) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.warning } };
+                    } else {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.danger } };
+                    }
+                }
+                
+                // Commission (colonne G)
+                if (cellValue === 'OUI' && C === 7) {
+                    ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.success } };
+                    ws[cell_address].s.fill = { 
+                        patternType: "solid",
+                        fgColor: { rgb: 'E8F5E8' } 
+                    };
+                } else if (cellValue === 'NON' && C === 7) {
+                    ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.danger } };
+                    ws[cell_address].s.fill = { 
+                        patternType: "solid",
+                        fgColor: { rgb: 'FDE8E8' } 
+                    };
+                }
+                
+                // Colonnes couleurs (colonnes 3-6)
+                if (C >= 3 && C <= 6 && cellValue && !isNaN(cellValue) && cellValue > 0) {
+                    const colors = ['', '', '', this.companyColors.success, this.companyColors.warning, this.companyColors.danger, '343A40'];
+                    if (colors[C]) {
+                        ws[cell_address].s.font = { name: 'Calibri', sz: 10, bold: true, color: { rgb: colors[C] } };
+                    }
+                }
+            }
+        }
+    
+        // Fusionner les titres de sections
+        const merges = [
+            { s: { c: 0, r: 0 }, e: { c: 7, r: 0 } },  // Titre principal
+            { s: { c: 0, r: 2 }, e: { c: 7, r: 2 } },  // Résumé global
+        ];
+        
+        // Trouver et fusionner les autres sections
+        for (let R = 0; R < rowCount; ++R) {
+            const cell = ws[XLSX.utils.encode_cell({ c: 0, r: R })];
+            if (cell && cell.v && typeof cell.v === 'string' && 
+                (cell.v.includes('STATISTIQUES PAR CGP') || 
+                 cell.v.includes('SYNTHÈSE CGP') || 
+                 cell.v.includes('RÉPARTITION GLOBALE'))) {
+                merges.push({ s: { c: 0, r: R }, e: { c: 7, r: R } });
+            }
+        }
+        
+        ws['!merges'] = merges;
+        
+        // Filtres automatiques sur la section CGP
+        // Trouver la ligne des en-têtes CGP pour les filtres
+        for (let R = 0; R < rowCount; ++R) {
+            const cell = ws[XLSX.utils.encode_cell({ c: 0, r: R })];
+            if (cell && cell.v === 'CGP') {
+                ws['!autofilter'] = { ref: `A${R+1}:H${R+cgpCount+1}` };
+                break;
+            }
+        }
     }
     
     // NOUVELLE MÉTHODE : Formatage de l'onglet statistiques enrichi
@@ -3780,6 +4013,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
