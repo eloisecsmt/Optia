@@ -4628,12 +4628,14 @@ export class PersistenceManager {
                 const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
                 if (!ws[cell_address]) continue;
                 
+                // ✅ DÉFINIR isQuestionColumn ICI, accessible à tout moment
+                const isQuestionColumn = C >= 12; // À partir de la colonne 12 (documents)
+                
                 ws[cell_address].s = {
                     alignment: { 
-                        horizontal: 'center', 
-                        vertical: 'center', 
+                        vertical: 'top', 
                         wrapText: true,
-                        textRotation: isQuestionColumn ? 90 : 0
+                        horizontal: 'left'
                     },
                     font: { name: 'Calibri', sz: 10 },
                     border: {
@@ -4645,49 +4647,59 @@ export class PersistenceManager {
                 };
                 
                 if (R === 0) {
-                    // En-têtes
+                    // En-têtes avec rotation pour les questions
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                        font: { 
+                            name: 'Calibri', 
+                            sz: isQuestionColumn ? 9 : 10, // Plus petit pour les questions
+                            bold: true, 
+                            color: { rgb: 'FFFFFF' } 
+                        },
                         fill: { 
                             patternType: "solid",
                             fgColor: { rgb: this.companyColors.primary } 
                         },
-                        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+                        alignment: { 
+                            horizontal: 'center', 
+                            vertical: 'center', 
+                            wrapText: true,
+                            textRotation: isQuestionColumn ? 90 : 0 // Rotation pour les questions
+                        }
                     };
                 } else if (R > 0) {
-                    // Alternance de couleurs
+                    // ... reste du code pour les données (inchangé)
                     const isEvenRow = R % 2 === 0;
                     ws[cell_address].s.fill = { 
                         patternType: "solid",
                         fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light } 
                     };
                     
-                    // NOUVEAU : Coloration colonne Finalisation (colonne 9)
+                    // Coloration colonne Finalisation (colonne 9)
                     if (C === 9) {
                         const cellValue = ws[cell_address].v;
                         if (cellValue === 'C1') {
                             ws[cell_address].s.fill = { 
                                 patternType: "solid",
-                                fgColor: { rgb: 'E8F5E8' }  // Vert clair
+                                fgColor: { rgb: 'E8F5E8' }
                             };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
                         } else if (cellValue === 'C1S') {
                             ws[cell_address].s.fill = { 
                                 patternType: "solid",
-                                fgColor: { rgb: 'FFF3CD' }  // Jaune clair
+                                fgColor: { rgb: 'FFF3CD' }
                             };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.warning } };
                         } else if (cellValue === 'C2R') {
                             ws[cell_address].s.fill = { 
                                 patternType: "solid",
-                                fgColor: { rgb: 'E3F2FD' }  // Bleu clair
+                                fgColor: { rgb: 'E3F2FD' }
                             };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.info } };
                         }
                     }
                     
-                    // NOUVEAU : Coloration colonne Anomalies (colonne 10)
+                    // Coloration colonne Anomalies (colonne 10)
                     if (C === 10) {
                         const anomalies = parseInt(ws[cell_address].v) || 0;
                         if (anomalies > 0) {
@@ -4705,7 +4717,7 @@ export class PersistenceManager {
                         }
                     }
                     
-                    // NOUVEAU : Coloration colonne Conformité (colonne 11)
+                    // Coloration colonne Conformité (colonne 11)
                     if (C === 11) {
                         if (ws[cell_address].v === 'CONFORME') {
                             ws[cell_address].s.fill = { 
@@ -4722,7 +4734,7 @@ export class PersistenceManager {
                         }
                     }
                     
-                    // Logique existante pour les statuts de documents (maintenant à partir de la colonne 12)
+                    // Logique pour les statuts de documents
                     if (this.isDocumentStatusColumn(C, documentsInfo)) {
                         const cellValue = ws[cell_address].v;
                         if (cellValue === 'CONFORME') {
@@ -4746,7 +4758,7 @@ export class PersistenceManager {
                         }
                     }
                     
-                    // Logique existante pour les questions de documents
+                    // Logique pour les questions de documents
                     else if (this.isDocumentQuestionColumn(C, R, ws, documentsInfo)) {
                         const statusCol = this.getDocumentStatusColumnIndex(C, documentsInfo);
                         if (statusCol !== -1) {
@@ -4764,6 +4776,7 @@ export class PersistenceManager {
             }
         }
         
+        // ✅ HAUTEUR PLUS IMPORTANTE POUR LES EN-TÊTES PIVOTÉS
         ws['!rows'] = [{ hpt: 120 }];
         ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
     }
@@ -4788,7 +4801,7 @@ export class PersistenceManager {
         documentsInfo.forEach(docInfo => {
             widths.push({ width: 15 }); // Statut document
             docInfo.questionsArray.forEach(() => {
-                widths.push({ width: 40 }); // Questions
+                widths.push({ width: 8 }); // Questions
             });
         });
         
@@ -5021,6 +5034,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
