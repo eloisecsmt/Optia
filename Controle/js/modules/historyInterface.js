@@ -1398,11 +1398,11 @@ export class HistoryInterface {
         const defaults = {
             cgpCommissionThreshold: 75,
             controlTargets: {
-                'LCB-FT': { yearly: 600 },
-                'Financement': { yearly: 360 },        // Au lieu de 'FINANCEMENT'
-                'Carto Client': { yearly: 480 },       // Au lieu de 'CARTO_CLIENT'
-                'Opération': { yearly: 420 },          // Au lieu de 'OPERATION'  
-                'Nouveau Client': { yearly: 300 }      // Au lieu de 'NOUVEAU_CLIENT'
+                'LCB-FT': { yearly: 360 },
+                'Financement': { yearly: 360 },        
+                'Carto Client': { yearly: 360 },
+                'Opération': { yearly: 360 },          
+                'Nouveau Client': { yearly: 300 }      
             }
         };
         
@@ -3224,6 +3224,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
