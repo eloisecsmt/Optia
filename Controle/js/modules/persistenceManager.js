@@ -2043,7 +2043,22 @@ export class PersistenceManager {
         const statsByCGP = {};
         const objectives = this.getObjectives();
         
+        // ÉTAPE 1: Identifier les contrôles à exclure (parents de révisions)
+        const excludedControlIds = new Set();
         data.controles.forEach(controle => {
+            if (controle.completionType === 'C2R' && controle.parentControlId) {
+                excludedControlIds.add(controle.parentControlId);
+            }
+        });
+        
+        // ÉTAPE 2: Traiter seulement les contrôles finaux
+        data.controles.forEach(controle => {
+            // Ignorer les contrôles parents qui ont été révisés
+            if (excludedControlIds.has(controle.id)) {
+                console.log(`Contrôle ${controle.id} ignoré (parent de révision)`);
+                return;
+            }
+            
             const cgp = controle.conseiller || 'Non renseigné';
             
             if (!statsByCGP[cgp]) {
@@ -2065,12 +2080,12 @@ export class PersistenceManager {
             
             statsByCGP[cgp].totalControles++;
             
-            // NOUVEAU CALCUL SIMPLIFIÉ par statut global
+            // Calcul simplifié par statut global
             if (controle.conformiteGlobale === 'CONFORME') {
                 if (controle.anomaliesMajeures === 0) {
-                    statsByCGP[cgp].repartition.green++;  // Parfait : conforme + 0 anomalie
+                    statsByCGP[cgp].repartition.green++;  // Parfait
                 } else {
-                    statsByCGP[cgp].repartition.orange++; // Conforme mais avec réserves
+                    statsByCGP[cgp].repartition.orange++; // Conforme avec réserves
                 }
             } else {
                 // Non conforme
@@ -2081,7 +2096,7 @@ export class PersistenceManager {
                 }
             }
             
-            // Garder le calcul de points existant si vous l'utilisez ailleurs
+            // Calcul de points (gardez votre logique existante)
             if (controle.details) {
                 controle.details.forEach(detail => {
                     const points = this.calculateDetailPoints(detail);
@@ -3708,6 +3723,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
