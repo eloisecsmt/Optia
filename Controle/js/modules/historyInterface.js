@@ -245,17 +245,6 @@ export class HistoryInterface {
                         </button>
                     `}
                 </div>
-
-                <!-- NOUVEAU BOUTON ICI -->
-                    <button class="btn btn-info" onclick="window.persistenceManager?.showQuickObjectivesConfig()">
-                        ⚙️ Objectifs
-                    </button>
-                    
-                    <!-- NOUVEAU BOUTON STATS CGP ICI -->
-                    <button class="btn btn-success" onclick="window.historyInterface?.showCGPStatistics()">
-                        👥 Stats CGP
-                    </button>
-                </div>
                 
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="showAutomaticControls()">
@@ -1178,8 +1167,10 @@ export class HistoryInterface {
             Utils.showNotification('Gestionnaire d\'historique non disponible', 'error');
             return;
         }
-
+    
         const stats = window.persistenceManager.getStatistics();
+        const statsByCGP = window.persistenceManager.getStatisticsByCGP();
+        const objectives = window.persistenceManager.getObjectives();
         
         this.closeAllModals();
         
@@ -1189,67 +1180,57 @@ export class HistoryInterface {
         
         modal.innerHTML = `
             <div class="modal-overlay" onclick="window.historyInterface?.closeStatsModal()">
-                <div class="modal-content" style="max-width: 700px;" onclick="event.stopPropagation();">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3>📈 Statistiques détaillées</h3>
-                        <button class="btn btn-sm btn-secondary" onclick="window.historyInterface?.closeStatsModal()" 
-                                style="padding: 5px 10px;">❌</button>
+                <div class="modal-content stats-modal" onclick="event.stopPropagation()">
+                    <div class="stats-header">
+                        <h3>Statistiques et analyses</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="window.historyInterface?.closeStatsModal()">✕</button>
                     </div>
                     
-                    <div class="summary-cards" style="margin-bottom: 25px;">
-                        <div class="summary-card">
-                            <div class="card-value">${stats.totalControles}</div>
-                            <div class="card-label">Total contrôles</div>
-                        </div>
-                        <div class="summary-card ${stats.tauxConformite >= 80 ? 'success' : 'warning'}">
-                            <div class="card-value">${stats.tauxConformite}%</div>
-                            <div class="card-label">Taux conformité global</div>
-                        </div>
-                        <div class="summary-card ${stats.totalAnomaliesMajeures === 0 ? 'success' : 'danger'}">
-                            <div class="card-value">${stats.totalAnomaliesMajeures}</div>
-                            <div class="card-label">Anomalies majeures</div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="card-value">${stats.controlesMoisActuel}</div>
-                            <div class="card-label">Contrôles ce mois-ci</div>
-                        </div>
+                    <!-- Onglets de navigation -->
+                    <div class="stats-tabs">
+                        <button class="stats-tab active" data-tab="global" onclick="window.historyInterface?.switchStatsTab('global')">
+                            Global
+                        </button>
+                        <button class="stats-tab" data-tab="cgp" onclick="window.historyInterface?.switchStatsTab('cgp')">
+                            Par CGP
+                        </button>
+                        <button class="stats-tab" data-tab="objectifs" onclick="window.historyInterface?.switchStatsTab('objectifs')">
+                            Objectifs
+                        </button>
+                        <button class="stats-tab" data-tab="config" onclick="window.historyInterface?.switchStatsTab('config')">
+                            Configuration
+                        </button>
                     </div>
                     
-                    <h4>📊 Répartition par type de contrôle</h4>
-                    <div class="type-stats" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        ${Object.entries(stats.repartitionTypes).length > 0 ? 
-                            Object.entries(stats.repartitionTypes).map(([type, count]) => `
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e9ecef;">
-                                    <span><strong>${type}</strong></span>
-                                    <div>
-                                        <span class="badge control-type">${count} contrôle(s)</span>
-                                        <span style="margin-left: 10px; color: #6c757d;">${stats.totalControles > 0 ? Math.round((count / stats.totalControles) * 100) : 0}%</span>
-                                    </div>
-                                </div>
-                            `).join('') :
-                            '<p style="text-align: center; color: #6c757d;">Aucune donnée de répartition disponible</p>'
-                        }
-                    </div>
-                    
-                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h5>🏆 Type le plus fréquent</h5>
-                        <p style="margin: 5px 0;"><strong>${stats.typePlusFrequent}</strong></p>
+                    <!-- Contenu des onglets -->
+                    <div class="stats-content">
+                        <!-- Onglet Global (existant) -->
+                        <div class="stats-panel active" id="stats-global">
+                            ${this.generateGlobalStats(stats)}
+                        </div>
                         
-                        <h5 style="margin-top: 15px;">📈 Évaluation globale</h5>
-                        <p style="margin: 5px 0;">
-                            ${stats.tauxConformite >= 90 ? '🟢 Excellent niveau de conformité (≥90%)' : 
-                            stats.tauxConformite >= 75 ? '🟡 Bon niveau de conformité (75-89%)' : 
-                            stats.tauxConformite >= 50 ? '🟠 Niveau de conformité moyen (50-74%)' :
-                            '🔴 Niveau de conformité à améliorer (<50%)'}
-                        </p>
+                        <!-- Onglet CGP -->
+                        <div class="stats-panel" id="stats-cgp">
+                            ${this.generateCGPStats(statsByCGP, objectives)}
+                        </div>
+                        
+                        <!-- Onglet Objectifs -->
+                        <div class="stats-panel" id="stats-objectifs">
+                            ${this.generateObjectivesPanel(objectives)}
+                        </div>
+                        
+                        <!-- Onglet Configuration -->
+                        <div class="stats-panel" id="stats-config">
+                            ${this.generateConfigPanel(objectives)}
+                        </div>
                     </div>
                     
-                    <div style="display: flex; justify-content: space-between; gap: 15px;">
+                    <div class="stats-footer">
                         <button class="btn btn-primary" onclick="window.historyInterface?.exportComplete()">
-                            📊 Exporter historique Excel
+                            Exporter historique Excel
                         </button>
                         <button class="btn btn-secondary" onclick="window.historyInterface?.closeStatsModal()">
-                            ❌ Fermer
+                            Fermer
                         </button>
                     </div>
                 </div>
@@ -1257,17 +1238,143 @@ export class HistoryInterface {
         `;
         
         document.body.appendChild(modal);
+        this.addStatsModalStyles();
+    }
+    
+    // Gestion des onglets
+    switchStatsTab(tabName) {
+        // Désactiver tous les onglets et panneaux
+        document.querySelectorAll('.stats-tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.stats-panel').forEach(panel => panel.classList.remove('active'));
         
-        // Ajouter un écouteur pour la touche Échap
-        const handleEscape = (e) => {
-            if (e.key === 'Escape') {
-                this.closeStatsModal();
-                document.removeEventListener('keydown', handleEscape);
-            }
+        // Activer l'onglet et panneau sélectionnés
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        document.getElementById(`stats-${tabName}`).classList.add('active');
+    }
+    
+    // Génération des statistiques CGP
+    generateCGPStats(statsByCGP, objectives) {
+        const cgpEntries = Object.entries(statsByCGP);
+        
+        return `
+            <div class="cgp-stats-container">
+                <h4>Statistiques par conseiller (méthode pondérée)</h4>
+                <div class="cgp-summary">
+                    <div class="cgp-metric">
+                        <span class="metric-value">${cgpEntries.length}</span>
+                        <span class="metric-label">CGP actifs</span>
+                    </div>
+                    <div class="cgp-metric">
+                        <span class="metric-value">${cgpEntries.filter(([,stats]) => stats.eligibleCommission).length}</span>
+                        <span class="metric-label">Éligibles commission (≥${objectives.cgpCommissionThreshold}%)</span>
+                    </div>
+                </div>
+                
+                <div class="cgp-table-container">
+                    <table class="cgp-table">
+                        <thead>
+                            <tr>
+                                <th>CGP</th>
+                                <th>Contrôles</th>
+                                <th>Taux conformité</th>
+                                <th>Commission</th>
+                                <th>Détail</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${cgpEntries.map(([cgp, stats]) => `
+                                <tr class="cgp-row ${stats.eligibleCommission ? 'eligible' : 'not-eligible'}">
+                                    <td class="cgp-name">${cgp}</td>
+                                    <td>${stats.totalControles}</td>
+                                    <td class="conformity-cell">
+                                        <span class="conformity-rate ${this.getConformityClass(stats.tauxConformite)}">${stats.tauxConformite}%</span>
+                                        <div class="points-detail">(${stats.pointsTotal}/${stats.pointsMax} pts)</div>
+                                    </td>
+                                    <td class="commission-cell">
+                                        <span class="commission-status ${stats.eligibleCommission ? 'eligible' : 'not-eligible'}">
+                                            ${stats.eligibleCommission ? '✓ Oui' : '✗ Non'}
+                                        </span>
+                                    </td>
+                                    <td class="color-breakdown">
+                                        <span class="color-badge green">${stats.repartition.vert}</span>
+                                        <span class="color-badge orange">${stats.repartition.orange}</span>
+                                        <span class="color-badge red">${stats.repartition.rouge}</span>
+                                        <span class="color-badge black">${stats.repartition.noir}</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info" onclick="window.historyInterface?.showCGPDetail('${cgp}')">
+                                            Détail calcul
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Génération du panneau de configuration
+    generateConfigPanel(objectives) {
+        return `
+            <div class="config-container">
+                <h4>Configuration des seuils et objectifs</h4>
+                <form id="objectives-form">
+                    <div class="config-section">
+                        <label>Seuil commission CGP (%) :</label>
+                        <input type="number" id="cgp-threshold" value="${objectives.cgpCommissionThreshold}" min="0" max="100">
+                        <small>Taux de conformité minimum pour percevoir la commission</small>
+                    </div>
+                    
+                    <div class="config-section">
+                        <h5>Objectifs mensuels par type de contrôle :</h5>
+                        ${Object.entries(objectives.controlTargets).map(([type, targets]) => `
+                            <div class="objective-row">
+                                <label>${type} :</label>
+                                <input type="number" data-type="${type}" value="${targets.monthly}" min="0">
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="config-actions">
+                        <button type="button" class="btn btn-primary" onclick="window.historyInterface?.saveObjectivesConfig()">
+                            Sauvegarder les modifications
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="window.historyInterface?.resetObjectivesConfig()">
+                            Rétablir par défaut
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+    }
+    
+    // Sauvegarder la configuration
+    saveObjectivesConfig() {
+        const cgpThreshold = document.getElementById('cgp-threshold')?.value;
+        const controlInputs = document.querySelectorAll('[data-type]');
+        
+        const objectives = {
+            cgpCommissionThreshold: parseInt(cgpThreshold) || 75,
+            controlTargets: {}
         };
-        document.addEventListener('keydown', handleEscape);
         
-        modal.escapeHandler = handleEscape;
+        controlInputs.forEach(input => {
+            const type = input.dataset.type;
+            objectives.controlTargets[type] = {
+                monthly: parseInt(input.value) || 0
+            };
+        });
+        
+        window.persistenceManager.updateObjectives(objectives);
+        
+        // Rafraîchir l'affichage
+        setTimeout(() => {
+            this.closeStatsModal();
+            this.showStatistics();
+        }, 500);
     }
 
     // Effacer l'historique avec confirmation
@@ -1999,6 +2106,136 @@ updateMailButton() {
         
         return changes;
     }
+    
+    addStatsModalStyles() {
+        if (document.getElementById('stats-modal-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'stats-modal-styles';
+        style.textContent = `
+            .stats-modal {
+                max-width: 1200px !important;
+                width: 95vw !important;
+                max-height: 90vh !important;
+            }
+            
+            .stats-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e9ecef;
+            }
+            
+            .stats-tabs {
+                display: flex;
+                border-bottom: 1px solid #dee2e6;
+                margin-bottom: 20px;
+            }
+            
+            .stats-tab {
+                padding: 12px 24px;
+                border: none;
+                background: none;
+                cursor: pointer;
+                border-bottom: 3px solid transparent;
+                transition: all 0.3s ease;
+            }
+            
+            .stats-tab.active {
+                border-bottom-color: #1a1a2e;
+                font-weight: 600;
+                color: #1a1a2e;
+            }
+            
+            .stats-panel {
+                display: none;
+            }
+            
+            .stats-panel.active {
+                display: block;
+            }
+            
+            .cgp-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+            }
+            
+            .cgp-table th,
+            .cgp-table td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #dee2e6;
+            }
+            
+            .cgp-table th {
+                background: #f8f9fa;
+                font-weight: 600;
+            }
+            
+            .cgp-row.eligible {
+                background: rgba(40, 167, 69, 0.1);
+            }
+            
+            .cgp-row.not-eligible {
+                background: rgba(220, 53, 69, 0.1);
+            }
+            
+            .conformity-rate.high { color: #28a745; font-weight: 600; }
+            .conformity-rate.medium { color: #ffc107; font-weight: 600; }
+            .conformity-rate.low { color: #dc3545; font-weight: 600; }
+            
+            .color-badge {
+                display: inline-block;
+                padding: 2px 6px;
+                border-radius: 3px;
+                margin: 0 2px;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+            
+            .color-badge.green { background: #28a745; color: white; }
+            .color-badge.orange { background: #ffc107; color: black; }
+            .color-badge.red { background: #dc3545; color: white; }
+            .color-badge.black { background: #343a40; color: white; }
+            
+            .config-section {
+                margin: 20px 0;
+                padding: 15px;
+                background: #f8f9fa;
+                border-radius: 8px;
+            }
+            
+            .objective-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin: 10px 0;
+            }
+            
+            .objective-row label {
+                flex: 1;
+                font-weight: 500;
+            }
+            
+            .objective-row input {
+                width: 100px;
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+        `;
+        
+        document.head.appendChild(style);
+    }
+    
+    getConformityClass(rate) {
+        if (rate >= 80) return 'high';
+        if (rate >= 60) return 'medium';
+        return 'low';
+    }
 
     // NOUVEAU : Formater la valeur d'un détail
     formatDetailValue(detail) {
@@ -2097,6 +2334,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
