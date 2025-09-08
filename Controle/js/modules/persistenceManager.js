@@ -1547,12 +1547,14 @@ export class PersistenceManager {
                 const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
                 if (!ws[cell_address]) continue;
                 
+                // ✅ DÉFINIR isQuestionColumn ICI pour être accessible partout
+                const isQuestionColumn = C >= 13; // À partir de la colonne 13 pour les CGP
+                
                 ws[cell_address].s = {
                     alignment: { 
-                        horizontal: 'center', 
-                        vertical: 'center', 
+                        vertical: 'top', 
                         wrapText: true,
-                        textRotation: isQuestionColumn ? 90 : 0 
+                        horizontal: 'left'
                     },
                     font: { name: 'Calibri', sz: 10 },
                     border: {
@@ -1564,15 +1566,25 @@ export class PersistenceManager {
                 };
                 
                 if (R === 0) {
-                    // En-têtes
+                    // En-têtes avec rotation pour les questions
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
-                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                        font: { 
+                            name: 'Calibri', 
+                            sz: isQuestionColumn ? 9 : 10, // Plus petit pour les questions
+                            bold: true, 
+                            color: { rgb: 'FFFFFF' } 
+                        },
                         fill: { 
                             patternType: "solid",
                             fgColor: { rgb: this.companyColors.primary } 
                         },
-                        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+                        alignment: { 
+                            horizontal: 'center', 
+                            vertical: 'center', 
+                            wrapText: true,
+                            textRotation: isQuestionColumn ? 90 : 0 // Rotation pour les questions
+                        }
                     };
                 } else if (R > 0) {
                     // Alternance de couleurs
@@ -1698,6 +1710,7 @@ export class PersistenceManager {
             }
         }
         
+        // ✅ HAUTEUR PLUS IMPORTANTE POUR LES EN-TÊTES PIVOTÉS
         ws['!rows'] = [{ hpt: 120 }];
         ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
     }
@@ -1722,7 +1735,7 @@ export class PersistenceManager {
         documentsInfo.forEach(docInfo => {
             widths.push({ width: 15 }); // Statut document
             docInfo.questionsArray.forEach(() => {
-                widths.push({ width: 40 }); // Questions
+                widths.push({ width: 8 }); // Questions
             });
         });
         
@@ -5034,6 +5047,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
