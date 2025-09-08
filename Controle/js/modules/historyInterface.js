@@ -2301,8 +2301,196 @@ updateMailButton() {
         const style = document.createElement('style');
         style.id = 'stats-modal-styles';
         style.textContent = `
-            /* Styles existants... */
+            .stats-modal {
+                max-width: 1200px !important;
+                width: 95vw !important;
+                max-height: 90vh !important;
+            }
             
+            .stats-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e9ecef;
+            }
+            
+            .stats-tabs {
+                display: flex;
+                border-bottom: 1px solid #dee2e6;
+                margin-bottom: 20px;
+                background: #f8f9fa;
+                border-radius: 8px 8px 0 0;
+            }
+            
+            .stats-tab {
+                padding: 12px 24px;
+                border: none;
+                background: none;
+                cursor: pointer;
+                border-bottom: 3px solid transparent;
+                transition: all 0.3s ease;
+                font-weight: 500;
+                color: #6c757d;
+            }
+            
+            .stats-tab:hover {
+                background: #e9ecef;
+                color: #495057;
+            }
+            
+            .stats-tab.active {
+                border-bottom-color: #1a1a2e;
+                font-weight: 600;
+                color: #1a1a2e;
+                background: white;
+            }
+            
+            .stats-content {
+                min-height: 400px;
+                padding: 20px;
+                background: white;
+                border-radius: 0 0 8px 8px;
+                border: 1px solid #dee2e6;
+                border-top: none;
+            }
+            
+            .stats-panel {
+                display: none;
+            }
+            
+            .stats-panel.active {
+                display: block;
+                animation: fadeIn 0.3s ease-in-out;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            .stats-footer {
+                margin-top: 20px;
+                padding-top: 15px;
+                border-top: 1px solid #e9ecef;
+                display: flex;
+                justify-content: space-between;
+            }
+            
+            /* Styles pour l'onglet CGP */
+            .cgp-stats-container {
+                padding: 0;
+            }
+            
+            .cgp-summary {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 25px;
+            }
+            
+            .cgp-metric {
+                text-align: center;
+                padding: 15px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border-left: 4px solid #1a1a2e;
+            }
+            
+            .metric-value {
+                display: block;
+                font-size: 2rem;
+                font-weight: 600;
+                color: #1a1a2e;
+            }
+            
+            .metric-label {
+                display: block;
+                color: #6c757d;
+                margin-top: 5px;
+            }
+            
+            .cgp-table-container {
+                overflow-x: auto;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+            }
+            
+            .cgp-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 0;
+            }
+            
+            .cgp-table th,
+            .cgp-table td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #dee2e6;
+            }
+            
+            .cgp-table th {
+                background: #f8f9fa;
+                font-weight: 600;
+                position: sticky;
+                top: 0;
+            }
+            
+            .cgp-row.eligible {
+                background: rgba(40, 167, 69, 0.05);
+            }
+            
+            .cgp-row.not-eligible {
+                background: rgba(220, 53, 69, 0.05);
+            }
+            
+            .conformity-rate {
+                font-weight: 600;
+                font-size: 1.1rem;
+            }
+            
+            .conformity-rate.high { color: #28a745; }
+            .conformity-rate.medium { color: #ffc107; }
+            .conformity-rate.low { color: #dc3545; }
+            
+            .points-detail {
+                font-size: 0.8rem;
+                color: #6c757d;
+                margin-top: 2px;
+            }
+            
+            .commission-status.eligible {
+                color: #28a745;
+                font-weight: 600;
+            }
+            
+            .commission-status.not-eligible {
+                color: #dc3545;
+                font-weight: 600;
+            }
+            
+            .color-breakdown {
+                display: flex;
+                gap: 5px;
+            }
+            
+            .color-badge {
+                display: inline-block;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                min-width: 20px;
+                text-align: center;
+            }
+            
+            .color-badge.green { background: #28a745; color: white; }
+            .color-badge.orange { background: #ffc107; color: black; }
+            .color-badge.red { background: #dc3545; color: white; }
+            .color-badge.black { background: #343a40; color: white; }
+            
+            /* Styles pour l'onglet Objectifs */
             .objectives-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -2315,6 +2503,7 @@ updateMailButton() {
                 border: 1px solid #dee2e6;
                 border-radius: 8px;
                 padding: 20px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
             
             .objective-header {
@@ -2322,6 +2511,11 @@ updateMailButton() {
                 justify-content: space-between;
                 align-items: center;
                 margin-bottom: 15px;
+            }
+            
+            .objective-header h5 {
+                margin: 0;
+                color: #1a1a2e;
             }
             
             .objective-percentage {
@@ -2353,6 +2547,118 @@ updateMailButton() {
             .progress-fill.warning { background: #ffc107; }
             .progress-fill.danger { background: #dc3545; }
             
+            .progress-text {
+                font-size: 0.9rem;
+                color: #6c757d;
+                text-align: center;
+            }
+            
+            /* Styles pour l'onglet Configuration */
+            .config-container {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+            
+            .config-section {
+                margin: 20px 0;
+                padding: 15px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border-left: 4px solid #1a1a2e;
+            }
+            
+            .config-section label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 8px;
+                color: #1a1a2e;
+            }
+            
+            .config-section input {
+                width: 100px;
+                padding: 8px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-size: 1rem;
+            }
+            
+            .config-section small {
+                display: block;
+                color: #6c757d;
+                margin-top: 5px;
+                font-style: italic;
+            }
+            
+            .objective-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin: 10px 0;
+                padding: 8px 0;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .objective-row:last-child {
+                border-bottom: none;
+            }
+            
+            .objective-row label {
+                flex: 1;
+                font-weight: 500;
+                margin: 0;
+            }
+            
+            .config-actions {
+                margin-top: 30px;
+                text-align: center;
+            }
+            
+            .config-actions .btn {
+                margin: 0 10px;
+            }
+            
+            /* Styles pour les détails CGP */
+            .cgp-detail-content {
+                max-height: 600px;
+                overflow-y: auto;
+            }
+            
+            .cgp-summary {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                margin-bottom: 20px;
+                padding: 15px;
+                background: #f8f9fa;
+                border-radius: 8px;
+            }
+            
+            .summary-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 0;
+            }
+            
+            .detail-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
+            
+            .detail-table th,
+            .detail-table td {
+                padding: 8px;
+                border-bottom: 1px solid #dee2e6;
+                text-align: left;
+            }
+            
+            .detail-table th {
+                background: #f8f9fa;
+                font-weight: 600;
+                position: sticky;
+                top: 0;
+            }
+            
             .level-badge {
                 padding: 2px 6px;
                 border-radius: 3px;
@@ -2364,6 +2670,31 @@ updateMailButton() {
             .level-badge.mineur { background: #ffc107; color: black; }
             .level-badge.grave { background: #dc3545; color: white; }
             .level-badge.impossible { background: #343a40; color: white; }
+            
+            /* Responsive */
+            @media (max-width: 768px) {
+                .stats-modal {
+                    width: 98vw !important;
+                    max-height: 95vh !important;
+                }
+                
+                .stats-tabs {
+                    flex-wrap: wrap;
+                }
+                
+                .stats-tab {
+                    flex: 1;
+                    min-width: 120px;
+                }
+                
+                .cgp-table-container {
+                    font-size: 0.8rem;
+                }
+                
+                .objectives-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
         `;
         
         document.head.appendChild(style);
@@ -2472,6 +2803,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
