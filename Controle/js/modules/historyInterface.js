@@ -1562,10 +1562,10 @@ export class HistoryInterface {
                                         </span>
                                     </td>
                                     <td class="color-breakdown">
-                                        <span class="color-badge green">${stats.repartition?.vert || 0}</span>
-                                        <span class="color-badge orange">${stats.repartition?.orange || 0}</span>
-                                        <span class="color-badge red">${stats.repartition?.rouge || 0}</span>
-                                        <span class="color-badge black">${stats.repartition?.noir || 0}</span>
+                                        <span class="color-badge green">${stats.repartition.green || 0}</span>
+                                        <span class="color-badge orange">${stats.repartition.orange || 0}</span>
+                                        <span class="color-badge red">${stats.repartition.red || 0}</span>
+                                        <span class="color-badge black">${stats.repartition.black || 0}</span>
                                     </td>
                                     <td>
                                         <button class="btn btn-sm btn-info" onclick="window.historyInterface?.showCGPDetail('${cgp}')">
@@ -3214,6 +3214,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
