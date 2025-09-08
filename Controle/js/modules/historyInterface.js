@@ -334,13 +334,21 @@ export class HistoryInterface {
     
     generateObjectivesPanel(objectives) {
         const currentYear = new Date().getFullYear();
-    
+        
+        // Récupérer les données comme dans l'onglet Global
+        const controls = window.persistenceManager ? window.persistenceManager.getHistoryData().controles : [];
+        
         return `
             <div class="objectives-container">
                 <h4>Suivi des objectifs annuels ${currentYear}</h4>
                 <div class="objectives-grid">
                     ${Object.entries(objectives.controlTargets).map(([type, targets]) => {
-                        const completed = this.getCompletedControlsForYear(type, currentYear);
+                        // Utiliser la même logique que l'onglet Global
+                        const completed = controls.filter(control => {
+                            const controlYear = new Date(control.date).getFullYear();
+                            return control.type === type && controlYear === currentYear;
+                        }).length;
+                        
                         const percentage = targets.yearly > 0 ? Math.round((completed / targets.yearly) * 100) : 0;
                         const progressClass = percentage >= 100 ? 'complete' : percentage >= 75 ? 'good' : percentage >= 50 ? 'warning' : 'danger';
                         
@@ -356,7 +364,7 @@ export class HistoryInterface {
                                     </div>
                                     <div class="progress-text">
                                         ${completed} / ${targets.yearly} contrôles
-                                        ${completed >= targets.yearly ? ' ✓' : ` (${targets.yearly - completed} restants)`}
+                                        ${completed >= targets.yearly ? ' ✓ Objectif atteint' : ` (${targets.yearly - completed} restants)`}
                                     </div>
                                 </div>
                             </div>
@@ -3187,6 +3195,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
