@@ -1385,7 +1385,7 @@ export class PersistenceManager {
 
     createIndividualCGPSheets(wb, statsByCGP) {
         const cgpEntries = Object.entries(statsByCGP)
-            .filter(([,stats]) => stats.totalControles >= 3) // Seuil minimum
+            .filter(([,stats]) => stats.totalControles >= 1) // Seuil minimum
             .sort(([,a], [,b]) => b.tauxConformite - a.tauxConformite)
             .slice(0, 20); // Limiter à 20 CGP max
         
@@ -5019,6 +5019,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
