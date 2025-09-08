@@ -333,17 +333,15 @@ export class HistoryInterface {
     }
     
     generateObjectivesPanel(objectives) {
-        // Calculer la progression pour chaque type de contrôle
-        const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
-        
+    
         return `
             <div class="objectives-container">
-                <h4>Suivi des objectifs mensuels</h4>
+                <h4>Suivi des objectifs annuels ${currentYear}</h4>
                 <div class="objectives-grid">
                     ${Object.entries(objectives.controlTargets).map(([type, targets]) => {
-                        const completed = this.getCompletedControlsCount(type, currentMonth, currentYear);
-                        const percentage = targets.monthly > 0 ? Math.round((completed / targets.monthly) * 100) : 0;
+                        const completed = this.getCompletedControlsForYear(type, currentYear);
+                        const percentage = targets.yearly > 0 ? Math.round((completed / targets.yearly) * 100) : 0;
                         const progressClass = percentage >= 100 ? 'complete' : percentage >= 75 ? 'good' : percentage >= 50 ? 'warning' : 'danger';
                         
                         return `
@@ -357,8 +355,8 @@ export class HistoryInterface {
                                         <div class="progress-fill ${progressClass}" style="width: ${Math.min(percentage, 100)}%"></div>
                                     </div>
                                     <div class="progress-text">
-                                        ${completed} / ${targets.monthly} contrôles
-                                        ${completed >= targets.monthly ? ' ✓' : ` (${targets.monthly - completed} restants)`}
+                                        ${completed} / ${targets.yearly} contrôles
+                                        ${completed >= targets.yearly ? ' ✓' : ` (${targets.yearly - completed} restants)`}
                                     </div>
                                 </div>
                             </div>
@@ -368,17 +366,14 @@ export class HistoryInterface {
             </div>
         `;
     }
-    
-    // Méthode utilitaire pour compter les contrôles du mois
-    getCompletedControlsCount(type, month, year) {
+
+    getCompletedControlsForYear(type, year) {
         if (!window.persistenceManager) return 0;
         
         const controls = window.persistenceManager.getHistoryData().controles;
         return controls.filter(control => {
             const controlDate = new Date(control.date);
-            return control.type === type && 
-                   controlDate.getMonth() === month && 
-                   controlDate.getFullYear() === year;
+            return control.type === type && controlDate.getFullYear() === year;
         }).length;
     }
     
@@ -1362,6 +1357,22 @@ export class HistoryInterface {
         }
     }
 
+    getObjectives() {
+        const defaults = {
+            cgpCommissionThreshold: 75,
+            controlTargets: {
+                'LCB-FT': { yearly: 600 },        // Au lieu de monthly: 50
+                'FINANCEMENT': { yearly: 360 },   // Au lieu de monthly: 30
+                'CARTO_CLIENT': { yearly: 480 },  // Au lieu de monthly: 40
+                'OPERATION': { yearly: 420 },     // Au lieu de monthly: 35
+                'NOUVEAU_CLIENT': { yearly: 300 } // Au lieu de monthly: 25
+            }
+        };
+        
+        const saved = localStorage.getItem('app_objectives');
+        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    }
+
     // Modal statistiques enrichie
     showStatistics() {
         if (!window.persistenceManager) {
@@ -1445,6 +1456,19 @@ export class HistoryInterface {
         setTimeout(() => {
             this.initializeStatsInterface();
         }, 100);
+    }
+
+    initializeStatsInterface() {
+        // S'assurer que les event listeners des onglets sont bien attachés
+        const tabs = document.querySelectorAll('.stats-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const tabName = e.target.getAttribute('data-tab');
+                if (tabName) {
+                    this.switchStatsTab(tabName);
+                }
+            });
+        });
     }
     
     // Gestion des onglets
@@ -1531,10 +1555,10 @@ export class HistoryInterface {
     }
     
     // Génération du panneau de configuration
-    generateConfigPanel(objectives) {
+   generateConfigPanel(objectives) {
         return `
             <div class="config-container">
-                <h4>Configuration des seuils et objectifs</h4>
+                <h4>Configuration des seuils et objectifs annuels</h4>
                 <form id="objectives-form">
                     <div class="config-section">
                         <label>Seuil commission CGP (%) :</label>
@@ -1543,11 +1567,12 @@ export class HistoryInterface {
                     </div>
                     
                     <div class="config-section">
-                        <h5>Objectifs mensuels par type de contrôle :</h5>
+                        <h5>Objectifs annuels par type de contrôle :</h5>
                         ${Object.entries(objectives.controlTargets).map(([type, targets]) => `
                             <div class="objective-row">
                                 <label>${type} :</label>
-                                <input type="number" data-type="${type}" value="${targets.monthly}" min="0">
+                                <input type="number" data-type="${type}" value="${targets.yearly}" min="0">
+                                <small>contrôles par an</small>
                             </div>
                         `).join('')}
                     </div>
@@ -1566,7 +1591,7 @@ export class HistoryInterface {
     }
     
     // Sauvegarder la configuration
-    saveObjectivesConfig() {
+   saveObjectivesConfig() {
         const cgpThreshold = document.getElementById('cgp-threshold')?.value;
         const controlInputs = document.querySelectorAll('[data-type]');
         
@@ -1578,7 +1603,7 @@ export class HistoryInterface {
         controlInputs.forEach(input => {
             const type = input.dataset.type;
             objectives.controlTargets[type] = {
-                monthly: parseInt(input.value) || 0
+                yearly: parseInt(input.value) || 0  // yearly au lieu de monthly
             };
         });
         
@@ -1590,7 +1615,7 @@ export class HistoryInterface {
             this.showStatistics();
         }, 500);
     }
-
+    
     // Effacer l'historique avec confirmation
     clearHistory() {
         if (!window.persistenceManager) {
@@ -3162,6 +3187,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
