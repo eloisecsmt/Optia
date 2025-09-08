@@ -874,6 +874,350 @@ export class PersistenceManager {
         ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 4, r: 0 } }];
     }
 
+    formatCGPSynthesisSheet(ws, rowCount) {
+        if (!ws['!ref']) return;
+    
+        // Largeurs de colonnes
+        ws['!cols'] = [
+            { width: 25 },  // CGP
+            { width: 12 },  // Nb Contrôles
+            { width: 15 },  // Taux Pondéré
+            { width: 8 },   // Vert
+            { width: 8 },   // Orange
+            { width: 8 },   // Rouge
+            { width: 8 },   // Noir
+            { width: 15 },  // Commission
+            { width: 8 }    // Rang
+        ];
+    
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+    
+                ws[cell_address].s = {
+                    alignment: { vertical: 'center', wrapText: true },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+    
+                const cellValue = ws[cell_address].v;
+    
+                // Titre principal
+                if (R === 0) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.primary } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // En-têtes
+                else if (R === 2) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.secondary } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // Sections résumé
+                else if (cellValue && typeof cellValue === 'string' && cellValue.includes('RÉSUMÉ')) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.info } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // Données
+                else if (R > 2) {
+                    // Alternance de couleurs
+                    const isEvenRow = (R - 3) % 2 === 0;
+                    if (!ws[cell_address].s.fill) {
+                        ws[cell_address].s.fill = { 
+                            patternType: "solid",
+                            fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light } 
+                        };
+                    }
+    
+                    // Coloration taux de conformité (colonne 2)
+                    if (C === 2 && cellValue && typeof cellValue === 'string' && cellValue.includes('%')) {
+                        const rate = parseInt(cellValue);
+                        if (rate >= 90) {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
+                        } else if (rate >= 75) {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.warning } };
+                        } else {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.danger } };
+                        }
+                    }
+    
+                    // Coloration commission (colonne 7)
+                    if (C === 7) {
+                        if (cellValue === 'ÉLIGIBLE') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'E8F5E8' } 
+                            };
+                        } else if (cellValue === 'NON ÉLIGIBLE') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.danger } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'FDE8E8' } 
+                            };
+                        }
+                    }
+                }
+            }
+        }
+    
+        // Fusionner le titre
+        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 8, r: 0 } }];
+        
+        // Filtres automatiques
+        ws['!autofilter'] = { ref: `A3:I3` };
+    }
+    
+    formatColorDistributionSheet(ws, rowCount) {
+        if (!ws['!ref']) return;
+    
+        ws['!cols'] = [
+            { width: 25 },  // CGP
+            { width: 10 },  // Total
+            { width: 8 },   // Vert
+            { width: 8 },   // Orange
+            { width: 8 },   // Rouge
+            { width: 8 },   // Noir
+            { width: 12 }   // Dominant
+        ];
+    
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+    
+                ws[cell_address].s = {
+                    alignment: { vertical: 'center', wrapText: true },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+    
+                const cellValue = ws[cell_address].v;
+    
+                // Titre principal
+                if (R === 0) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.primary } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // En-têtes
+                else if (R === 2) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.secondary } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // Sections spéciales
+                else if (cellValue && typeof cellValue === 'string' && 
+                        (cellValue.includes('TOTAUX') || cellValue === 'TOTAL' || cellValue === 'POURCENTAGES')) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.companyColors.primary } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: 'F0F8FF' } 
+                        }
+                    };
+                }
+                // Coloration des couleurs dominantes (colonne 6)
+                else if (C === 6 && cellValue) {
+                    if (cellValue === 'VERT') {
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
+                    } else if (cellValue === 'ORANGE') {
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.warning } };
+                    } else if (cellValue === 'ROUGE') {
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.danger } };
+                    } else if (cellValue === 'NOIR') {
+                        ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: '343A40' } };
+                    }
+                }
+            }
+        }
+    
+        ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 6, r: 0 } }];
+        ws['!autofilter'] = { ref: `A3:G3` };
+    }
+    
+    formatSingleCGPSheet(ws, rowCount, cgpName) {
+        if (!ws['!ref']) return;
+    
+        ws['!cols'] = [
+            { width: 12 },  // Date
+            { width: 16 },  // Type
+            { width: 25 },  // Client
+            { width: 15 },  // Code
+            { width: 15 },  // Montant
+            { width: 12 },  // Finalisation
+            { width: 10 },  // Anomalies
+            { width: 15 },  // Conformité
+            { width: 10 },  // Couleur
+            { width: 12 }   // Points
+        ];
+    
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+    
+                ws[cell_address].s = {
+                    alignment: { vertical: 'center', wrapText: true },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+    
+                const cellValue = ws[cell_address].v;
+    
+                // Titre principal
+                if (R === 0) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.primary } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // Performance line
+                else if (R === 2) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: this.companyColors.info } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: 'F0F8FF' } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // En-têtes
+                else if (R === 4) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.secondary } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center' }
+                    };
+                }
+                // Sections résumé
+                else if (cellValue && typeof cellValue === 'string' && cellValue.includes('RÉSUMÉ')) {
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.info } 
+                        }
+                    };
+                }
+                // Données
+                else if (R > 4) {
+                    // Coloration couleur (colonne 8)
+                    if (C === 8 && cellValue) {
+                        if (cellValue === 'VERT') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'E8F5E8' } 
+                            };
+                        } else if (cellValue === 'ORANGE') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.warning } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'FFF3CD' } 
+                            };
+                        } else if (cellValue === 'ROUGE') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.danger } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'FDE8E8' } 
+                            };
+                        } else if (cellValue === 'NOIR') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: '343A40' } 
+                            };
+                        }
+                    }
+    
+                    // Coloration conformité (colonne 7)
+                    if (C === 7) {
+                        if (cellValue === 'CONFORME') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
+                        } else if (cellValue === 'NON CONFORME') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.danger } };
+                        }
+                    }
+                }
+            }
+        }
+    
+        ws['!merges'] = [
+            { s: { c: 0, r: 0 }, e: { c: 9, r: 0 } },
+            { s: { c: 0, r: 2 }, e: { c: 9, r: 2 } }
+        ];
+        
+        ws['!autofilter'] = { ref: `A5:J5` };
+    }
+
     exportByCGP(fileName = null) {
         if (!fileName) {
             fileName = `Export_par_CGP_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -4330,6 +4674,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
