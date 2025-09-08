@@ -444,7 +444,7 @@ export class HistoryInterface {
             <div class="modal-overlay" onclick="this.parentElement.remove()">
                 <div class="modal-content" onclick="event.stopPropagation()">
                     <div class="modal-header">
-                        <h3>Détail du calcul - ${cgpName}</h3>
+                        <h3>Détail du calcul pondéré - ${cgpName}</h3>
                         <button class="btn btn-sm btn-secondary" onclick="this.closest('.justification-modal').remove()">✕</button>
                     </div>
                     
@@ -455,7 +455,7 @@ export class HistoryInterface {
                                 <span>${cgpStats.totalControles}</span>
                             </div>
                             <div class="summary-item">
-                                <span>Taux conformité:</span>
+                                <span>Taux conformité pondéré:</span>
                                 <span class="${this.getConformityClass(cgpStats.tauxConformite)}">${cgpStats.tauxConformite}%</span>
                             </div>
                             <div class="summary-item">
@@ -470,15 +470,15 @@ export class HistoryInterface {
                             </div>
                         </div>
                         
-                        <h5>Détail des points par contrôle:</h5>
+                        <h5>Détail des contrôles avec pondération :</h5>
                         <div class="calcul-details" style="max-height: 300px; overflow-y: auto;">
                             <table class="detail-table">
                                 <thead>
                                     <tr>
                                         <th>Client</th>
                                         <th>Date</th>
-                                        <th>Question</th>
-                                        <th>Niveau</th>
+                                        <th>Couleur</th>
+                                        <th>Coefficient</th>
                                         <th>Points</th>
                                     </tr>
                                 </thead>
@@ -487,9 +487,9 @@ export class HistoryInterface {
                                         <tr>
                                             <td>${detail.client}</td>
                                             <td>${new Date(detail.date).toLocaleDateString('fr-FR')}</td>
-                                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${detail.question}</td>
-                                            <td><span class="level-badge ${detail.niveau}">${detail.niveau}</span></td>
-                                            <td>${detail.points}</td>
+                                            <td><span class="color-badge ${detail.couleur}">${detail.couleur.toUpperCase()}</span></td>
+                                            <td>${(detail.coefficient * 100)}%</td>
+                                            <td>${detail.pointsObtenus}/${detail.pointsMax}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -1548,20 +1548,39 @@ export class HistoryInterface {
     generateCGPStats(statsByCGP, objectives) {
         const cgpEntries = Object.entries(statsByCGP);
     
-        console.log('=== CONTRÔLES FINAUX CGP ===');
-    
-        // Vérifier qu'on ne compte pas les doublons
-        const totalControlesComptes = Object.values(statsByCGP)
-            .reduce((sum, stats) => sum + stats.totalControles, 0);
-        const totalControlesDB = window.persistenceManager.getHistoryData().controles.length;
-        
-        console.log(`Total contrôles en DB: ${totalControlesDB}`);
-        console.log(`Total contrôles comptés: ${totalControlesComptes}`);
-        console.log(`Différence (révisions exclues): ${totalControlesDB - totalControlesComptes}`);
-        
         return `
             <div class="cgp-stats-container">
-                <h4>Statistiques par conseiller (méthode pondérée)</h4>
+                <h4>Statistiques par conseiller (nouvelle méthode pondérée)</h4>
+                
+                <!-- NOUVELLE LÉGENDE -->
+                <div class="color-legend" style="
+                    margin-bottom: 25px; 
+                    padding: 20px; 
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                    border-radius: 12px; 
+                    border-left: 4px solid #1a1a2e;
+                ">
+                    <h5 style="margin: 0 0 15px 0; color: #1a1a2e;">🎯 Système de pondération :</h5>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="color-badge green" style="min-width: 60px; text-align: center;">VERT</span>
+                            <span>Aucune anomalie → <strong>100% des points</strong></span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="color-badge orange" style="min-width: 60px; text-align: center;">ORANGE</span>
+                            <span>Anomalies optionnelles → <strong>75% des points</strong></span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="color-badge red" style="min-width: 60px; text-align: center;">ROUGE</span>
+                            <span>Anomalies obligatoires → <strong>25% des points</strong></span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="color-badge black" style="min-width: 60px; text-align: center;">NOIR</span>
+                            <span>Document absent → <strong>0% des points</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="cgp-summary">
                     <div class="cgp-metric">
                         <span class="metric-value">${cgpEntries.length}</span>
@@ -1579,9 +1598,9 @@ export class HistoryInterface {
                             <tr>
                                 <th>CGP</th>
                                 <th>Contrôles</th>
-                                <th>Taux conformité</th>
+                                <th>Taux conformité pondéré</th>
                                 <th>Commission</th>
-                                <th>Détail</th>
+                                <th>Répartition (V/O/R/N)</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -3252,6 +3271,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
