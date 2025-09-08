@@ -1389,11 +1389,356 @@ export class PersistenceManager {
             .sort(([,a], [,b]) => b.tauxConformite - a.tauxConformite)
             .slice(0, 20); // Limiter à 20 CGP max
         
-        Utils.debugLog(`Création de ${cgpEntries.length} onglets CGP individuels`);
+        Utils.debugLog(`Création de ${cgpEntries.length} onglets CGP détaillés`);
         
         cgpEntries.forEach(([cgpName, cgpStats]) => {
-            this.createSingleCGPSheet(wb, cgpName, cgpStats);
+            this.createDetailedCGPSheet(wb, cgpName, cgpStats);
         });
+    }
+
+    createDetailedCGPSheet(wb, cgpName, cgpStats) {
+        // Récupérer tous les contrôles de ce CGP
+        const cgpControles = this.controles.filter(c => 
+            (c.conseiller || 'Non renseigné') === cgpName
+        ).sort((a, b) => b.date - a.date);
+        
+        // Analyser les documents pour ce CGP (même logique que par type)
+        const documentsInfo = this.analyzeDocumentsForCGP(cgpControles);
+        const headers = this.createCGPSheetHeaders(documentsInfo, cgpName);
+        const data = [headers];
+        
+        // Ajouter chaque contrôle avec ses détails
+        cgpControles.forEach(controle => {
+            const row = this.createCGPSheetRow(controle, documentsInfo);
+            data.push(row);
+        });
+        
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        this.formatDetailedCGPSheet(ws, data.length, headers.length, documentsInfo, cgpName, cgpStats);
+        
+        const safeName = this.createSafeCGPSheetName(cgpName);
+        XLSX.utils.book_append_sheet(wb, ws, safeName);
+        
+        Utils.debugLog(`Onglet CGP détaillé créé: ${safeName}`);
+    }
+    
+    analyzeDocumentsForCGP(controles) {
+        const documentsMap = new Map();
+        
+        controles.forEach(controle => {
+            if (controle.details && controle.details.length > 0) {
+                const detailsByDoc = {};
+                controle.details.forEach(detail => {
+                    if (!detailsByDoc[detail.document]) {
+                        detailsByDoc[detail.document] = [];
+                    }
+                    detailsByDoc[detail.document].push(detail);
+                });
+                
+                Object.entries(detailsByDoc).forEach(([docName, details]) => {
+                    if (!documentsMap.has(docName)) {
+                        documentsMap.set(docName, {
+                            name: docName,
+                            questions: new Set(),
+                            maxQuestions: 0
+                        });
+                    }
+                    
+                    const docInfo = documentsMap.get(docName);
+                    details.forEach(detail => {
+                        docInfo.questions.add(detail.question);
+                    });
+                    docInfo.maxQuestions = Math.max(docInfo.maxQuestions, details.length);
+                });
+            }
+        });
+        
+        const result = Array.from(documentsMap.entries()).map(([name, info]) => ({
+            name,
+            questionsArray: Array.from(info.questions),
+            maxQuestions: info.maxQuestions
+        })).sort((a, b) => a.name.localeCompare(b.name));
+        
+        return result;
+    }
+    
+    createCGPSheetHeaders(documentsInfo, cgpName) {
+        const headers = [
+            'Date', 'Type Contrôle', 'Client', 'Code Dossier', 'Montant', 
+            'Domaine', 'Nouveau Client', 'Type d\'acte', 'Date d\'envoi',
+            'Finalisation', 'Anomalies', 'Conformité', 'Couleur'
+        ];
+        
+        documentsInfo.forEach(docInfo => {
+            headers.push(`${docInfo.name} - Statut`);
+            
+            docInfo.questionsArray.forEach((question, index) => {
+                const shortQuestion = this.shortenQuestionText(question);
+                headers.push(`${docInfo.name} - Q${index + 1}: ${shortQuestion}`);
+            });
+        });
+        
+        return headers;
+    }
+    
+    createCGPSheetRow(controle, documentsInfo) {
+        const couleurInfo = this.determinerCouleurEtCoefficient(controle);
+        
+        const row = [
+            controle.date.toLocaleDateString('fr-FR'),
+            controle.type,
+            controle.client,
+            controle.codeDossier || '',
+            controle.montant || '',
+            controle.domaine || '',
+            controle.nouveauClient || '',
+            controle.typeActe || '',
+            controle.dateEnvoi || '',
+            controle.completionType || 'C1',
+            controle.anomaliesMajeures || 0,
+            controle.conformiteGlobale,
+            couleurInfo.couleur.toUpperCase()
+        ];
+        
+        const detailsByDoc = {};
+        if (controle.details && controle.details.length > 0) {
+            controle.details.forEach(detail => {
+                if (!detailsByDoc[detail.document]) {
+                    detailsByDoc[detail.document] = [];
+                }
+                detailsByDoc[detail.document].push(detail);
+            });
+        }
+        
+        documentsInfo.forEach(docInfo => {
+            const docDetails = detailsByDoc[docInfo.name] || [];
+            const docStatus = this.getDocumentStatus(docDetails);
+            row.push(docStatus);
+            
+            docInfo.questionsArray.forEach(question => {
+                const detail = docDetails.find(d => d.question === question);
+                if (detail) {
+                    if (docStatus === 'ABSENT') {
+                        row.push('-');
+                    } else {
+                        const cellValue = detail.justification && detail.justification.trim() !== '' 
+                            ? detail.justification 
+                            : detail.reponse;
+                        row.push(cellValue || '-');
+                    }
+                } else {
+                    row.push('-');
+                }
+            });
+        });
+        
+        return row;
+    }
+    
+    formatDetailedCGPSheet(ws, rowCount, colCount, documentsInfo, cgpName, cgpStats) {
+        if (!ws['!ref']) return;
+    
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        const colWidths = this.calculateCGPColumnWidths(documentsInfo);
+        ws['!cols'] = colWidths;
+        
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = XLSX.utils.encode_cell({ c: C, r: R });
+                if (!ws[cell_address]) continue;
+                
+                ws[cell_address].s = {
+                    alignment: { 
+                        vertical: 'top', 
+                        wrapText: true,
+                        horizontal: 'left'
+                    },
+                    font: { name: 'Calibri', sz: 10 },
+                    border: {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    }
+                };
+                
+                if (R === 0) {
+                    // En-têtes
+                    ws[cell_address].s = {
+                        ...ws[cell_address].s,
+                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { 
+                            patternType: "solid",
+                            fgColor: { rgb: this.companyColors.primary } 
+                        },
+                        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+                    };
+                } else if (R > 0) {
+                    // Alternance de couleurs
+                    const isEvenRow = R % 2 === 0;
+                    ws[cell_address].s.fill = { 
+                        patternType: "solid",
+                        fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light } 
+                    };
+                    
+                    // Coloration colonne Finalisation (colonne 9)
+                    if (C === 9) {
+                        const cellValue = ws[cell_address].v;
+                        if (cellValue === 'C1') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'E8F5E8' }
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
+                        } else if (cellValue === 'C1S') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'FFF3CD' }
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.warning } };
+                        } else if (cellValue === 'C2R') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'E3F2FD' }
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.info } };
+                        }
+                    }
+                    
+                    // Coloration colonne Anomalies (colonne 10)
+                    if (C === 10) {
+                        const anomalies = parseInt(ws[cell_address].v) || 0;
+                        if (anomalies > 0) {
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                color: { rgb: this.companyColors.danger }, 
+                                bold: true 
+                            };
+                        } else {
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                color: { rgb: this.companyColors.success },
+                                bold: true
+                            };
+                        }
+                    }
+                    
+                    // Coloration colonne Conformité (colonne 11)
+                    if (C === 11) {
+                        if (ws[cell_address].v === 'CONFORME') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.success } 
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        } else if (ws[cell_address].v === 'NON CONFORME') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.danger } 
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        }
+                    }
+                    
+                    // Coloration colonne Couleur (colonne 12)
+                    if (C === 12) {
+                        const cellValue = ws[cell_address].v;
+                        if (cellValue === 'VERT') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'E8F5E8' } 
+                            };
+                        } else if (cellValue === 'ORANGE') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.warning } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'FFF3CD' } 
+                            };
+                        } else if (cellValue === 'ROUGE') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.danger } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'FDE8E8' } 
+                            };
+                        } else if (cellValue === 'NOIR') {
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: '343A40' } 
+                            };
+                        }
+                    }
+                    
+                    // Logique pour les statuts de documents (à partir de la colonne 13)
+                    if (this.isCGPDocumentStatusColumn(C, documentsInfo)) {
+                        const cellValue = ws[cell_address].v;
+                        if (cellValue === 'CONFORME') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.success } 
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        } else if (cellValue === 'AVEC RÉSERVES') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.warning } 
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
+                        } else if (cellValue === 'NON CONFORME' || cellValue === 'ABSENT') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.danger } 
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        }
+                    }
+                }
+            }
+        }
+        
+        ws['!rows'] = [{ hpt: 40 }];
+        ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(range.e.c)}1` };
+    }
+    
+    calculateCGPColumnWidths(documentsInfo) {
+        const widths = [
+            { width: 12 }, // Date
+            { width: 16 }, // Type
+            { width: 25 }, // Client
+            { width: 15 }, // Code
+            { width: 15 }, // Montant
+            { width: 15 }, // Domaine
+            { width: 15 }, // Nouveau Client
+            { width: 15 }, // Type d'acte
+            { width: 12 }, // Date d'envoi
+            { width: 12 }, // Finalisation
+            { width: 10 }, // Anomalies
+            { width: 15 }, // Conformité
+            { width: 10 }  // Couleur
+        ];
+        
+        documentsInfo.forEach(docInfo => {
+            widths.push({ width: 15 }); // Statut document
+            docInfo.questionsArray.forEach(() => {
+                widths.push({ width: 40 }); // Questions
+            });
+        });
+        
+        return widths;
+    }
+    
+    isCGPDocumentStatusColumn(colIndex, documentsInfo) {
+        let currentCol = 13; // Commence à la colonne 13 (après Couleur)
+        
+        for (const docInfo of documentsInfo) {
+            if (colIndex === currentCol) {
+                return true;
+            }
+            currentCol += 1 + docInfo.questionsArray.length;
+        }
+        
+        return false;
     }
 
     createSingleCGPSheet(wb, cgpName, cgpStats) {
@@ -4674,6 +5019,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
