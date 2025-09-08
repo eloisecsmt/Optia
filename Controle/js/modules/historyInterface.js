@@ -1550,7 +1550,7 @@ export class HistoryInterface {
     
         return `
             <div class="cgp-stats-container">
-                <h4>Statistiques par conseiller (nouvelle méthode pondérée)</h4>
+                <h4>Statistiques par conseiller</h4>
                 
                 <!-- NOUVELLE LÉGENDE -->
                 <div class="color-legend" style="
@@ -3271,6 +3271,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
