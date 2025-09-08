@@ -265,6 +265,194 @@ export class HistoryInterface {
         }
     }
 
+    generateGlobalStats(stats) {
+        return `
+            <div class="global-stats-container">
+                <div class="summary-cards" style="margin-bottom: 25px;">
+                    <div class="summary-card">
+                        <div class="card-value">${stats.totalControles}</div>
+                        <div class="card-label">Total contrôles</div>
+                    </div>
+                    <div class="summary-card ${stats.tauxConformite >= 80 ? 'success' : stats.tauxConformite >= 60 ? 'warning' : 'danger'}">
+                        <div class="card-value">${stats.tauxConformite}%</div>
+                        <div class="card-label">Taux conformité global</div>
+                    </div>
+                    <div class="summary-card ${stats.totalAnomaliesMajeures === 0 ? 'success' : 'danger'}">
+                        <div class="card-value">${stats.totalAnomaliesMajeures}</div>
+                        <div class="card-label">Anomalies majeures</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-value">${stats.controlesMoisActuel}</div>
+                        <div class="card-label">Contrôles ce mois-ci</div>
+                    </div>
+                </div>
+                
+                <h4>Répartition par type de contrôle</h4>
+                <div class="type-stats" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    ${Object.entries(stats.repartitionTypes).length > 0 ? 
+                        Object.entries(stats.repartitionTypes).map(([type, count]) => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e9ecef;">
+                                <span><strong>${type}</strong></span>
+                                <div>
+                                    <span class="badge control-type">${count} contrôle(s)</span>
+                                    <span style="margin-left: 10px; color: #6c757d;">${stats.totalControles > 0 ? Math.round((count / stats.totalControles) * 100) : 0}%</span>
+                                </div>
+                            </div>
+                        `).join('') :
+                        '<p style="text-align: center; color: #6c757d;">Aucune donnée de répartition disponible</p>'
+                    }
+                </div>
+                
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h5>Type le plus fréquent</h5>
+                    <p style="margin: 5px 0;"><strong>${stats.typePlusFrequent}</strong></p>
+                    
+                    <h5 style="margin-top: 15px;">Évaluation globale</h5>
+                    <p style="margin: 5px 0;">
+                        ${stats.tauxConformite >= 90 ? 'Excellent niveau de conformité (≥90%)' : 
+                        stats.tauxConformite >= 75 ? 'Bon niveau de conformité (75-89%)' : 
+                        stats.tauxConformite >= 50 ? 'Niveau de conformité moyen (50-74%)' :
+                        'Niveau de conformité à améliorer (<50%)'}
+                    </p>
+                </div>
+            </div>
+        `;
+    }
+    
+    generateObjectivesPanel(objectives) {
+        // Calculer la progression pour chaque type de contrôle
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        return `
+            <div class="objectives-container">
+                <h4>Suivi des objectifs mensuels</h4>
+                <div class="objectives-grid">
+                    ${Object.entries(objectives.controlTargets).map(([type, targets]) => {
+                        const completed = this.getCompletedControlsCount(type, currentMonth, currentYear);
+                        const percentage = targets.monthly > 0 ? Math.round((completed / targets.monthly) * 100) : 0;
+                        const progressClass = percentage >= 100 ? 'complete' : percentage >= 75 ? 'good' : percentage >= 50 ? 'warning' : 'danger';
+                        
+                        return `
+                            <div class="objective-card">
+                                <div class="objective-header">
+                                    <h5>${type}</h5>
+                                    <span class="objective-percentage ${progressClass}">${percentage}%</span>
+                                </div>
+                                <div class="objective-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill ${progressClass}" style="width: ${Math.min(percentage, 100)}%"></div>
+                                    </div>
+                                    <div class="progress-text">
+                                        ${completed} / ${targets.monthly} contrôles
+                                        ${completed >= targets.monthly ? ' ✓' : ` (${targets.monthly - completed} restants)`}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Méthode utilitaire pour compter les contrôles du mois
+    getCompletedControlsCount(type, month, year) {
+        if (!window.persistenceManager) return 0;
+        
+        const controls = window.persistenceManager.getHistoryData().controles;
+        return controls.filter(control => {
+            const controlDate = new Date(control.date);
+            return control.type === type && 
+                   controlDate.getMonth() === month && 
+                   controlDate.getFullYear() === year;
+        }).length;
+    }
+    
+    // Méthode pour afficher le détail d'un CGP
+    showCGPDetail(cgpName) {
+        const statsByCGP = window.persistenceManager.getStatisticsByCGP();
+        const cgpStats = statsByCGP[cgpName];
+        
+        if (!cgpStats) return;
+        
+        const detailModal = document.createElement('div');
+        detailModal.className = 'justification-modal';
+        detailModal.innerHTML = `
+            <div class="modal-overlay" onclick="this.parentElement.remove()">
+                <div class="modal-content" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h3>Détail du calcul - ${cgpName}</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="this.closest('.justification-modal').remove()">✕</button>
+                    </div>
+                    
+                    <div class="cgp-detail-content">
+                        <div class="cgp-summary">
+                            <div class="summary-item">
+                                <span>Total contrôles:</span>
+                                <span>${cgpStats.totalControles}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Taux conformité:</span>
+                                <span class="${this.getConformityClass(cgpStats.tauxConformite)}">${cgpStats.tauxConformite}%</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Points obtenus:</span>
+                                <span>${cgpStats.pointsTotal} / ${cgpStats.pointsMax}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Commission:</span>
+                                <span class="${cgpStats.eligibleCommission ? 'eligible' : 'not-eligible'}">
+                                    ${cgpStats.eligibleCommission ? 'Éligible' : 'Non éligible'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <h5>Détail des points par contrôle:</h5>
+                        <div class="calcul-details" style="max-height: 300px; overflow-y: auto;">
+                            <table class="detail-table">
+                                <thead>
+                                    <tr>
+                                        <th>Client</th>
+                                        <th>Date</th>
+                                        <th>Question</th>
+                                        <th>Niveau</th>
+                                        <th>Points</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${cgpStats.calculDetails.map(detail => `
+                                        <tr>
+                                            <td>${detail.client}</td>
+                                            <td>${new Date(detail.date).toLocaleDateString('fr-FR')}</td>
+                                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${detail.question}</td>
+                                            <td><span class="level-badge ${detail.niveau}">${detail.niveau}</span></td>
+                                            <td>${detail.points}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="this.closest('.justification-modal').remove()">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(detailModal);
+    }
+    
+    getConformityClass(rate) {
+        if (rate >= 80) return 'high';
+        if (rate >= 60) return 'medium';
+        return 'low';
+    }
+
     // NOUVEAU : Méthode pour mettre à jour le bouton mail
     updateMailButton() {
          const mailButton = document.getElementById('history-mail-btn');
@@ -2113,119 +2301,69 @@ updateMailButton() {
         const style = document.createElement('style');
         style.id = 'stats-modal-styles';
         style.textContent = `
-            .stats-modal {
-                max-width: 1200px !important;
-                width: 95vw !important;
-                max-height: 90vh !important;
+            /* Styles existants... */
+            
+            .objectives-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
             }
             
-            .stats-header {
+            .objective-card {
+                background: white;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                padding: 20px;
+            }
+            
+            .objective-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-                border-bottom: 2px solid #e9ecef;
+                margin-bottom: 15px;
             }
             
-            .stats-tabs {
-                display: flex;
-                border-bottom: 1px solid #dee2e6;
-                margin-bottom: 20px;
-            }
-            
-            .stats-tab {
-                padding: 12px 24px;
-                border: none;
-                background: none;
-                cursor: pointer;
-                border-bottom: 3px solid transparent;
-                transition: all 0.3s ease;
-            }
-            
-            .stats-tab.active {
-                border-bottom-color: #1a1a2e;
+            .objective-percentage {
                 font-weight: 600;
-                color: #1a1a2e;
+                font-size: 1.2rem;
             }
             
-            .stats-panel {
-                display: none;
-            }
+            .objective-percentage.complete { color: #28a745; }
+            .objective-percentage.good { color: #28a745; }
+            .objective-percentage.warning { color: #ffc107; }
+            .objective-percentage.danger { color: #dc3545; }
             
-            .stats-panel.active {
-                display: block;
-            }
-            
-            .cgp-table {
+            .progress-bar {
                 width: 100%;
-                border-collapse: collapse;
-                margin-top: 15px;
+                height: 20px;
+                background: #e9ecef;
+                border-radius: 10px;
+                overflow: hidden;
+                margin-bottom: 8px;
             }
             
-            .cgp-table th,
-            .cgp-table td {
-                padding: 12px;
-                text-align: left;
-                border-bottom: 1px solid #dee2e6;
+            .progress-fill {
+                height: 100%;
+                transition: width 0.3s ease;
             }
             
-            .cgp-table th {
-                background: #f8f9fa;
-                font-weight: 600;
-            }
+            .progress-fill.complete { background: #28a745; }
+            .progress-fill.good { background: #28a745; }
+            .progress-fill.warning { background: #ffc107; }
+            .progress-fill.danger { background: #dc3545; }
             
-            .cgp-row.eligible {
-                background: rgba(40, 167, 69, 0.1);
-            }
-            
-            .cgp-row.not-eligible {
-                background: rgba(220, 53, 69, 0.1);
-            }
-            
-            .conformity-rate.high { color: #28a745; font-weight: 600; }
-            .conformity-rate.medium { color: #ffc107; font-weight: 600; }
-            .conformity-rate.low { color: #dc3545; font-weight: 600; }
-            
-            .color-badge {
-                display: inline-block;
+            .level-badge {
                 padding: 2px 6px;
                 border-radius: 3px;
-                margin: 0 2px;
                 font-size: 0.8rem;
                 font-weight: 600;
             }
             
-            .color-badge.green { background: #28a745; color: white; }
-            .color-badge.orange { background: #ffc107; color: black; }
-            .color-badge.red { background: #dc3545; color: white; }
-            .color-badge.black { background: #343a40; color: white; }
-            
-            .config-section {
-                margin: 20px 0;
-                padding: 15px;
-                background: #f8f9fa;
-                border-radius: 8px;
-            }
-            
-            .objective-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin: 10px 0;
-            }
-            
-            .objective-row label {
-                flex: 1;
-                font-weight: 500;
-            }
-            
-            .objective-row input {
-                width: 100px;
-                padding: 5px;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-            }
+            .level-badge.conforme { background: #28a745; color: white; }
+            .level-badge.mineur { background: #ffc107; color: black; }
+            .level-badge.grave { background: #dc3545; color: white; }
+            .level-badge.impossible { background: #343a40; color: white; }
         `;
         
         document.head.appendChild(style);
@@ -2334,6 +2472,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
