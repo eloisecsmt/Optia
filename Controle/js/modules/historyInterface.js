@@ -318,6 +318,19 @@ export class HistoryInterface {
             </div>
         `;
     }
+
+    // À ajouter dans la classe HistoryInterface
+    getCompletedControlsCount(type, month, year) {
+        if (!window.persistenceManager) return 0;
+        
+        const controls = window.persistenceManager.getHistoryData().controles;
+        return controls.filter(control => {
+            const controlDate = new Date(control.date);
+            return control.type === type && 
+                   controlDate.getMonth() === month && 
+                   controlDate.getFullYear() === year;
+        }).length;
+    }
     
     generateObjectivesPanel(objectives) {
         // Calculer la progression pour chaque type de contrôle
@@ -3149,6 +3162,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
