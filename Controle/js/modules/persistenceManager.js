@@ -51,6 +51,39 @@ export class PersistenceManager {
         }
     }
 
+    // Dans persistenceManager.js, ajoutez cette méthode à la classe PersistenceManager
+    determineComplianceLevel(response, questionData = null) {
+        // NC = toujours conforme (pas de pénalisation)
+        if (response.answer === 'NC') {
+            return { level: 'conforme', color: 'green', points: 100 };
+        }
+        
+        // Document absent = impossible (noir)
+        if (response.answer === 'Non' && questionData?.skipIfNo) {
+            return { level: 'impossible', color: 'black', points: 0, excluded: true };
+        }
+        
+        // Conforme si Oui + qualité OK
+        if (response.answer === 'Oui' && 
+            (response.quality === 'Conforme' || !response.quality)) {
+            return { level: 'conforme', color: 'green', points: 100 };
+        }
+        
+        // Anomalies selon obligation
+        if (response.answer === 'Non' || 
+            response.quality === 'Non conforme' || 
+            response.quality === 'Partiellement conforme') {
+            
+            if (response.obligation === 'Obligatoire') {
+                return { level: 'grave', color: 'red', points: 25 };
+            } else {
+                return { level: 'mineur', color: 'orange', points: 75 };
+            }
+        }
+        
+        return { level: 'conforme', color: 'green', points: 100 };
+    }
+
     // Sauvegarder un contrôle (inchangé)
     saveControl(controlData) {
         try {
@@ -225,6 +258,27 @@ export class PersistenceManager {
             </div>
         `;
         document.body.appendChild(modal);
+    }
+
+    getObjectives() {
+        const defaults = {
+            cgpCommissionThreshold: 75,
+            controlTargets: {
+                'LCB-FT': { monthly: 50 },
+                'FINANCEMENT': { monthly: 30 },
+                'CARTO_CLIENT': { monthly: 40 },
+                'OPERATION': { monthly: 35 },
+                'NOUVEAU_CLIENT': { monthly: 25 }
+            }
+        };
+        
+        const saved = localStorage.getItem('app_objectives');
+        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    }
+    
+    updateObjectives(newObjectives) {
+        localStorage.setItem('app_objectives', JSON.stringify(newObjectives));
+        Utils.showNotification('Objectifs mis à jour', 'success');
     }
 
     // NOUVEAU : Obtenir le contrôle original par ID
@@ -1994,7 +2048,7 @@ export class PersistenceManager {
                     totalControles: 0,
                     pointsTotal: 0,
                     pointsMax: 0,
-                    repartition: { vert: 0, orange: 0, rouge: 0, noir: 0 },
+                    repartition: { green: 0, orange: 0, red: 0, black: 0 },
                     calculDetails: []
                 });
             }
@@ -2003,7 +2057,15 @@ export class PersistenceManager {
             stats.totalControles++;
             
             controle.details?.forEach(detail => {
-                const compliance = this.determineComplianceLevel(detail);
+                let compliance;
+                
+                // Utiliser les données migrées si disponibles
+                if (detail.complianceLevel) {
+                    compliance = this.mapMigratedCompliance(detail);
+                } else {
+                    // Nouveau système
+                    compliance = this.determineComplianceLevel(detail);
+                }
                 
                 if (!compliance.excluded) {
                     stats.pointsTotal += compliance.points;
@@ -2031,6 +2093,18 @@ export class PersistenceManager {
         });
         
         return Object.fromEntries(statsByCGP);
+    }
+    
+    // Méthode pour mapper les données migrées
+    mapMigratedCompliance(detail) {
+        const colorMap = {
+            'conforme': { level: 'conforme', color: 'green', points: 100 },
+            'mineur': { level: 'mineur', color: 'orange', points: 75 },
+            'grave': { level: 'grave', color: 'red', points: 25 },
+            'impossible': { level: 'impossible', color: 'black', points: 0, excluded: true }
+        };
+        
+        return colorMap[detail.complianceLevel] || colorMap['conforme'];
     }
     
      calculateRevisedComplianceRate() {
@@ -3609,6 +3683,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
