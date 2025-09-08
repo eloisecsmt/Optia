@@ -334,31 +334,54 @@ export class HistoryInterface {
     
     generateObjectivesPanel(objectives) {
         const currentYear = new Date().getFullYear();
-        const controls = window.persistenceManager ? window.persistenceManager.getHistoryData().controles : [];
+        const allControls = window.persistenceManager ? window.persistenceManager.getHistoryData().controles : [];
         
-        // Mapping entre noms configurés et noms réels
-        const typeMapping = {
-            'LCB-FT': 'LCB-FT',
-            'FINANCEMENT': 'Financement', 
-            'CARTO_CLIENT': 'Carto Client',
-            'OPERATION': 'Opération',
-            'NOUVEAU_CLIENT': 'Nouveau Client'
-        };
+        // MÊME LOGIQUE DE DÉDUPLICATION que dans getStatisticsByCGP()
+        console.log('=== DEBUG OBJECTIFS DÉDUPLICATION ===');
+        
+        // Étape 1: Identifier les contrôles parents à exclure
+        const excludedControlIds = new Set();
+        
+        allControls.forEach(controle => {
+            if (controle.completionType === 'C2R') {
+                const parentId = controle.parentControlId || 
+                               controle.originalControlId || 
+                               controle.parentId ||
+                               controle.baseControlId;
+                
+                if (parentId) {
+                    excludedControlIds.add(parentId);
+                    excludedControlIds.add(String(parentId));
+                    excludedControlIds.add(Number(parentId));
+                    console.log(`Objectifs - Exclusion parent: ${parentId} (révision: ${controle.id})`);
+                }
+            }
+        });
+        
+        // Étape 2: Filtrer les contrôles finaux seulement
+        const controls = allControls.filter(controle => {
+            const shouldExclude = excludedControlIds.has(controle.id) || 
+                                 excludedControlIds.has(String(controle.id)) || 
+                                 excludedControlIds.has(Number(controle.id));
+            return !shouldExclude;
+        });
+        
+        console.log(`Total contrôles avant déduplication: ${allControls.length}`);
+        console.log(`Total contrôles après déduplication: ${controls.length}`);
+        console.log(`Contrôles exclus: ${allControls.length - controls.length}`);
         
         return `
             <div class="objectives-container">
                 <h4>Suivi des objectifs annuels ${currentYear}</h4>
                 <div class="objectives-grid">
                     ${Object.entries(objectives.controlTargets).map(([type, targets]) => {
-                        const realType = typeMapping[type] || type; // Utiliser le mapping
-                        
                         const completed = controls.filter(control => {
                             const controlYear = new Date(control.date).getFullYear();
-                            const match = control.type === realType && controlYear === currentYear;
+                            const match = control.type === type && controlYear === currentYear;
                             return match;
                         }).length;
                         
-                        console.log(`Type "${type}" -> "${realType}": ${completed} contrôles trouvés`);
+                        console.log(`Objectifs - Type "${type}": ${completed} contrôles finaux trouvés`);
                         
                         const percentage = targets.yearly > 0 ? Math.round((completed / targets.yearly) * 100) : 0;
                         const progressClass = percentage >= 100 ? 'complete' : percentage >= 75 ? 'good' : percentage >= 50 ? 'warning' : 'danger';
@@ -381,6 +404,15 @@ export class HistoryInterface {
                             </div>
                         `;
                     }).join('')}
+                </div>
+                
+                <!-- Indication sur la déduplication -->
+                <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; font-size: 0.9rem; color: #1565c0;">
+                    <strong>Note:</strong> Les révisions (C2R) remplacent les contrôles initiaux dans le décompte. 
+                    ${allControls.length - controls.length > 0 ? 
+                        `${allControls.length - controls.length} contrôle(s) initial(aux) exclu(s) pour éviter les doublons.` : 
+                        'Aucun doublon détecté.'
+                    }
                 </div>
             </div>
         `;
@@ -3217,6 +3249,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
