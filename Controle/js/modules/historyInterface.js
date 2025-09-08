@@ -1513,13 +1513,16 @@ export class HistoryInterface {
     generateCGPStats(statsByCGP, objectives) {
         const cgpEntries = Object.entries(statsByCGP);
     
-        // DEBUG pour voir la structure des données
-        console.log('=== DEBUG CGP STATS ===');
-        console.log('statsByCGP:', statsByCGP);
-        cgpEntries.forEach(([cgp, stats]) => {
-            console.log(`CGP ${cgp}:`, stats);
-            console.log(`Répartition pour ${cgp}:`, stats.repartition);
-        });
+        console.log('=== CONTRÔLES FINAUX CGP ===');
+    
+        // Vérifier qu'on ne compte pas les doublons
+        const totalControlesComptes = Object.values(statsByCGP)
+            .reduce((sum, stats) => sum + stats.totalControles, 0);
+        const totalControlesDB = window.persistenceManager.getHistoryData().controles.length;
+        
+        console.log(`Total contrôles en DB: ${totalControlesDB}`);
+        console.log(`Total contrôles comptés: ${totalControlesComptes}`);
+        console.log(`Différence (révisions exclues): ${totalControlesDB - totalControlesComptes}`);
         
         return `
             <div class="cgp-stats-container">
@@ -3214,6 +3217,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
