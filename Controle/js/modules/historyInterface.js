@@ -334,24 +334,35 @@ export class HistoryInterface {
     
     generateObjectivesPanel(objectives) {
         const currentYear = new Date().getFullYear();
-        
-        // Récupérer les données comme dans l'onglet Global
         const controls = window.persistenceManager ? window.persistenceManager.getHistoryData().controles : [];
         
-        // DEBUG : Afficher les données
-        console.log('=== DEBUG OBJECTIFS ===');
+        // DEBUG DÉTAILLÉ
+        console.log('=== DEBUG OBJECTIFS DÉTAILLÉ ===');
+        console.log('Année actuelle:', currentYear);
         console.log('Nombre total de contrôles:', controls.length);
-        console.log('Types dans objectives:', Object.keys(objectives.controlTargets));
+        console.log('Types configurés dans objectifs:', Object.keys(objectives.controlTargets));
         
-        // Voir tous les types de contrôles existants
-        const existingTypes = [...new Set(controls.map(c => c.type))];
-        console.log('Types existants dans les contrôles:', existingTypes);
-        console.log('Premier contrôle exemple:', controls[0]); // Pour voir un exemple complet
+        // Voir les types réels dans les données
+        const realTypes = [...new Set(controls.map(c => c.type))];
+        console.log('Types réels dans les contrôles:', realTypes);
+    
+        // Voir quelques exemples de contrôles
+        console.log('Exemples de contrôles:', controls.slice(0, 3));
+        
+        // Test pour chaque type configuré
+        Object.keys(objectives.controlTargets).forEach(type => {
+            const matchingControls = controls.filter(control => {
+                const controlYear = new Date(control.date).getFullYear();
+                const match = control.type === type && controlYear === currentYear;
+                console.log(`Type "${type}": contrôle "${control.type}" année ${controlYear} = match: ${match}`);
+                return match;
+            });
+            console.log(`Type "${type}": ${matchingControls.length} contrôles trouvés`);
+        });
 
         
         // Voir les contrôles de cette année
         const thisYearControls = controls.filter(c => new Date(c.date).getFullYear() === currentYear);
-        console.log('Contrôles de cette année:', thisYearControls.length);
         
         return `
             <div class="objectives-container">
@@ -3213,6 +3224,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
