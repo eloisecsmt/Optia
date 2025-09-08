@@ -4894,6 +4894,38 @@ export class DocumentController {
         return true;
     }
 
+    determineComplianceLevel(response, questionData = null) {
+        // NC = toujours conforme (pas de pénalisation)
+        if (response.answer === 'NC') {
+            return { level: 'conforme', color: 'green', points: 100 };
+        }
+        
+        // Document absent = impossible (noir)
+        if (response.answer === 'Non' && questionData?.skipIfNo) {
+            return { level: 'impossible', color: 'black', points: 0, excluded: true };
+        }
+        
+        // Conforme si Oui + qualité OK
+        if (response.answer === 'Oui' && 
+            (response.quality === 'Conforme' || !response.quality)) {
+            return { level: 'conforme', color: 'green', points: 100 };
+        }
+        
+        // Anomalies selon obligation
+        if (response.answer === 'Non' || 
+            response.quality === 'Non conforme' || 
+            response.quality === 'Partiellement conforme') {
+            
+            if (response.obligation === 'Obligatoire') {
+                return { level: 'grave', color: 'red', points: 25 };
+            } else {
+                return { level: 'mineur', color: 'orange', points: 75 };
+            }
+        }
+        
+        return { level: 'conforme', color: 'green', points: 100 };
+    }
+
     completeDocument() {
         const docConfig = this.documentsConfig[this.currentDocument];
     
@@ -6149,6 +6181,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
