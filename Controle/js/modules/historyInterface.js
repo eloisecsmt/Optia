@@ -1512,6 +1512,14 @@ export class HistoryInterface {
     // Génération des statistiques CGP
     generateCGPStats(statsByCGP, objectives) {
         const cgpEntries = Object.entries(statsByCGP);
+    
+        // DEBUG pour voir la structure des données
+        console.log('=== DEBUG CGP STATS ===');
+        console.log('statsByCGP:', statsByCGP);
+        cgpEntries.forEach(([cgp, stats]) => {
+            console.log(`CGP ${cgp}:`, stats);
+            console.log(`Répartition pour ${cgp}:`, stats.repartition);
+        });
         
         return `
             <div class="cgp-stats-container">
@@ -3206,6 +3214,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
