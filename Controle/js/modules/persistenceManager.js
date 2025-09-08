@@ -19,6 +19,7 @@ export class PersistenceManager {
             info: '17A2B8'          // Bleu info
         };
         this.init();
+        this.migrateToV2(); // Migration automatique
     }
 
     init() {
@@ -26,6 +27,28 @@ export class PersistenceManager {
         this.loadFromStorage();
         this.loadSuspendedFromStorage(); // Charger les suspendus
         this.loadControlledDossiersFromStorage(); // Charger les dossiers contrôlés
+    }
+
+    migrateToV2() {
+        let migrationCount = 0;
+        this.controles.forEach(controle => {
+            if (!controle.complianceVersion) {
+                controle.complianceVersion = 'v2';
+                controle.details?.forEach(detail => {
+                    if (detail.conforme === false) {
+                        detail.complianceLevel = detail.obligatoire === 'Obligatoire' ? 'grave' : 'mineur';
+                    } else {
+                        detail.complianceLevel = 'conforme';
+                    }
+                });
+                migrationCount++;
+            }
+        });
+        
+        if (migrationCount > 0) {
+            this.saveToStorage();
+            Utils.debugLog(`Migration v2: ${migrationCount} contrôles migrés`);
+        }
     }
 
     // Sauvegarder un contrôle (inchangé)
@@ -142,6 +165,66 @@ export class PersistenceManager {
             console.error('Erreur sauvegarde contrôle:', error);
             return null;
         }
+    }
+
+    getObjectives() {
+        const defaults = {
+            cgpCommissionThreshold: 75,
+            controlTargets: {
+                'LCB-FT': { monthly: 50 },
+                'FINANCEMENT': { monthly: 30 },
+                'CARTO_CLIENT': { monthly: 40 },
+                'OPERATION': { monthly: 35 },
+                'NOUVEAU_CLIENT': { monthly: 25 }
+            }
+        };
+        
+        const saved = localStorage.getItem('app_objectives');
+        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    }
+    
+    updateObjectives(newObjectives) {
+        localStorage.setItem('app_objectives', JSON.stringify(newObjectives));
+        Utils.showNotification('Objectifs mis à jour', 'success');
+    }
+    
+    // Interface simple dans l'historique
+    showQuickObjectivesConfig() {
+        const current = this.getObjectives();
+        const modal = document.createElement('div');
+        modal.className = 'justification-modal';
+        modal.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-content">
+                    <h3>Configuration des objectifs</h3>
+                    
+                    <div class="config-section">
+                        <label>Seuil commission CGP (%) :</label>
+                        <input type="number" id="cgp-threshold" value="${current.cgpCommissionThreshold}" min="0" max="100">
+                    </div>
+                    
+                    <div class="config-section">
+                        <h4>Objectifs mensuels par type :</h4>
+                        ${Object.entries(current.controlTargets).map(([type, targets]) => `
+                            <div class="objective-row">
+                                <label>${type} :</label>
+                                <input type="number" data-type="${type}" value="${targets.monthly}" min="0">
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" onclick="window.persistenceManager?.saveQuickObjectives()">
+                            Sauvegarder
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.persistenceManager?.closeQuickConfig()">
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
     }
 
     // NOUVEAU : Obtenir le contrôle original par ID
@@ -1900,6 +1983,55 @@ export class PersistenceManager {
             revisionsImprovedCompliance: this.countRevisionsImprovedCompliance()
         };
     }
+
+    getStatisticsByCGP() {
+        const statsByCGP = new Map();
+        
+        this.controles.forEach(controle => {
+            const cgp = controle.conseiller || 'Non assigné';
+            if (!statsByCGP.has(cgp)) {
+                statsByCGP.set(cgp, {
+                    totalControles: 0,
+                    pointsTotal: 0,
+                    pointsMax: 0,
+                    repartition: { vert: 0, orange: 0, rouge: 0, noir: 0 },
+                    calculDetails: []
+                });
+            }
+            
+            const stats = statsByCGP.get(cgp);
+            stats.totalControles++;
+            
+            controle.details?.forEach(detail => {
+                const compliance = this.determineComplianceLevel(detail);
+                
+                if (!compliance.excluded) {
+                    stats.pointsTotal += compliance.points;
+                    stats.pointsMax += 100;
+                }
+                
+                stats.repartition[compliance.color]++;
+                stats.calculDetails.push({
+                    client: controle.client,
+                    date: controle.date,
+                    question: detail.question,
+                    niveau: compliance.level,
+                    points: compliance.points
+                });
+            });
+        });
+        
+        // Calculer les taux
+        statsByCGP.forEach(stats => {
+            stats.tauxConformite = stats.pointsMax > 0 ? 
+                Math.round((stats.pointsTotal / stats.pointsMax) * 100) : 0;
+            
+            const objectives = this.getObjectives();
+            stats.eligibleCommission = stats.tauxConformite >= objectives.cgpCommissionThreshold;
+        });
+        
+        return Object.fromEntries(statsByCGP);
+    }
     
      calculateRevisedComplianceRate() {
         const uniqueDossiers = new Map();
@@ -3477,6 +3609,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
