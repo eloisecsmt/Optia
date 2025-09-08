@@ -2043,34 +2043,81 @@ export class PersistenceManager {
         const statsByCGP = {};
         const objectives = this.getObjectives();
         
-        // ÉTAPE 1: Identifier les contrôles à exclure (parents de révisions)
+        // DEBUG : Examiner la structure des contrôles
+        console.log('=== DEBUG STRUCTURE CONTRÔLES ===');
+        console.log(`Total contrôles en base: ${data.controles.length}`);
+        
+        // Examiner les contrôles C2R
+        const c2rControls = data.controles.filter(c => c.completionType === 'C2R');
+        console.log(`Contrôles C2R trouvés: ${c2rControls.length}`);
+        
+        c2rControls.forEach((c2r, index) => {
+            console.log(`C2R ${index + 1}:`, {
+                id: c2r.id,
+                client: c2r.client,
+                completionType: c2r.completionType,
+                parentControlId: c2r.parentControlId,
+                originalControlId: c2r.originalControlId,
+                parentId: c2r.parentId,
+                baseControlId: c2r.baseControlId,
+                allProperties: Object.keys(c2r).filter(key => 
+                    key.toLowerCase().includes('parent') || 
+                    key.toLowerCase().includes('original') || 
+                    key.toLowerCase().includes('base')
+                )
+            });
+        });
+        
+        // ÉTAPE 1: Identifier les contrôles parents à exclure
         const excludedControlIds = new Set();
+        
         data.controles.forEach(controle => {
-            if (controle.completionType === 'C2R' && controle.parentControlId) {
-                excludedControlIds.add(controle.parentControlId);
+            if (controle.completionType === 'C2R') {
+                // Essayer différentes propriétés possibles pour l'ID parent
+                const parentId = controle.parentControlId || 
+                               controle.originalControlId || 
+                               controle.parentId ||
+                               controle.baseControlId;
+                
+                if (parentId) {
+                    console.log(`Marquage pour exclusion - Parent ID: ${parentId} (révision: ${controle.id} - ${controle.client})`);
+                    excludedControlIds.add(parentId);
+                } else {
+                    console.log(`ATTENTION: Contrôle C2R ${controle.id} (${controle.client}) sans ID parent identifiable`);
+                }
             }
         });
         
-        // ÉTAPE 2: Traiter seulement les contrôles finaux
+        console.log(`IDs de contrôles à exclure:`, Array.from(excludedControlIds));
+        
+        // ÉTAPE 2: Traiter les contrôles finaux (en excluant les parents)
+        let controlesTraites = 0;
+        let controlesIgnores = 0;
+        
         data.controles.forEach(controle => {
-            // Ignorer les contrôles parents qui ont été révisés
+            // Vérifier si ce contrôle doit être ignoré
             if (excludedControlIds.has(controle.id)) {
-                console.log(`Contrôle ${controle.id} ignoré (parent de révision)`);
+                console.log(`IGNORÉ: ${controle.id} (${controle.client}) - parent d'une révision`);
+                controlesIgnores++;
                 return;
             }
             
+            console.log(`TRAITÉ: ${controle.id} (${controle.client}) - ${controle.completionType || 'C1'}`);
+            controlesTraites++;
+            
             const cgp = controle.conseiller || 'Non renseigné';
             
+            // Initialiser les stats du CGP si nécessaire
             if (!statsByCGP[cgp]) {
                 statsByCGP[cgp] = {
                     totalControles: 0,
                     pointsTotal: 0,
                     pointsMax: 0,
                     repartition: {
-                        green: 0,   // Parfaitement conforme
-                        orange: 0,  // Conforme avec réserves
-                        red: 0,     // Non conforme standard
-                        black: 0    // Très problématique
+                        green: 0,   // Parfaitement conforme (conforme + 0 anomalie)
+                        orange: 0,  // Conforme avec réserves (conforme + anomalies)
+                        red: 0,     // Non conforme standard (non conforme + peu d'anomalies)
+                        black: 0    // Très problématique (non conforme + beaucoup d'anomalies)
                     },
                     calculDetails: [],
                     eligibleCommission: false,
@@ -2080,26 +2127,34 @@ export class PersistenceManager {
             
             statsByCGP[cgp].totalControles++;
             
-            // Calcul simplifié par statut global
+            // CALCUL SIMPLIFIÉ par statut global du dossier
             if (controle.conformiteGlobale === 'CONFORME') {
                 if (controle.anomaliesMajeures === 0) {
                     statsByCGP[cgp].repartition.green++;  // Parfait
+                    console.log(`  → VERT (conforme + 0 anomalie)`);
                 } else {
                     statsByCGP[cgp].repartition.orange++; // Conforme avec réserves
+                    console.log(`  → ORANGE (conforme + ${controle.anomaliesMajeures} anomalie(s))`);
                 }
             } else {
                 // Non conforme
                 if (controle.anomaliesMajeures >= 3) {
                     statsByCGP[cgp].repartition.black++;  // Très problématique
+                    console.log(`  → NOIR (non conforme + ${controle.anomaliesMajeures} anomalies)`);
                 } else {
                     statsByCGP[cgp].repartition.red++;    // Non conforme standard
+                    console.log(`  → ROUGE (non conforme + ${controle.anomaliesMajeures} anomalie(s))`);
                 }
             }
             
-            // Calcul de points (gardez votre logique existante)
-            if (controle.details) {
+            // Calcul des points pour le taux de conformité (gardez votre logique existante)
+            if (controle.details && controle.details.length > 0) {
                 controle.details.forEach(detail => {
-                    const points = this.calculateDetailPoints(detail);
+                    const points = this.calculateDetailPoints ? this.calculateDetailPoints(detail) : {
+                        max: detail.obligatoire ? 100 : 50,
+                        obtained: detail.conforme ? (detail.obligatoire ? 100 : 50) : 0
+                    };
+                    
                     statsByCGP[cgp].pointsTotal += points.obtained;
                     statsByCGP[cgp].pointsMax += points.max;
                     
@@ -2114,13 +2169,20 @@ export class PersistenceManager {
             }
         });
         
-        // Calculer les taux de conformité et éligibilité
+        // ÉTAPE 3: Calculer les taux de conformité et éligibilité commission
         Object.keys(statsByCGP).forEach(cgp => {
             const stats = statsByCGP[cgp];
             stats.tauxConformite = stats.pointsMax > 0 ? 
                 Math.round((stats.pointsTotal / stats.pointsMax) * 100) : 0;
             stats.eligibleCommission = stats.tauxConformite >= objectives.cgpCommissionThreshold;
         });
+        
+        // Résumé final
+        console.log('=== RÉSUMÉ TRAITEMENT ===');
+        console.log(`Contrôles traités: ${controlesTraites}`);
+        console.log(`Contrôles ignorés (parents): ${controlesIgnores}`);
+        console.log(`Total en base: ${data.controles.length}`);
+        console.log(`Vérification: ${controlesTraites + controlesIgnores === data.controles.length ? 'OK' : 'ERREUR'}`);
         
         return statsByCGP;
     }
@@ -3723,6 +3785,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
