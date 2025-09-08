@@ -228,9 +228,12 @@ export class HistoryInterface {
 
             <!-- Actions d'export et consultation -->
             <div class="history-actions">
-                <div class="btn-group">
+                 <div class="btn-group">
                     <button class="btn btn-primary" onclick="window.historyInterface?.exportComplete()">
-                        📊 Exporter Historique
+                        📊 Export par Type
+                    </button>
+                    <button class="btn btn-primary" onclick="window.historyInterface?.exportByCGP()">
+                        👨‍💼 Export par CGP
                     </button>
                     <button class="btn btn-primary" onclick="window.historyInterface?.exportFiltered()">
                         📋 Exporter Résultats (<span id="filtered-count">0</span>)
@@ -262,6 +265,15 @@ export class HistoryInterface {
         this.updateMailButton();
         this.updateSuspendedBadge();
         
+        }
+    }
+
+    exportByCGP() {
+        if (window.persistenceManager) {
+            window.persistenceManager.exportByCGP();
+            Utils.showNotification('Export par CGP en cours...', 'info');
+        } else {
+            Utils.showNotification('Gestionnaire d\'historique non disponible', 'error');
         }
     }
 
@@ -1387,12 +1399,12 @@ export class HistoryInterface {
     exportComplete() {
         if (window.persistenceManager) {
             window.persistenceManager.saveToExcel();
-            Utils.showNotification('Export historique complet en cours (avec stats CGP pondérées)...', 'info');
+            Utils.showNotification('Export par type de contrôle en cours...', 'info');
         } else {
             Utils.showNotification('Gestionnaire d\'historique non disponible', 'error');
         }
     }
-
+    
     // Export filtré
     exportFiltered() {
         if (this.currentResults.length === 0) {
@@ -3271,6 +3283,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
