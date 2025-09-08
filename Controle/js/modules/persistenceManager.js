@@ -2075,90 +2075,64 @@ export class PersistenceManager {
         let controlesIgnores = 0;
         
         data.controles.forEach(controle => {
-            // Vérifier l'exclusion avec tous les formats possibles
-            const shouldExclude = excludedControlIds.has(controle.id) || 
-                                 excludedControlIds.has(String(controle.id)) || 
-                                 excludedControlIds.has(Number(controle.id));
-            
-            if (shouldExclude) {
-                console.log(`IGNORÉ: ${controle.id} (${controle.client}) - parent d'une révision`);
-                controlesIgnores++;
-                return;
-            }
-            
-            console.log(`TRAITÉ: ${controle.id} (${controle.client}) - ${controle.completionType || 'C1'}`);
-            controlesTraites++;
-            
-            const cgp = controle.conseiller || 'Non renseigné';
-            
-            // Initialiser les stats du CGP si nécessaire
-            if (!statsByCGP[cgp]) {
-                statsByCGP[cgp] = {
-                    totalControles: 0,
-                    pointsTotal: 0,
-                    pointsMax: 0,
-                    repartition: {
-                        green: 0,
-                        orange: 0,
-                        red: 0,
-                        black: 0
-                    },
-                    calculDetails: [],
-                    eligibleCommission: false,
-                    tauxConformite: 0
-                };
-            }
-            
-            statsByCGP[cgp].totalControles++;
-            
-            // Calcul simplifié par statut global
-            if (controle.conformiteGlobale === 'CONFORME') {
-                if (controle.anomaliesMajeures === 0) {
-                    statsByCGP[cgp].repartition.green++;
-                    console.log(`  → VERT (conforme + 0 anomalie)`);
-                } else {
-                    statsByCGP[cgp].repartition.orange++;
-                    console.log(`  → ORANGE (conforme + ${controle.anomaliesMajeures} anomalie(s))`);
-                }
-            } else {
-                if (controle.anomaliesMajeures >= 3) {
-                    statsByCGP[cgp].repartition.black++;
-                    console.log(`  → NOIR (non conforme + ${controle.anomaliesMajeures} anomalies)`);
-                } else {
-                    statsByCGP[cgp].repartition.red++;
-                    console.log(`  → ROUGE (non conforme + ${controle.anomaliesMajeures} anomalie(s))`);
-                }
-            }
-            
-            // Calcul des points
-            if (controle.details && controle.details.length > 0) {
-                controle.details.forEach(detail => {
-                    const points = this.calculateDetailPoints ? this.calculateDetailPoints(detail) : {
-                        max: detail.obligatoire ? 100 : 50,
-                        obtained: detail.conforme ? (detail.obligatoire ? 100 : 50) : 0
-                    };
-                    
-                    statsByCGP[cgp].pointsTotal += points.obtained;
-                    statsByCGP[cgp].pointsMax += points.max;
-                    
-                    statsByCGP[cgp].calculDetails.push({
-                        client: controle.client,
-                        date: controle.date,
-                        question: detail.question,
-                        niveau: detail.obligatoire ? 'Obligatoire' : 'Optionnel',
-                        points: points.obtained
-                    });
-                });
-            }
-        });
+        // Vérifier l'exclusion avec tous les formats possibles
+        const shouldExclude = excludedControlIds.has(controle.id) || 
+                             excludedControlIds.has(String(controle.id)) || 
+                             excludedControlIds.has(Number(controle.id));
         
-        // Calculer les taux de conformité
-        Object.keys(statsByCGP).forEach(cgp => {
-            const stats = statsByCGP[cgp];
-            stats.tauxConformite = stats.pointsMax > 0 ? 
-                Math.round((stats.pointsTotal / stats.pointsMax) * 100) : 0;
-            stats.eligibleCommission = stats.tauxConformite >= objectives.cgpCommissionThreshold;
+        if (shouldExclude) {
+            console.log(`IGNORÉ: ${controle.id} (${controle.client}) - parent d'une révision`);
+            return;
+        }
+        
+        const cgp = controle.conseiller || 'Non renseigné';
+        
+        // Initialiser les stats du CGP si nécessaire
+        if (!statsByCGP[cgp]) {
+            statsByCGP[cgp] = {
+                totalControles: 0,
+                pointsTotal: 0,
+                pointsMax: 0,
+                repartition: { green: 0, orange: 0, red: 0, black: 0 },
+                calculDetails: [],
+                eligibleCommission: false,
+                tauxConformite: 0
+            };
+        }
+        
+        statsByCGP[cgp].totalControles++;
+        
+        // NOUVELLE LOGIQUE : Déterminer la couleur du contrôle
+        const { couleur, coefficient } = this.determinerCouleurEtCoefficient(controle);
+        statsByCGP[cgp].repartition[couleur]++;
+        
+        console.log(`${controle.client} → ${couleur.toUpperCase()} (coeff: ${coefficient})`);
+        
+        // Calcul des points avec coefficient
+        const basePoints = 100; // Points de base pour un contrôle
+        const pointsObtenus = Math.round(basePoints * coefficient);
+        
+        statsByCGP[cgp].pointsTotal += pointsObtenus;
+        statsByCGP[cgp].pointsMax += basePoints;
+        
+        // Ajouter le détail pour traçabilité
+        statsByCGP[cgp].calculDetails.push({
+            client: controle.client,
+            date: controle.date,
+            couleur: couleur,
+            coefficient: coefficient,
+            pointsObtenus: pointsObtenus,
+            pointsMax: basePoints
         });
+    });
+    
+    // Calculer les taux de conformité
+    Object.keys(statsByCGP).forEach(cgp => {
+        const stats = statsByCGP[cgp];
+        stats.tauxConformite = stats.pointsMax > 0 ? 
+            Math.round((stats.pointsTotal / stats.pointsMax) * 100) : 0;
+        stats.eligibleCommission = stats.tauxConformite >= objectives.cgpCommissionThreshold;
+    });
         
         console.log('=== RÉSUMÉ TRAITEMENT ===');
         console.log(`Contrôles traités: ${controlesTraites}`);
@@ -2176,6 +2150,46 @@ export class PersistenceManager {
             max: maxPoints,
             obtained: obtainedPoints
         };
+    }
+
+    determinerCouleurEtCoefficient(controle) {
+        if (!controle.details || controle.details.length === 0) {
+            return { couleur: 'black', coefficient: 0 }; // Pas de détails = impossible
+        }
+        
+        // Vérifier si le contrôle était impossible (document absent)
+        const premiereQuestion = controle.details[0];
+        if (this.isQuestionPresenceDocument(premiereQuestion) && premiereQuestion.reponse === 'Non') {
+            return { couleur: 'black', coefficient: 0 }; // Document absent = impossible
+        }
+        
+        // Analyser les anomalies
+        const anomalies = controle.details.filter(detail => !detail.conforme);
+        
+        if (anomalies.length === 0) {
+            return { couleur: 'green', coefficient: 1.0 }; // Aucune anomalie = 100%
+        }
+        
+        // Vérifier s'il y a au moins une anomalie obligatoire
+        const anomaliesObligatoires = anomalies.filter(detail => detail.obligatoire);
+        
+        if (anomaliesObligatoires.length > 0) {
+            return { couleur: 'red', coefficient: 0.25 }; // Au moins une anomalie obligatoire = 25%
+        } else {
+            return { couleur: 'orange', coefficient: 0.75 }; // Seulement des anomalies optionnelles = 75%
+        }
+    }
+    
+    isQuestionPresenceDocument(detail) {
+        if (!detail || !detail.question) return false;
+        
+        const question = detail.question.toLowerCase();
+        return question.includes('est-ce que le document est présent') ||
+               question.includes('document présent') ||
+               question.includes('présence du document') ||
+               question.includes('a été réalisé') ||
+               question.includes('a été créé') ||
+               question.includes('tous les documents sont-ils bien ajoutés dans zeendoc');
     }
     
     // Méthode pour mapper les données migrées
@@ -3766,6 +3780,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
