@@ -204,17 +204,17 @@ export class PersistenceManager {
         const defaults = {
             cgpCommissionThreshold: 75,
             controlTargets: {
-                'LCB-FT': { monthly: 50 },
-                'FINANCEMENT': { monthly: 30 },
-                'CARTO_CLIENT': { monthly: 40 },
-                'OPERATION': { monthly: 35 },
-                'NOUVEAU_CLIENT': { monthly: 25 }
+                'LCB-FT': { yearly: 360 },
+                'Financement': { yearly: 360 },        
+                'Carto Client': { yearly: 360 },
+                'Opération': { yearly: 360 },          
+                'Nouveau Client': { yearly: 360 }      
             }
         };
-        
-        const saved = localStorage.getItem('app_objectives');
-        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
-    }
+    
+    const saved = localStorage.getItem('app_objectives');
+    return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+}
     
     updateObjectives(newObjectives) {
         localStorage.setItem('app_objectives', JSON.stringify(newObjectives));
@@ -3683,6 +3683,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
