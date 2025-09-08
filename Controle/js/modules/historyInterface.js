@@ -336,47 +336,29 @@ export class HistoryInterface {
         const currentYear = new Date().getFullYear();
         const controls = window.persistenceManager ? window.persistenceManager.getHistoryData().controles : [];
         
-        // DEBUG DÉTAILLÉ
-        console.log('=== DEBUG OBJECTIFS DÉTAILLÉ ===');
-        console.log('Année actuelle:', currentYear);
-        console.log('Nombre total de contrôles:', controls.length);
-        console.log('Types configurés dans objectifs:', Object.keys(objectives.controlTargets));
-        
-        // Voir les types réels dans les données
-        const realTypes = [...new Set(controls.map(c => c.type))];
-        console.log('Types réels dans les contrôles:', realTypes);
-    
-        // Voir quelques exemples de contrôles
-        console.log('Exemples de contrôles:', controls.slice(0, 3));
-        
-        // Test pour chaque type configuré
-        Object.keys(objectives.controlTargets).forEach(type => {
-            const matchingControls = controls.filter(control => {
-                const controlYear = new Date(control.date).getFullYear();
-                const match = control.type === type && controlYear === currentYear;
-                console.log(`Type "${type}": contrôle "${control.type}" année ${controlYear} = match: ${match}`);
-                return match;
-            });
-            console.log(`Type "${type}": ${matchingControls.length} contrôles trouvés`);
-        });
-
-        
-        // Voir les contrôles de cette année
-        const thisYearControls = controls.filter(c => new Date(c.date).getFullYear() === currentYear);
+        // Mapping entre noms configurés et noms réels
+        const typeMapping = {
+            'LCB-FT': 'LCB-FT',
+            'FINANCEMENT': 'Financement', 
+            'CARTO_CLIENT': 'Carto Client',
+            'OPERATION': 'Opération',
+            'NOUVEAU_CLIENT': 'Nouveau Client'
+        };
         
         return `
             <div class="objectives-container">
                 <h4>Suivi des objectifs annuels ${currentYear}</h4>
                 <div class="objectives-grid">
                     ${Object.entries(objectives.controlTargets).map(([type, targets]) => {
-                        // DEBUG pour chaque type
+                        const realType = typeMapping[type] || type; // Utiliser le mapping
+                        
                         const completed = controls.filter(control => {
                             const controlYear = new Date(control.date).getFullYear();
-                            const match = control.type === type && controlYear === currentYear;
+                            const match = control.type === realType && controlYear === currentYear;
                             return match;
                         }).length;
                         
-                        console.log(`Type "${type}": ${completed} contrôles trouvés`);
+                        console.log(`Type "${type}" -> "${realType}": ${completed} contrôles trouvés`);
                         
                         const percentage = targets.yearly > 0 ? Math.round((completed / targets.yearly) * 100) : 0;
                         const progressClass = percentage >= 100 ? 'complete' : percentage >= 75 ? 'good' : percentage >= 50 ? 'warning' : 'danger';
@@ -3224,6 +3206,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
