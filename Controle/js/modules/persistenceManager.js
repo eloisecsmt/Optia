@@ -2039,60 +2039,85 @@ export class PersistenceManager {
     }
 
     getStatisticsByCGP() {
-        const statsByCGP = new Map();
+        const data = this.getHistoryData();
+        const statsByCGP = {};
+        const objectives = this.getObjectives();
         
-        this.controles.forEach(controle => {
-            const cgp = controle.conseiller || 'Non assigné';
-            if (!statsByCGP.has(cgp)) {
-                statsByCGP.set(cgp, {
+        data.controles.forEach(controle => {
+            const cgp = controle.conseiller || 'Non renseigné';
+            
+            if (!statsByCGP[cgp]) {
+                statsByCGP[cgp] = {
                     totalControles: 0,
                     pointsTotal: 0,
                     pointsMax: 0,
-                    repartition: { green: 0, orange: 0, red: 0, black: 0 },
-                    calculDetails: []
-                });
+                    repartition: {
+                        green: 0,   // Parfaitement conforme
+                        orange: 0,  // Conforme avec réserves
+                        red: 0,     // Non conforme standard
+                        black: 0    // Très problématique
+                    },
+                    calculDetails: [],
+                    eligibleCommission: false,
+                    tauxConformite: 0
+                };
             }
             
-            const stats = statsByCGP.get(cgp);
-            stats.totalControles++;
+            statsByCGP[cgp].totalControles++;
             
-            controle.details?.forEach(detail => {
-                let compliance;
-                
-                // Utiliser les données migrées si disponibles
-                if (detail.complianceLevel) {
-                    compliance = this.mapMigratedCompliance(detail);
+            // NOUVEAU CALCUL SIMPLIFIÉ par statut global
+            if (controle.conformiteGlobale === 'CONFORME') {
+                if (controle.anomaliesMajeures === 0) {
+                    statsByCGP[cgp].repartition.green++;  // Parfait : conforme + 0 anomalie
                 } else {
-                    // Nouveau système
-                    compliance = this.determineComplianceLevel(detail);
+                    statsByCGP[cgp].repartition.orange++; // Conforme mais avec réserves
                 }
-                
-                if (!compliance.excluded) {
-                    stats.pointsTotal += compliance.points;
-                    stats.pointsMax += 100;
+            } else {
+                // Non conforme
+                if (controle.anomaliesMajeures >= 3) {
+                    statsByCGP[cgp].repartition.black++;  // Très problématique
+                } else {
+                    statsByCGP[cgp].repartition.red++;    // Non conforme standard
                 }
-                
-                stats.repartition[compliance.color]++;
-                stats.calculDetails.push({
-                    client: controle.client,
-                    date: controle.date,
-                    question: detail.question,
-                    niveau: compliance.level,
-                    points: compliance.points
+            }
+            
+            // Garder le calcul de points existant si vous l'utilisez ailleurs
+            if (controle.details) {
+                controle.details.forEach(detail => {
+                    const points = this.calculateDetailPoints(detail);
+                    statsByCGP[cgp].pointsTotal += points.obtained;
+                    statsByCGP[cgp].pointsMax += points.max;
+                    
+                    statsByCGP[cgp].calculDetails.push({
+                        client: controle.client,
+                        date: controle.date,
+                        question: detail.question,
+                        niveau: detail.obligatoire ? 'Obligatoire' : 'Optionnel',
+                        points: points.obtained
+                    });
                 });
-            });
+            }
         });
         
-        // Calculer les taux
-        statsByCGP.forEach(stats => {
+        // Calculer les taux de conformité et éligibilité
+        Object.keys(statsByCGP).forEach(cgp => {
+            const stats = statsByCGP[cgp];
             stats.tauxConformite = stats.pointsMax > 0 ? 
                 Math.round((stats.pointsTotal / stats.pointsMax) * 100) : 0;
-            
-            const objectives = this.getObjectives();
             stats.eligibleCommission = stats.tauxConformite >= objectives.cgpCommissionThreshold;
         });
         
-        return Object.fromEntries(statsByCGP);
+        return statsByCGP;
+    }
+
+    calculateDetailPoints(detail) {
+        const maxPoints = detail.obligatoire ? 100 : 50;
+        const obtainedPoints = detail.conforme ? maxPoints : 0;
+        
+        return {
+            max: maxPoints,
+            obtained: obtainedPoints
+        };
     }
     
     // Méthode pour mapper les données migrées
@@ -3683,6 +3708,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
