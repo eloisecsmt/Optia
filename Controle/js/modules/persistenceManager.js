@@ -3550,10 +3550,12 @@ export class PersistenceManager {
     createTypeSheetHeaders(documentsInfo) {
         const headers = [
             'Date', 'Client', 'Code Dossier', 'Conseiller', 'Montant', 
-            'Domaine', 'Nouveau Client', 'Type d\'acte', 'Date d\'envoi'
+            'Domaine', 'Nouveau Client', 'Type d\'acte', 'Date d\'envoi',
+            'Finalisation', // NOUVEAU - Ajouter cette colonne
+            'Anomalies', 'Conformité' // Déplacer ces colonnes après
         ];
         
-        documentsInfo.forEach(docInfo => {
+            documentsInfo.forEach(docInfo => {
             headers.push(`${docInfo.name} - Statut`);
             
             docInfo.questionsArray.forEach((question, index) => {
@@ -3597,7 +3599,10 @@ export class PersistenceManager {
             controle.domaine || '',
             controle.nouveauClient || '',
             controle.typeActe || '',
-            controle.dateEnvoi || ''
+            controle.dateEnvoi || '',
+            controle.completionType || 'C1', // NOUVEAU - Type de finalisation
+            controle.anomaliesMajeures || 0,  // NOUVEAU - Anomalies
+            controle.conformiteGlobale        // NOUVEAU - Conformité
         ];
         
         const detailsByDoc = {};
@@ -3711,11 +3716,12 @@ export class PersistenceManager {
                 };
                 
                 if (R === 0) {
+                    // En-têtes
                     ws[cell_address].s = {
                         ...ws[cell_address].s,
                         font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
                         fill: { 
-                            patternType: "solid", // ✅ AJOUTER CETTE LIGNE
+                            patternType: "solid",
                             fgColor: { rgb: this.companyColors.primary } 
                         },
                         alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
@@ -3724,38 +3730,101 @@ export class PersistenceManager {
                     // Alternance de couleurs
                     const isEvenRow = R % 2 === 0;
                     ws[cell_address].s.fill = { 
-                        patternType: "solid", // ✅ AJOUTER CETTE LIGNE
+                        patternType: "solid",
                         fgColor: { rgb: isEvenRow ? 'FFFFFF' : this.companyColors.light } 
                     };
                     
+                    // NOUVEAU : Coloration colonne Finalisation (colonne 9)
+                    if (C === 9) {
+                        const cellValue = ws[cell_address].v;
+                        if (cellValue === 'C1') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'E8F5E8' }  // Vert clair
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.success } };
+                        } else if (cellValue === 'C1S') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'FFF3CD' }  // Jaune clair
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.warning } };
+                        } else if (cellValue === 'C2R') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: 'E3F2FD' }  // Bleu clair
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: this.companyColors.info } };
+                        }
+                    }
+                    
+                    // NOUVEAU : Coloration colonne Anomalies (colonne 10)
+                    if (C === 10) {
+                        const anomalies = parseInt(ws[cell_address].v) || 0;
+                        if (anomalies > 0) {
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                color: { rgb: this.companyColors.danger }, 
+                                bold: true 
+                            };
+                        } else {
+                            ws[cell_address].s.font = { 
+                                ...ws[cell_address].s.font, 
+                                color: { rgb: this.companyColors.success },
+                                bold: true
+                            };
+                        }
+                    }
+                    
+                    // NOUVEAU : Coloration colonne Conformité (colonne 11)
+                    if (C === 11) {
+                        if (ws[cell_address].v === 'CONFORME') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.success } 
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        } else if (ws[cell_address].v === 'NON CONFORME') {
+                            ws[cell_address].s.fill = { 
+                                patternType: "solid",
+                                fgColor: { rgb: this.companyColors.danger } 
+                            };
+                            ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
+                        }
+                    }
+                    
+                    // Logique existante pour les statuts de documents (maintenant à partir de la colonne 12)
                     if (this.isDocumentStatusColumn(C, documentsInfo)) {
                         const cellValue = ws[cell_address].v;
                         if (cellValue === 'CONFORME') {
                             ws[cell_address].s.fill = { 
-                                patternType: "solid", // ✅ AJOUTER CETTE LIGNE
+                                patternType: "solid",
                                 fgColor: { rgb: this.companyColors.success } 
                             };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         } else if (cellValue === 'AVEC RÉSERVES') {
                             ws[cell_address].s.fill = { 
-                                patternType: "solid", // ✅ AJOUTER CETTE LIGNE
+                                patternType: "solid",
                                 fgColor: { rgb: this.companyColors.warning } 
                             };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true };
                         } else if (cellValue === 'NON CONFORME' || cellValue === 'ABSENT') {
                             ws[cell_address].s.fill = { 
-                                patternType: "solid", // ✅ AJOUTER CETTE LIGNE
+                                patternType: "solid",
                                 fgColor: { rgb: this.companyColors.danger } 
                             };
                             ws[cell_address].s.font = { ...ws[cell_address].s.font, bold: true, color: { rgb: 'FFFFFF' } };
                         }
-                    } else if (this.isDocumentQuestionColumn(C, R, ws, documentsInfo)) {
+                    }
+                    
+                    // Logique existante pour les questions de documents
+                    else if (this.isDocumentQuestionColumn(C, R, ws, documentsInfo)) {
                         const statusCol = this.getDocumentStatusColumnIndex(C, documentsInfo);
                         if (statusCol !== -1) {
                             const statusCell = ws[XLSX.utils.encode_cell({ c: statusCol, r: R })];
                             if (statusCell && statusCell.v === 'ABSENT' && ws[cell_address].v === '-') {
                                 ws[cell_address].s.fill = { 
-                                    patternType: "solid", // ✅ AJOUTER CETTE LIGNE
+                                    patternType: "solid",
                                     fgColor: { rgb: 'E9ECEF' } 
                                 };
                                 ws[cell_address].s.font = { ...ws[cell_address].s.font, color: { rgb: '6C757D' } };
@@ -3773,14 +3842,24 @@ export class PersistenceManager {
     // NOUVELLE MÉTHODE : Calculer les largeurs de colonnes
     calculateColumnWidths(documentsInfo) {
         const widths = [
-            { width: 12 }, { width: 25 }, { width: 15 }, { width: 20 }, { width: 15 },
-            { width: 15 }, { width: 15 }, { width: 15 }, { width: 12 }
+            { width: 12 }, // Date
+            { width: 25 }, // Client
+            { width: 15 }, // Code
+            { width: 20 }, // Conseiller
+            { width: 15 }, // Montant
+            { width: 15 }, // Domaine
+            { width: 15 }, // Nouveau Client
+            { width: 15 }, // Type d'acte
+            { width: 12 }, // Date d'envoi
+            { width: 12 }, // Finalisation (NOUVEAU)
+            { width: 10 }, // Anomalies (NOUVEAU)
+            { width: 15 }  // Conformité (NOUVEAU)
         ];
         
         documentsInfo.forEach(docInfo => {
-            widths.push({ width: 15 });
+            widths.push({ width: 15 }); // Statut document
             docInfo.questionsArray.forEach(() => {
-                widths.push({ width: 40 });
+                widths.push({ width: 40 }); // Questions
             });
         });
         
@@ -3789,7 +3868,7 @@ export class PersistenceManager {
     
     // NOUVELLE MÉTHODE : Vérifier si c'est une colonne de statut de document
     isDocumentStatusColumn(colIndex, documentsInfo) {
-        let currentCol = 9;
+        let currentCol = 12; // Commence maintenant à la colonne 12 au lieu de 9
         
         for (const docInfo of documentsInfo) {
             if (colIndex === currentCol) {
@@ -4013,6 +4092,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
