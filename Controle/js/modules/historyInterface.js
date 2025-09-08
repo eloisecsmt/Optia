@@ -1387,7 +1387,7 @@ export class HistoryInterface {
     exportComplete() {
         if (window.persistenceManager) {
             window.persistenceManager.saveToExcel();
-            Utils.showNotification('Export historique complet en cours...', 'info');
+            Utils.showNotification('Export historique complet en cours (avec stats CGP pondérées)...', 'info');
         } else {
             Utils.showNotification('Gestionnaire d\'historique non disponible', 'error');
         }
@@ -3271,6 +3271,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
