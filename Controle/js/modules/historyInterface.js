@@ -346,6 +346,8 @@ export class HistoryInterface {
         // Voir tous les types de contrôles existants
         const existingTypes = [...new Set(controls.map(c => c.type))];
         console.log('Types existants dans les contrôles:', existingTypes);
+        console.log('Premier contrôle exemple:', controls[0]); // Pour voir un exemple complet
+
         
         // Voir les contrôles de cette année
         const thisYearControls = controls.filter(c => new Date(c.date).getFullYear() === currentYear);
@@ -3211,6 +3213,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
