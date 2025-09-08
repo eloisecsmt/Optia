@@ -1383,15 +1383,15 @@ export class HistoryInterface {
         }
     }
 
-    getObjectives() {
+   getObjectives() {
         const defaults = {
             cgpCommissionThreshold: 75,
             controlTargets: {
-                'LCB-FT': { yearly: 600 },        // Au lieu de monthly: 50
-                'FINANCEMENT': { yearly: 360 },   // Au lieu de monthly: 30
-                'CARTO_CLIENT': { yearly: 480 },  // Au lieu de monthly: 40
-                'OPERATION': { yearly: 420 },     // Au lieu de monthly: 35
-                'NOUVEAU_CLIENT': { yearly: 300 } // Au lieu de monthly: 25
+                'LCB-FT': { yearly: 600 },
+                'Financement': { yearly: 360 },        // Au lieu de 'FINANCEMENT'
+                'Carto Client': { yearly: 480 },       // Au lieu de 'CARTO_CLIENT'
+                'Opération': { yearly: 420 },          // Au lieu de 'OPERATION'  
+                'Nouveau Client': { yearly: 300 }      // Au lieu de 'NOUVEAU_CLIENT'
             }
         };
         
@@ -3213,6 +3213,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
