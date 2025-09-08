@@ -874,6 +874,244 @@ export class PersistenceManager {
         ws['!merges'] = [{ s: { c: 0, r: 0 }, e: { c: 4, r: 0 } }];
     }
 
+    exportByCGP(fileName = null) {
+        if (!fileName) {
+            fileName = `Export_par_CGP_${new Date().toISOString().split('T')[0]}.xlsx`;
+        }
+    
+        if (this.controles.length === 0) {
+            Utils.showNotification('Aucun contrôle à exporter', 'warning');
+            return false;
+        }
+    
+        try {
+            const wb = XLSX.utils.book_new();
+            const statsByCGP = this.getStatisticsByCGP();
+            const objectives = this.getObjectives();
+            
+            // 1. Onglet synthèse CGP
+            this.createCGPSynthesisSheet(wb, statsByCGP, objectives);
+            
+            // 2. Onglet répartition couleurs
+            this.createColorDistributionSheet(wb, statsByCGP);
+            
+            // 3. Onglets individuels par CGP (seuil minimum)
+            this.createIndividualCGPSheets(wb, statsByCGP);
+            
+            // 4. Onglet statistiques enrichi (réutilisé)
+            this.createEnhancedStatsSheet(wb);
+            
+            XLSX.writeFile(wb, fileName);
+            
+            const totalCGP = Object.keys(statsByCGP).length;
+            const cgpWithSheets = Object.entries(statsByCGP).filter(([,stats]) => stats.totalControles >= 3).length;
+            
+            Utils.showNotification(
+                `Export par CGP généré: ${totalCGP} conseillers (${cgpWithSheets} onglets détaillés)`, 
+                'success'
+            );
+            return true;
+    
+        } catch (error) {
+            console.error('Erreur export par CGP:', error);
+            Utils.showNotification('Erreur lors de l\'export par CGP: ' + error.message, 'error');
+            return false;
+        }
+    }
+
+    createCGPSynthesisSheet(wb, statsByCGP, objectives) {
+        const cgpEntries = Object.entries(statsByCGP)
+            .sort(([,a], [,b]) => b.tauxConformite - a.tauxConformite);
+        
+        const synthesisData = [
+            ['SYNTHÈSE PAR CGP - VUE D\'ENSEMBLE', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', ''],
+            ['CGP / Conseiller', 'Nb Contrôles', 'Taux Pondéré', 'Vert', 'Orange', 'Rouge', 'Noir', 'Commission', 'Rang']
+        ];
+        
+        cgpEntries.forEach(([cgp, stats], index) => {
+            synthesisData.push([
+                cgp,
+                stats.totalControles,
+                `${stats.tauxConformite}%`,
+                stats.repartition.green || 0,
+                stats.repartition.orange || 0,
+                stats.repartition.red || 0,
+                stats.repartition.black || 0,
+                stats.eligibleCommission ? 'ÉLIGIBLE' : 'NON ÉLIGIBLE',
+                index + 1
+            ]);
+        });
+        
+        synthesisData.push(['', '', '', '', '', '', '', '', '']);
+        
+        // Ajouter résumé
+        const totalCGP = cgpEntries.length;
+        const eligibles = cgpEntries.filter(([,stats]) => stats.eligibleCommission).length;
+        const moyennePonderee = totalCGP > 0 ? 
+            Math.round(cgpEntries.reduce((sum, [,stats]) => sum + stats.tauxConformite, 0) / totalCGP) : 0;
+        
+        synthesisData.push(['RÉSUMÉ', '', '', '', '', '', '', '', '']);
+        synthesisData.push(['Total CGP', totalCGP, '', '', '', '', '', '', '']);
+        synthesisData.push(['CGP éligibles', eligibles, `${Math.round((eligibles/totalCGP)*100)}%`, '', '', '', '', '', '']);
+        synthesisData.push(['Moyenne pondérée', `${moyennePonderee}%`, '', '', '', '', '', '', '']);
+        synthesisData.push(['Seuil commission', `${objectives.cgpCommissionThreshold}%`, '', '', '', '', '', '', '']);
+        
+        const ws = XLSX.utils.aoa_to_sheet(synthesisData);
+        this.formatCGPSynthesisSheet(ws, synthesisData.length);
+        XLSX.utils.book_append_sheet(wb, ws, "Synthèse CGP");
+    }
+
+    createColorDistributionSheet(wb, statsByCGP) {
+        const totauxCouleurs = Object.values(statsByCGP).reduce((acc, stats) => {
+            acc.green += stats.repartition.green || 0;
+            acc.orange += stats.repartition.orange || 0;
+            acc.red += stats.repartition.red || 0;
+            acc.black += stats.repartition.black || 0;
+            return acc;
+        }, { green: 0, orange: 0, red: 0, black: 0 });
+        
+        const totalControles = Object.values(totauxCouleurs).reduce((sum, val) => sum + val, 0);
+        
+        const colorData = [
+            ['RÉPARTITION DES COULEURS PAR CGP', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', ''],
+            ['CGP / Conseiller', 'Total', 'Vert', 'Orange', 'Rouge', 'Noir', 'Dominant']
+        ];
+        
+        Object.entries(statsByCGP)
+            .sort(([,a], [,b]) => b.totalControles - a.totalControles)
+            .forEach(([cgp, stats]) => {
+                const couleurDominante = this.getCouleurDominante(stats.repartition);
+                colorData.push([
+                    cgp,
+                    stats.totalControles,
+                    stats.repartition.green || 0,
+                    stats.repartition.orange || 0,
+                    stats.repartition.red || 0,
+                    stats.repartition.black || 0,
+                    couleurDominante
+                ]);
+            });
+        
+        colorData.push(['', '', '', '', '', '', '']);
+        colorData.push(['TOTAUX GLOBAUX', '', '', '', '', '', '']);
+        colorData.push([
+            'TOTAL',
+            totalControles,
+            totauxCouleurs.green,
+            totauxCouleurs.orange,
+            totauxCouleurs.red,
+            totauxCouleurs.black,
+            this.getCouleurDominante(totauxCouleurs)
+        ]);
+        
+        if (totalControles > 0) {
+            colorData.push([
+                'POURCENTAGES',
+                '100%',
+                `${Math.round((totauxCouleurs.green/totalControles)*100)}%`,
+                `${Math.round((totauxCouleurs.orange/totalControles)*100)}%`,
+                `${Math.round((totauxCouleurs.red/totalControles)*100)}%`,
+                `${Math.round((totauxCouleurs.black/totalControles)*100)}%`,
+                ''
+            ]);
+        }
+        
+        const ws = XLSX.utils.aoa_to_sheet(colorData);
+        this.formatColorDistributionSheet(ws, colorData.length);
+        XLSX.utils.book_append_sheet(wb, ws, "Répartition Couleurs");
+    }
+    
+    getCouleurDominante(repartition) {
+        const max = Math.max(
+            repartition.green || 0,
+            repartition.orange || 0,
+            repartition.red || 0,
+            repartition.black || 0
+        );
+        
+        if (max === 0) return 'AUCUNE';
+        if (max === (repartition.green || 0)) return 'VERT';
+        if (max === (repartition.orange || 0)) return 'ORANGE';
+        if (max === (repartition.red || 0)) return 'ROUGE';
+        if (max === (repartition.black || 0)) return 'NOIR';
+        return 'ÉGALITÉ';
+    }
+
+    createIndividualCGPSheets(wb, statsByCGP) {
+        const cgpEntries = Object.entries(statsByCGP)
+            .filter(([,stats]) => stats.totalControles >= 3) // Seuil minimum
+            .sort(([,a], [,b]) => b.tauxConformite - a.tauxConformite)
+            .slice(0, 20); // Limiter à 20 CGP max
+        
+        Utils.debugLog(`Création de ${cgpEntries.length} onglets CGP individuels`);
+        
+        cgpEntries.forEach(([cgpName, cgpStats]) => {
+            this.createSingleCGPSheet(wb, cgpName, cgpStats);
+        });
+    }
+
+    createSingleCGPSheet(wb, cgpName, cgpStats) {
+        // Récupérer tous les contrôles de ce CGP
+        const cgpControles = this.controles.filter(c => 
+            (c.conseiller || 'Non renseigné') === cgpName
+        ).sort((a, b) => b.date - a.date);
+        
+        const cgpData = [
+            [`DÉTAIL CGP: ${cgpName}`, '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', ''],
+            [`Performance: ${cgpStats.tauxConformite}% - ${cgpStats.eligibleCommission ? 'ÉLIGIBLE' : 'NON ÉLIGIBLE'} commission`, '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', ''],
+            ['Date', 'Type Contrôle', 'Client', 'Code Dossier', 'Montant', 'Finalisation', 'Anomalies', 'Conformité', 'Couleur', 'Points']
+        ];
+        
+        cgpControles.forEach(controle => {
+            const couleurInfo = this.determinerCouleurEtCoefficient(controle);
+            const points = Math.round(100 * couleurInfo.coefficient);
+            
+            cgpData.push([
+                controle.date.toLocaleDateString('fr-FR'),
+                controle.type,
+                controle.client,
+                controle.codeDossier || '',
+                controle.montant || '',
+                controle.completionType || 'C1',
+                controle.anomaliesMajeures || 0,
+                controle.conformiteGlobale,
+                couleurInfo.couleur.toUpperCase(),
+                `${points}/100`
+            ]);
+        });
+        
+        cgpData.push(['', '', '', '', '', '', '', '', '', '']);
+        cgpData.push(['RÉSUMÉ CGP', '', '', '', '', '', '', '', '', '']);
+        cgpData.push(['Total contrôles', cgpStats.totalControles, '', '', '', '', '', '', '', '']);
+        cgpData.push(['Taux pondéré', `${cgpStats.tauxConformite}%`, '', '', '', '', '', '', '', '']);
+        cgpData.push(['Vert', cgpStats.repartition.green || 0, '', '', '', '', '', '', '', '']);
+        cgpData.push(['Orange', cgpStats.repartition.orange || 0, '', '', '', '', '', '', '', '']);
+        cgpData.push(['Rouge', cgpStats.repartition.red || 0, '', '', '', '', '', '', '', '']);
+        cgpData.push(['Noir', cgpStats.repartition.black || 0, '', '', '', '', '', '', '', '']);
+        
+        const ws = XLSX.utils.aoa_to_sheet(cgpData);
+        this.formatSingleCGPSheet(ws, cgpData.length, cgpName);
+        
+        const safeName = this.createSafeCGPSheetName(cgpName);
+        XLSX.utils.book_append_sheet(wb, ws, safeName);
+    }
+    
+    createSafeCGPSheetName(cgpName) {
+        let safeName = cgpName
+            .replace(/[:\\/?*\[\]]/g, '_')
+            .substring(0, 25); // Plus court pour éviter les conflits
+            
+        if (!safeName.trim()) {
+            safeName = 'CGP';
+        }
+        
+        return safeName;
+    }
+    
     // Extraire les détails du contrôle (inchangé)
     extractDetails(controlData) {
         const details = [];
@@ -4092,6 +4330,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
