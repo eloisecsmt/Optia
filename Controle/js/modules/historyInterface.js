@@ -338,16 +338,32 @@ export class HistoryInterface {
         // Récupérer les données comme dans l'onglet Global
         const controls = window.persistenceManager ? window.persistenceManager.getHistoryData().controles : [];
         
+        // DEBUG : Afficher les données
+        console.log('=== DEBUG OBJECTIFS ===');
+        console.log('Nombre total de contrôles:', controls.length);
+        console.log('Types dans objectives:', Object.keys(objectives.controlTargets));
+        
+        // Voir tous les types de contrôles existants
+        const existingTypes = [...new Set(controls.map(c => c.type))];
+        console.log('Types existants dans les contrôles:', existingTypes);
+        
+        // Voir les contrôles de cette année
+        const thisYearControls = controls.filter(c => new Date(c.date).getFullYear() === currentYear);
+        console.log('Contrôles de cette année:', thisYearControls.length);
+        
         return `
             <div class="objectives-container">
                 <h4>Suivi des objectifs annuels ${currentYear}</h4>
                 <div class="objectives-grid">
                     ${Object.entries(objectives.controlTargets).map(([type, targets]) => {
-                        // Utiliser la même logique que l'onglet Global
+                        // DEBUG pour chaque type
                         const completed = controls.filter(control => {
                             const controlYear = new Date(control.date).getFullYear();
-                            return control.type === type && controlYear === currentYear;
+                            const match = control.type === type && controlYear === currentYear;
+                            return match;
                         }).length;
+                        
+                        console.log(`Type "${type}": ${completed} contrôles trouvés`);
                         
                         const percentage = targets.yearly > 0 ? Math.round((completed / targets.yearly) * 100) : 0;
                         const progressClass = percentage >= 100 ? 'complete' : percentage >= 75 ? 'good' : percentage >= 50 ? 'warning' : 'danger';
@@ -3195,6 +3211,7 @@ updateMailButton() {
         Utils.debugLog('HistoryInterface nettoyé');
     }
 }
+
 
 
 
