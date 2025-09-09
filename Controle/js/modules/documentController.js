@@ -4866,14 +4866,15 @@ export class DocumentController {
                     'est-ce que le patrimoine est-il connu',
                     'est-ce que les revenus sont-ils connus',
                     'des éléments sont-ils manquants',
-                    'd\'autres informations détaillées sont-elles manquantes',
+                    'd\'autres informations détaillées sont-elles manquantes ou incomplètes',
                     'si montant > 150 000€, une diligence renforcée',
                     'en cas de doute, une déclaration de soupçon',
                     'si compte tiers, y a-t-il une procuration',
                     'l\'opération concerne-t-elle un produit cif',
                     'par rapport à l\'ancien document, les informations ont-elles évolué',
                     'par rapport à l\'ancien profil, les informations ont-elles évolué',
-                    'Le document a-t-il été régularisé lors de la mise à jour ?'
+                    'Le document a-t-il été régularisé lors de la mise à jour ?',
+                    'd\'autres informations détaillées sont-elles manquantes ou incomplètes ?'
                 ];
                 
                 // Vérifier si la question fait partie des cas où "Non" est acceptable
@@ -6181,6 +6182,7 @@ generateManualResultsTable(results) {
         Utils.debugLog('DocumentController réinitialisé (révisions incluses)');
     }
 }
+
 
 
 
