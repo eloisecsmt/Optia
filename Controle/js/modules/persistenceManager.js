@@ -1583,7 +1583,7 @@ export class PersistenceManager {
                             horizontal: 'center', 
                             vertical: 'center', 
                             wrapText: true,
-                            textRotation: isQuestionColumn ? 90 : 0 // Rotation pour les questions
+                            textRotation: isQuestionColumn ? 70 : 0 // Rotation pour les questions
                         }
                     };
                 } else if (R > 0) {
@@ -1735,7 +1735,7 @@ export class PersistenceManager {
         documentsInfo.forEach(docInfo => {
             widths.push({ width: 15 }); // Statut document
             docInfo.questionsArray.forEach(() => {
-                widths.push({ width: 8 }); // Questions
+                widths.push({ width: 15 }); // Questions
             });
         });
         
@@ -4677,7 +4677,7 @@ export class PersistenceManager {
                             horizontal: 'center', 
                             vertical: 'center', 
                             wrapText: true,
-                            textRotation: isQuestionColumn ? 90 : 0 // Rotation pour les questions
+                            textRotation: isQuestionColumn ? 70 : 0 // Rotation pour les questions
                         }
                     };
                 } else if (R > 0) {
@@ -4814,7 +4814,7 @@ export class PersistenceManager {
         documentsInfo.forEach(docInfo => {
             widths.push({ width: 15 }); // Statut document
             docInfo.questionsArray.forEach(() => {
-                widths.push({ width: 8 }); // Questions
+                widths.push({ width: 15 }); // Questions
             });
         });
         
@@ -5047,6 +5047,7 @@ export class PersistenceManager {
         return latestControls.length > 0 ? Math.round((conformes / latestControls.length) * 100) : 0;
     }
 }
+
 
 
 
